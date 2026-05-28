@@ -1,5 +1,5 @@
 #!/bin/bash
-# tests/run_tests.sh — build and syntax-check all OS containers in parallel via Podman.
+# tests/run_container_tests.sh — build and syntax-check all OS containers in parallel via Podman.
 
 set -euo pipefail
 

@@ -58,7 +58,7 @@ roles/
 dotfiles/                 # chezmoi source — flat, no conditionals
 tests/
   Dockerfile.{debian,ubuntu,almalinux}
-  run_tests.sh            # parallel syntax-check via Podman
+  run_container_tests.sh  # parallel syntax-check via Podman
   run_vm_tests.sh         # full provisioning via Vagrant VMs
 vagrant/
   Vagrantfile             # multi-machine (debian/ubuntu/almalinux), multi-provider
@@ -79,7 +79,7 @@ All tunables live in `inventory/group_vars/all.yml`:
 ### Container tests (fast, syntax-check only)
 
 ```bash
-./tests/run_tests.sh
+./tests/run_container_tests.sh
 ```
 
 Builds a container per OS in parallel (Podman, rootless) and runs `ansible-playbook --syntax-check` against both playbooks.
