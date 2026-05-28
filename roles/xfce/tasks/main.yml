@@ -14,6 +14,9 @@
   become: true
   when: ansible_os_family == "RedHat"
 
-- name: Set LightDM as display manager
-  ansible.builtin.set_fact:
-    desktop_display_manager: lightdm
+- name: Enable and start LightDM
+  ansible.builtin.service:
+    name: lightdm
+    enabled: true
+    state: started
+  become: true

@@ -14,12 +14,18 @@
   become: true
   when: ansible_os_family == "RedHat"
 
-- name: Set GDM as default display manager
-  ansible.builtin.set_fact:
-    desktop_display_manager: gdm3
+- name: Enable and start GDM (Debian/Ubuntu)
+  ansible.builtin.service:
+    name: gdm3
+    enabled: true
+    state: started
+  become: true
   when: ansible_os_family == "Debian"
 
-- name: Set GDM as default display manager (RedHat)
-  ansible.builtin.set_fact:
-    desktop_display_manager: gdm
+- name: Enable and start GDM (RedHat/AlmaLinux)
+  ansible.builtin.service:
+    name: gdm
+    enabled: true
+    state: started
+  become: true
   when: ansible_os_family == "RedHat"

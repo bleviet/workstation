@@ -13,11 +13,3 @@
     state: present
   become: true
   when: ansible_os_family == "RedHat"
-
-- name: Enable display manager
-  ansible.builtin.service:
-    name: "{{ desktop_display_manager }}"
-    enabled: true
-    state: started
-  become: true
-  when: desktop_display_manager != ""
