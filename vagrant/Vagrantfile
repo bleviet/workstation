@@ -84,6 +84,9 @@ Vagrant.configure("2") do |config|
 
       # Step 3: run the full provisioning playbook.
       # Uses explicit env vars so paths are never relative to an ambiguous CWD.
+      # ANSIBLE_CONFIG is set explicitly because VMware synced folders are
+      # world-writable and Ansible refuses to auto-load cfg from such dirs.
+      # No --become: individual tasks that need root carry become: true already.
       m.vm.provision "shell", privileged: false, inline: <<~SHELL
         set -e
         REPO=/home/vagrant/workspace/workstation
@@ -91,7 +94,6 @@ Vagrant.configure("2") do |config|
         export ANSIBLE_ROLES_PATH="$REPO/roles"
         ansible-playbook \
           --inventory "$REPO/inventory/hosts.yml" \
-          --become \
           --extra-vars '{"features": {"gui": false, "fpga": false}}' \
           "$REPO/playbooks/site.yml"
       SHELL
