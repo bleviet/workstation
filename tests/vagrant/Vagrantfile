@@ -31,6 +31,7 @@ MACHINES = {
   # Set to false to provision headlessly (faster, no window).
   "debian-i3wm" => { box: "bento/debian-13",    profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true },
   "ubuntu-i3wm" => { box: "bento/ubuntu-24.04", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true },
+  "almalinux-i3wm" => { box: "bento/almalinux-10", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true },
 }.freeze
 
 # Install Ansible via the system package manager.
