@@ -2,6 +2,9 @@
 *.retry
 .vault_pass
 
+# Vagrant
+vagrant/.vagrant/
+
 # Python
 __pycache__/
 *.pyc

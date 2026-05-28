@@ -1,0 +1,100 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# Multi-machine, multi-provider test environment for workstation provisioning.
+#
+# Supported providers:
+#   virtualbox     — Windows/Linux desktop (VirtualBox must be installed on host)
+#   vmware_desktop — Windows/Linux with vagrant-vmware-desktop plugin
+#   libvirt        — WSL2 / native Linux with KVM (vagrant-libvirt plugin)
+#                    WSL2 setup: sudo apt install qemu-kvm libvirt-daemon-system
+#                                vagrant plugin install vagrant-libvirt
+#
+# Usage:
+#   vagrant up debian --provider=virtualbox
+#   vagrant up debian --provider=vmware_desktop
+#   vagrant up debian --provider=libvirt
+#   VAGRANT_DEFAULT_PROVIDER=libvirt vagrant up ubuntu
+#
+# All machines are autostart: false — you must name the machine explicitly.
+
+MACHINES = {
+  "debian"    => "bento/debian-12",
+  "ubuntu"    => "bento/ubuntu-24.04",
+  "almalinux" => "bento/almalinux-9",
+}.freeze
+
+# Install Ansible via the system package manager.
+# Mirrors the install logic in bootstrap.sh, without running the playbook.
+INSTALL_ANSIBLE = <<~SHELL
+  set -e
+  . /etc/os-release
+  case "$ID" in
+    debian|ubuntu)
+      apt-get update -y
+      apt-get install -y ansible
+      ;;
+    almalinux|rocky|rhel|centos)
+      dnf install -y epel-release
+      dnf install -y ansible
+      ;;
+    *)
+      echo "Unsupported OS: $ID" >&2
+      exit 1
+      ;;
+  esac
+SHELL
+
+Vagrant.configure("2") do |config|
+  MACHINES.each do |name, box|
+    config.vm.define name, autostart: false do |m|
+      m.vm.box      = box
+      m.vm.hostname = "workstation-test-#{name}"
+
+      # Map repo root (parent of vagrant/) into the VM at the expected path.
+      m.vm.synced_folder "..", "/home/vagrant/workspace/workstation"
+
+      m.vm.provider "virtualbox" do |vb|
+        vb.name   = "workstation-test-#{name}"
+        vb.memory = 2048
+        vb.cpus   = 2
+        vb.gui    = false
+      end
+
+      m.vm.provider "vmware_desktop" do |vmw|
+        vmw.vmx["displayName"] = "workstation-test-#{name}"
+        vmw.vmx["memsize"]     = "2048"
+        vmw.vmx["numvcpus"]    = "2"
+        vmw.gui                = false
+      end
+
+      m.vm.provider "libvirt" do |lv|
+        lv.title  = "workstation-test-#{name}"
+        lv.memory = 2048
+        lv.cpus   = 2
+      end
+
+      # Step 1: install Ansible inside the VM via system package manager.
+      m.vm.provision "shell", privileged: true, inline: INSTALL_ANSIBLE
+
+      # Step 2: install Ansible Galaxy collections (requirements.yml uses
+      # collections:, which ansible_local's galaxy_role_file does not handle).
+      m.vm.provision "shell", privileged: false,
+        inline: "cd /home/vagrant/workspace/workstation && " \
+                "ansible-galaxy collection install -r requirements.yml"
+
+      # Step 3: run the full provisioning playbook inside the VM.
+      # install: false — Ansible is already present from step 1.
+      # features.gui: false — skip font downloads in headless VMs.
+      m.vm.provision "ansible_local" do |ansible|
+        ansible.install           = false
+        ansible.playbook          = "playbooks/site.yml"
+        ansible.provisioning_path = "/home/vagrant/workspace/workstation"
+        ansible.become            = true
+        ansible.extra_vars        = {
+          "features" => { "gui" => false, "fpga" => false },
+        }
+      end
+    end
+  end
+end
