@@ -13,9 +13,9 @@ OS-specific aliases land in `~/.config/shell/os.sh` via an Ansible template. The
 
 | OS | Package manager |
 |---|---|
-| Debian 12 | apt |
-| Ubuntu 24.04 | apt |
-| AlmaLinux 9 | dnf |
+| Debian 13 | apt |
+| Ubuntu 26.04 | apt |
+| AlmaLinux 10 | dnf |
 
 ## Quick start
 

@@ -19,9 +19,9 @@
 # All machines are autostart: false — you must name the machine explicitly.
 
 MACHINES = {
-  "debian"    => "bento/debian-12",
-  "ubuntu"    => "bento/ubuntu-24.04",
-  "almalinux" => "bento/almalinux-9",
+  "debian"    => "bento/debian-13",
+  "ubuntu"    => "bento/ubuntu-26.04",
+  "almalinux" => "bento/almalinux-10",
 }.freeze
 
 # Install Ansible via the system package manager.
