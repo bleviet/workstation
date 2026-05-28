@@ -1,0 +1,9 @@
+---
+# localhost — local provisioning (ansible_connection: local).
+# Inherits workstations group defaults; override profile/features here.
+
+profile: desktop-xfce
+
+features:
+  fpga: false
+  xrdp: false

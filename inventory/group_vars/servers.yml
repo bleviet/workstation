@@ -1,0 +1,9 @@
+---
+# Defaults for all servers (headless remotes).
+# Override in host_vars/<hostname>.yml for per-machine settings.
+
+profile: headless
+
+features:
+  fpga: false
+  xrdp: true

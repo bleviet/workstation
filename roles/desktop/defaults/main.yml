@@ -1,0 +1,16 @@
+---
+desktop_base_packages_apt:
+  - xorg
+  - xserver-xorg
+  - dbus-x11
+  - fonts-noto
+  - fonts-noto-color-emoji
+
+desktop_base_packages_dnf:
+  - xorg-x11-server-Xorg
+  - xorg-x11-xinit
+  - dbus-x11
+  - google-noto-fonts-common
+
+# Overridden by gnome/xfce/i3wm roles to set their display manager
+desktop_display_manager: ""

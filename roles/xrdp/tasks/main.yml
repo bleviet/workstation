@@ -1,0 +1,52 @@
+---
+- name: Install xrdp (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: xrdp
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install xrdp (RedHat/AlmaLinux)
+  ansible.builtin.dnf:
+    name: xrdp
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Add xrdp user to ssl-cert group (Debian/Ubuntu)
+  ansible.builtin.user:
+    name: xrdp
+    groups: ssl-cert
+    append: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Allow xrdp port through ufw (Debian/Ubuntu)
+  community.general.ufw:
+    rule: allow
+    port: "3389"
+    proto: tcp
+  become: true
+  when:
+    - ansible_os_family == "Debian"
+    - xrdp_configure_firewall
+
+- name: Allow xrdp port through firewalld (RedHat/AlmaLinux)
+  ansible.posix.firewalld:
+    port: "3389/tcp"
+    state: enabled
+    permanent: true
+    immediate: true
+  become: true
+  when:
+    - ansible_os_family == "RedHat"
+    - xrdp_configure_firewall
+
+- name: Enable and start xrdp service
+  ansible.builtin.service:
+    name: xrdp
+    state: started
+    enabled: true
+  become: true
+  notify: Restart xrdp

@@ -4,7 +4,7 @@ Personal workstation provisioning for Linux. Ansible handles system setup; chezm
 
 ## How it works
 
-**Ansible** owns all variation — packages, OS-specific shell snippets, git config, tools.
+**Ansible** owns all variation — packages, OS-specific shell snippets, git config, tools, and desktop environment.
 **chezmoi** owns common dotfiles — no templates, no conditionals, just `apply`.
 
 OS-specific aliases land in `~/.config/shell/os.sh` via an Ansible template. The shell configs source `~/.config/shell/*.sh` by glob, so chezmoi never needs to know which OS it's on.
@@ -25,7 +25,7 @@ cd ~/workspace/workstation
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` installs Ansible (`ansible-core` on AlmaLinux 10 via AppStream; `ansible` on Debian/Ubuntu via apt), pulls the `community.general` collection, and runs `playbooks/site.yml`.
+`bootstrap.sh` installs Ansible (`ansible-core` on AlmaLinux 10 via AppStream; `ansible` on Debian/Ubuntu via apt), pulls the required collections, and runs `playbooks/site.yml`.
 
 ## Daily use
 
@@ -37,15 +37,90 @@ ansible-playbook playbooks/dotfiles.yml
 ansible-playbook playbooks/site.yml -K
 ```
 
+## Environment profiles
+
+Each host has a `profile` variable that controls which desktop environment (if any) is installed. Set it in `inventory/host_vars/<hostname>.yml`:
+
+| Profile | Description |
+|---|---|
+| `headless` | No GUI — SSH + X11 forwarding only |
+| `desktop-gnome` | GNOME Shell + GDM |
+| `desktop-xfce` | XFCE 4 + LightDM |
+| `desktop-i3wm` | i3wm + LightDM + polybar/rofi/dunst/picom |
+
+SSH and X11 forwarding (`X11Forwarding yes`, `AllowAgentForwarding yes`) are **always configured** on every host regardless of profile.
+
+### Optional features
+
+Override per host in `inventory/host_vars/<hostname>.yml`:
+
+| Variable | Default | Effect |
+|---|---|---|
+| `features.xrdp` | `false` | Install xrdp (Windows Remote Desktop access, port 3389) |
+| `features.fpga` | `false` | Install FPGA toolchain |
+
+### Example host\_vars
+
+```yaml
+# inventory/host_vars/my_laptop.yml
+profile: desktop-xfce
+features:
+  fpga: false
+  xrdp: false
+```
+
+```yaml
+# inventory/host_vars/dev_server.yml
+profile: headless
+features:
+  fpga: false
+  xrdp: true
+```
+
+## Remote deployment
+
+### From an admin PC (Ansible installed)
+
+Add your target hosts to `inventory/hosts.yml` and run:
+
+```bash
+ansible-playbook playbooks/site.yml -K -l my_laptop
+```
+
+### From a controller container (no Ansible on admin PC)
+
+Build and run the containerised Ansible controller — works with Podman or Docker:
+
+```bash
+# Run site.yml against all hosts
+./deploy/deploy.sh
+
+# Limit to a single host
+./deploy/deploy.sh -l my_laptop
+
+# Limit to servers, prompt for become password
+./deploy/deploy.sh -l servers -K
+```
+
+The container mounts `~/.ssh` read-only so your SSH keys are available without embedding them in the image.
+
 ## Structure
 
 ```
 bootstrap.sh              # entry point — installs Ansible, runs site.yml
+deploy/
+  Containerfile           # Ansible controller image (Podman/Docker)
+  deploy.sh               # wrapper: build image + run ansible-playbook
 inventory/
-  hosts.yml               # localhost (local connection)
-  group_vars/all.yml      # packages, brew formulae, git config, feature flags
+  hosts.yml               # workstations + servers groups
+  group_vars/
+    all.yml               # shared packages, brew formulae, git config
+    workstations.yml      # workstation defaults (profile, features)
+    servers.yml           # server defaults (headless, xrdp)
+  host_vars/
+    localhost.yml         # local machine overrides
 playbooks/
-  site.yml                # full provisioning
+  site.yml                # full provisioning (profile-aware)
   dotfiles.yml            # chezmoi apply only
 roles/
   packages/               # apt / dnf system packages
@@ -53,8 +128,14 @@ roles/
   git/                    # global gitconfig
   shell/                  # oh-my-zsh + os.sh template
   chezmoi/                # install chezmoi, configure source, apply
-  fonts/                  # Nerd Fonts (features.gui)
+  fonts/                  # Nerd Fonts
   fpga/                   # FPGA tools (features.fpga)
+  ssh/                    # openssh-server + X11 forwarding (always on)
+  desktop/                # Xorg base (when profile contains 'desktop')
+  gnome/                  # GNOME Shell + GDM (desktop-gnome)
+  xfce/                   # XFCE 4 + LightDM (desktop-xfce)
+  i3wm/                   # i3wm stack + LightDM (desktop-i3wm)
+  xrdp/                   # xrdp RDP server (features.xrdp)
 dotfiles/                 # chezmoi source — flat, no conditionals
 tests/
   container/
@@ -67,12 +148,13 @@ tests/
 
 ## Configuration
 
-All tunables live in `inventory/group_vars/all.yml`:
+Shared tunables live in `inventory/group_vars/all.yml`:
 
 - `packages` — system packages per package manager
 - `brew_formulae` — Homebrew formulae list
 - `git_name` / `git_email` — global git identity
-- `features.gui` — enables Nerd Fonts install
+- `profile` — default environment profile (overridden per group/host)
+- `features.xrdp` — enables xrdp install
 - `features.fpga` — enables FPGA toolchain
 
 ## Testing
@@ -170,4 +252,4 @@ Then `wsl --shutdown` and restart.
 
 `bento/*` boxes are used because they ship pre-built for VirtualBox, VMware, and libvirt. Each VM installs Ansible inside the guest via a shell provisioner and runs the full `playbooks/site.yml`, so the setup works identically across all three providers.
 
-`features.gui` and `features.fpga` are forced to `false` in VMs to skip font downloads and FPGA toolchain installs. Override via `--extra-vars` if needed.
+`features.xrdp` and `features.fpga` are forced to `false` in VMs to skip RDP and FPGA toolchain installs. Override via `--extra-vars` if needed.

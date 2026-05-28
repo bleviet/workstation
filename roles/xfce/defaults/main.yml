@@ -1,0 +1,17 @@
+---
+xfce_packages_apt:
+  - xfce4
+  - xfce4-goodies
+  - xfce4-terminal
+  - thunar
+  - lightdm
+  - lightdm-gtk-greeter
+
+xfce_packages_dnf:
+  - xfce4-session
+  - xfwm4
+  - xfce4-panel
+  - Thunar
+  - xfce4-terminal
+  - lightdm
+  - lightdm-gtk

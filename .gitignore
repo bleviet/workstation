@@ -5,6 +5,9 @@
 # Vagrant
 tests/vagrant/.vagrant/
 
+# Deploy controller
+deploy/.env
+
 # Python
 __pycache__/
 *.pyc

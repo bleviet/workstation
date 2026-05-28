@@ -1,0 +1,40 @@
+---
+- name: Install openssh-server and xauth (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - openssh-server
+      - xauth
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install openssh-server and xauth (RedHat/AlmaLinux)
+  ansible.builtin.dnf:
+    name:
+      - openssh-server
+      - xorg-x11-xauth
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Deploy sshd hardening + X11 forwarding config
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/99-workstation.conf
+    content: |
+      X11Forwarding yes
+      X11DisplayOffset 10
+      X11UseLocalhost yes
+      AllowAgentForwarding yes
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+  notify: Restart sshd
+
+- name: Enable and start sshd
+  ansible.builtin.service:
+    name: "{{ ssh_service_name }}"
+    state: started
+    enabled: true
+  become: true

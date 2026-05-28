@@ -1,0 +1,25 @@
+---
+- name: Install GNOME desktop environment (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: "{{ gnome_packages_apt }}"
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install GNOME desktop environment (RedHat/AlmaLinux)
+  ansible.builtin.dnf:
+    name: "{{ gnome_packages_dnf }}"
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Set GDM as default display manager
+  ansible.builtin.set_fact:
+    desktop_display_manager: gdm3
+  when: ansible_os_family == "Debian"
+
+- name: Set GDM as default display manager (RedHat)
+  ansible.builtin.set_fact:
+    desktop_display_manager: gdm
+  when: ansible_os_family == "RedHat"

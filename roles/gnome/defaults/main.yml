@@ -1,0 +1,16 @@
+---
+gnome_packages_apt:
+  - gnome-shell
+  - gnome-session
+  - gnome-tweaks
+  - gnome-terminal
+  - nautilus
+  - gdm3
+
+gnome_packages_dnf:
+  - gnome-shell
+  - gnome-session
+  - gnome-tweaks
+  - gnome-terminal
+  - nautilus
+  - gdm

@@ -1,0 +1,24 @@
+# Ansible controller image — use to run playbooks from a clean environment
+# without installing Ansible on the admin PC.
+#
+# Build:  podman build -t workstation-controller -f deploy/Containerfile .
+# Run:    ./deploy/deploy.sh [host] [profile]
+
+FROM debian:13
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        ansible-core \
+        openssh-client \
+        python3-pip \
+        git \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /repo
+
+# Install Ansible collections at build time
+COPY requirements.yml /tmp/requirements.yml
+RUN ansible-galaxy collection install -r /tmp/requirements.yml
+
+ENTRYPOINT ["ansible-playbook"]

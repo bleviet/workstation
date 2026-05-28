@@ -1,0 +1,19 @@
+---
+- name: Install XFCE desktop environment (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: "{{ xfce_packages_apt }}"
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install XFCE desktop environment (RedHat/AlmaLinux)
+  ansible.builtin.dnf:
+    name: "{{ xfce_packages_dnf }}"
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Set LightDM as display manager
+  ansible.builtin.set_fact:
+    desktop_display_manager: lightdm

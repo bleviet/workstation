@@ -1,0 +1,9 @@
+---
+# Defaults for all workstations (desktops / laptops).
+# Override in host_vars/<hostname>.yml for per-machine settings.
+
+profile: desktop-xfce
+
+features:
+  fpga: false
+  xrdp: false

@@ -47,9 +47,15 @@ git_email: "vietbach.le@bahonavi.de"
 git_editor: nvim
 git_default_branch: main
 
+# ── Environment profile ───────────────────────────────────────────────────────
+# Controls which desktop environment roles are applied.
+# Values: headless | desktop-gnome | desktop-xfce | desktop-i3wm
+# Override per host in host_vars/<hostname>.yml
+profile: headless
+
 # ── Feature flags ─────────────────────────────────────────────────────────────
 # Override per host in host_vars/ if needed.
 
 features:
-  gui: true
   fpga: false
+  xrdp: false

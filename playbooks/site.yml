@@ -1,6 +1,13 @@
 ---
 # Full workstation provisioning. Run order matters:
 #   packages → homebrew → git → shell → chezmoi → fonts → fpga
+#   ssh is always applied (X11 forwarding, sshd config)
+#   desktop roles are applied based on the host's `profile` variable:
+#     headless      — SSH only, no GUI
+#     desktop-gnome — GNOME + GDM
+#     desktop-xfce  — XFCE + LightDM
+#     desktop-i3wm  — i3wm + LightDM
+#   xrdp is opt-in via features.xrdp: true
 #
 # Usage:
 #   ansible-playbook playbooks/site.yml -K
@@ -15,3 +22,14 @@
     - chezmoi
     - fonts
     - fpga
+    - ssh
+    - role: desktop
+      when: "'desktop' in profile"
+    - role: gnome
+      when: "profile == 'desktop-gnome'"
+    - role: xfce
+      when: "profile == 'desktop-xfce'"
+    - role: i3wm
+      when: "profile == 'desktop-i3wm'"
+    - role: xrdp
+      when: "features.xrdp | default(false)"
