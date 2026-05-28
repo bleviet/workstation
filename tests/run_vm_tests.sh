@@ -18,7 +18,7 @@ VAGRANT_DIR="$(cd "$(dirname "$0")/vagrant" && pwd)"
 PROVIDER="${VAGRANT_PROVIDER:-virtualbox}"
 
 HEADLESS_MACHINES=(debian ubuntu almalinux)
-DESKTOP_MACHINES=(debian-i3wm ubuntu-i3wm)
+DESKTOP_MACHINES=(debian-i3wm ubuntu-i3wm almalinux-i3wm)
 
 if [ $# -gt 0 ]; then
   case "$1" in
