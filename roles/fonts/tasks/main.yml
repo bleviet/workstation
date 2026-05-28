@@ -1,0 +1,20 @@
+---
+- name: Skip on headless systems
+  ansible.builtin.meta: end_host
+  when: not (features.gui | default(false) | bool)
+
+- name: Check if Nerd Fonts are installed
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.local/share/fonts/NerdFonts"
+  register: nerd_fonts_stat
+
+- name: Install FiraCode Nerd Font
+  ansible.builtin.shell:
+    cmd: |
+      tmpdir=$(mktemp -d)
+      git clone --depth 1 https://github.com/ryanoasis/nerd-fonts.git "$tmpdir"
+      "$tmpdir/install.sh" FiraCode
+      rm -rf "$tmpdir"
+    executable: /bin/bash
+  when: not nerd_fonts_stat.stat.exists
+  changed_when: true

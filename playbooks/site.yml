@@ -1,0 +1,17 @@
+---
+# Full workstation provisioning. Run order matters:
+#   packages → homebrew → git → shell → chezmoi → fonts → fpga
+#
+# Usage:
+#   ansible-playbook playbooks/site.yml -K
+- name: Provision workstation
+  hosts: all
+  gather_facts: true
+  roles:
+    - packages
+    - homebrew
+    - git
+    - shell
+    - chezmoi
+    - fonts
+    - fpga

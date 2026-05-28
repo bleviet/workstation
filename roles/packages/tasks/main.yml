@@ -1,0 +1,22 @@
+---
+- name: Enable EPEL repository (RedHat family)
+  ansible.builtin.dnf:
+    name: epel-release
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Install system packages (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: "{{ packages.common + packages.apt }}"
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install system packages (RedHat/AlmaLinux)
+  ansible.builtin.dnf:
+    name: "{{ packages.common + packages.dnf }}"
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"

@@ -1,0 +1,40 @@
+---
+- name: Detect Homebrew prefix
+  ansible.builtin.set_fact:
+    brew_prefix: >-
+      {{ '/home/linuxbrew/.linuxbrew' if ansible_system == 'Linux' else
+         '/opt/homebrew' if ansible_architecture == 'aarch64' else
+         '/usr/local' }}
+
+- name: Install Homebrew build dependencies (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name: build-essential
+    state: present
+    update_cache: true
+  become: true
+  when: ansible_os_family == "Debian"
+
+- name: Install Homebrew build dependencies (RedHat)
+  ansible.builtin.dnf:
+    name: "@Development Tools"
+    state: present
+  become: true
+  when: ansible_os_family == "RedHat"
+
+- name: Check if Homebrew is installed
+  ansible.builtin.stat:
+    path: "{{ brew_prefix }}/bin/brew"
+  register: brew_stat
+
+- name: Install Homebrew
+  ansible.builtin.shell:
+    cmd: NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    executable: /bin/bash
+  when: not brew_stat.stat.exists
+  changed_when: true
+
+- name: Install Homebrew formulae
+  community.general.homebrew:
+    name: "{{ brew_formulae }}"
+    state: present
+    path: "{{ brew_prefix }}/bin"

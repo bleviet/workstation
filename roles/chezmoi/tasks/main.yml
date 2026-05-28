@@ -1,0 +1,39 @@
+---
+# Detect brew prefix independently so this role works when run standalone
+# (e.g. ansible-playbook playbooks/dotfiles.yml) without the homebrew role.
+- name: Detect Homebrew prefix
+  ansible.builtin.set_fact:
+    brew_prefix: >-
+      {{ '/home/linuxbrew/.linuxbrew' if ansible_system == 'Linux' else
+         '/opt/homebrew' if ansible_architecture == 'aarch64' else
+         '/usr/local' }}
+  when: brew_prefix == ""
+
+- name: Resolve workstation root from playbook location
+  ansible.builtin.set_fact:
+    workstation_root: "{{ playbook_dir | dirname }}"
+
+- name: Install chezmoi via Homebrew
+  community.general.homebrew:
+    name: chezmoi
+    state: present
+    path: "{{ brew_prefix }}/bin"
+
+- name: Ensure chezmoi config directory exists
+  ansible.builtin.file:
+    path: "{{ ansible_env.HOME }}/.config/chezmoi"
+    state: directory
+    mode: "0700"
+
+- name: Configure chezmoi source directory
+  ansible.builtin.template:
+    src: chezmoi.toml.j2
+    dest: "{{ ansible_env.HOME }}/.config/chezmoi/chezmoi.toml"
+    mode: "0600"
+
+- name: Apply dotfiles with chezmoi
+  ansible.builtin.command:
+    cmd: "{{ brew_prefix }}/bin/chezmoi apply --no-tty"
+  environment:
+    HOME: "{{ ansible_env.HOME }}"
+  changed_when: true

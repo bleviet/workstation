@@ -1,0 +1,20 @@
+---
+- name: Configure git user identity
+  community.general.git_config:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    scope: global
+  loop:
+    - { key: user.name,  value: "{{ git_name }}" }
+    - { key: user.email, value: "{{ git_email }}" }
+
+- name: Configure git core settings
+  community.general.git_config:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    scope: global
+  loop:
+    - { key: core.editor,          value: "{{ git_editor }}" }
+    - { key: core.autocrlf,        value: "input" }
+    - { key: init.defaultBranch,   value: "{{ git_default_branch }}" }
+    - { key: "url.https://github.com/.insteadOf", value: "gh:" }

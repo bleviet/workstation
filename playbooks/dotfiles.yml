@@ -1,0 +1,10 @@
+---
+# Apply dotfiles only — fast re-apply after editing files in dotfiles/.
+#
+# Usage:
+#   ansible-playbook playbooks/dotfiles.yml
+- name: Apply dotfiles
+  hosts: all
+  gather_facts: true
+  roles:
+    - chezmoi
