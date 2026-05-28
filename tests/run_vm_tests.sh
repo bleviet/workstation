@@ -12,7 +12,7 @@
 
 set -euo pipefail
 
-VAGRANT_DIR="$(cd "$(dirname "$0")/../vagrant" && pwd)"
+VAGRANT_DIR="$(cd "$(dirname "$0")/vagrant" && pwd)"
 PROVIDER="${VAGRANT_PROVIDER:-virtualbox}"
 
 if [ $# -gt 0 ]; then

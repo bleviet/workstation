@@ -57,11 +57,12 @@ roles/
   fpga/                   # FPGA tools (features.fpga)
 dotfiles/                 # chezmoi source — flat, no conditionals
 tests/
-  Dockerfile.{debian,ubuntu,almalinux}
+  container/
+    Dockerfile.{debian,ubuntu,almalinux}
+  vagrant/
+    Vagrantfile             # multi-machine (debian/ubuntu/almalinux), multi-provider
   run_container_tests.sh  # parallel syntax-check via Podman
   run_vm_tests.sh         # full provisioning via Vagrant VMs
-vagrant/
-  Vagrantfile             # multi-machine (debian/ubuntu/almalinux), multi-provider
 ```
 
 ## Configuration
@@ -108,10 +109,10 @@ VAGRANT_PROVIDER=libvirt ./tests/run_vm_tests.sh
 ./tests/run_vm_tests.sh ubuntu
 ```
 
-Or drive Vagrant directly from the `vagrant/` directory:
+Or drive Vagrant directly from the `tests/vagrant/` directory:
 
 ```bash
-cd vagrant
+cd tests/vagrant
 vagrant up debian --provider=virtualbox
 vagrant up ubuntu --provider=vmware_desktop
 vagrant up almalinux --provider=libvirt
@@ -124,7 +125,7 @@ Vagrant on Windows cannot reach the repo when it lives on the WSL filesystem. Cl
 
 ```powershell
 git clone <repo> C:\workspace\workstation
-cd C:\workspace\workstation\vagrant
+cd C:\workspace\workstation\tests\vagrant
 ```
 
 Then bring up a VM with whichever provider is installed:

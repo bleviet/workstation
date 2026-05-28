@@ -50,8 +50,8 @@ Vagrant.configure("2") do |config|
       m.vm.box      = box
       m.vm.hostname = "workstation-test-#{name}"
 
-      # Map repo root (parent of vagrant/) into the VM at the expected path.
-      m.vm.synced_folder "..", "/home/vagrant/workspace/workstation"
+      # Map repo root (two levels up from tests/vagrant/) into the VM at the expected path.
+      m.vm.synced_folder "../..", "/home/vagrant/workspace/workstation"
 
       m.vm.provider "virtualbox" do |vb|
         vb.name   = "workstation-test-#{name}"

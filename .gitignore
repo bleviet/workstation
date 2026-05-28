@@ -3,7 +3,7 @@
 .vault_pass
 
 # Vagrant
-vagrant/.vagrant/
+tests/vagrant/.vagrant/
 
 # Python
 __pycache__/
