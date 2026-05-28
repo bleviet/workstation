@@ -37,6 +37,7 @@
       - "{{ brew_prefix }}/bin/chezmoi"
       - apply
       - --no-tty
+      - --force
       - --source
       - "{{ workstation_root }}/dotfiles"
   environment:
