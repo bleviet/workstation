@@ -20,7 +20,7 @@
 
 MACHINES = {
   "debian"    => "bento/debian-13",
-  "ubuntu"    => "bento/ubuntu-26.04",
+  "ubuntu"    => "bento/ubuntu-24.04",
   "almalinux" => "bento/almalinux-10",
 }.freeze
 
