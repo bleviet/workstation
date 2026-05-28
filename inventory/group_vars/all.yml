@@ -13,6 +13,7 @@ packages:
     - stow
     - unzip
     - wget
+    - zsh
   apt:
     - p7zip-full
     - xclip
