@@ -27,9 +27,10 @@ MACHINES = {
   "almalinux" => { box: "bento/almalinux-10", profile: "headless",     memory: 2048, cpus: 2, gui: false },
 
   # ── Desktop profile — i3wm ────────────────────────────────────────────────
-  # Set gui: true to open the VM window and visually verify the DE starts.
-  "debian-i3wm" => { box: "bento/debian-13",    profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: false },
-  "ubuntu-i3wm" => { box: "bento/ubuntu-24.04", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: false },
+  # gui: true opens the VM display window so you can visually verify the DE.
+  # Set to false to provision headlessly (faster, no window).
+  "debian-i3wm" => { box: "bento/debian-13",    profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true },
+  "ubuntu-i3wm" => { box: "bento/ubuntu-24.04", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true },
 }.freeze
 
 # Install Ansible via the system package manager.
