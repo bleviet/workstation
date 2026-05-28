@@ -25,7 +25,7 @@ cd ~/workspace/workstation
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` installs Ansible, pulls the `community.general` collection, and runs `playbooks/site.yml`.
+`bootstrap.sh` installs Ansible (`ansible-core` on AlmaLinux 10 via AppStream; `ansible` on Debian/Ubuntu via apt), pulls the `community.general` collection, and runs `playbooks/site.yml`.
 
 ## Daily use
 
@@ -167,6 +167,6 @@ nestedVirtualization=true
 ```
 Then `wsl --shutdown` and restart.
 
-`bento/*` boxes are used because they ship pre-built for VirtualBox, VMware, and libvirt. Each VM runs the full `playbooks/site.yml` via `ansible_local` (Ansible executes inside the guest), so the setup works identically across all three providers.
+`bento/*` boxes are used because they ship pre-built for VirtualBox, VMware, and libvirt. Each VM installs Ansible inside the guest via a shell provisioner and runs the full `playbooks/site.yml`, so the setup works identically across all three providers.
 
 `features.gui` and `features.fpga` are forced to `false` in VMs to skip font downloads and FPGA toolchain installs. Override via `--extra-vars` if needed.
