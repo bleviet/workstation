@@ -31,8 +31,7 @@ case "$OS_ID" in
     run_as_root apt-get install -y ansible
     ;;
   almalinux|rocky|centos|rhel)
-    run_as_root dnf install -y epel-release
-    run_as_root dnf install -y ansible
+    run_as_root dnf install -y ansible-core
     ;;
   macos)
     if ! command -v brew >/dev/null 2>&1; then

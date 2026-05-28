@@ -35,8 +35,7 @@ INSTALL_ANSIBLE = <<~SHELL
       apt-get install -y ansible
       ;;
     almalinux|rocky|rhel|centos)
-      dnf install -y epel-release
-      dnf install -y ansible
+      dnf install -y ansible-core
       ;;
     *)
       echo "Unsupported OS: $ID" >&2

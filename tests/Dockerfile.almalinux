@@ -1,7 +1,6 @@
 FROM almalinux:10
 
-RUN dnf install -y epel-release && \
-    dnf install -y --allowerasing ansible curl git sudo && \
+RUN dnf install -y ansible-core curl git sudo && \
     dnf clean all
 
 RUN useradd -m -s /bin/bash user && \
