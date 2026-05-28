@@ -16,11 +16,5 @@ COPY --chown=user:user . .
 
 RUN ansible-galaxy collection install -r requirements.yml
 
-RUN ansible-playbook playbooks/site.yml \
-    --connection=local \
-    --syntax-check
-
-RUN ansible-playbook playbooks/site.yml \
-    --connection=local \
-    --check \
-    -e '{"features": {"gui": false, "fpga": false}}'
+RUN ansible-playbook playbooks/site.yml --syntax-check && \
+    ansible-playbook playbooks/dotfiles.yml --syntax-check

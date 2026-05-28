@@ -1,5 +1,5 @@
 #!/bin/bash
-# tests/run_tests.sh — build and run all OS test containers in parallel.
+# tests/run_tests.sh — build and syntax-check all OS containers in parallel via Podman.
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ NAMES=()
 build_and_test() {
   local name="$1" dockerfile="$2"
   echo "[${name}] Building..."
-  if docker build \
+  if podman build \
       --file "$dockerfile" \
       --tag "workstation-test-${name}" \
       "$ROOT_DIR" \
