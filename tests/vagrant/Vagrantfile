@@ -12,16 +12,24 @@
 #
 # Usage:
 #   vagrant up debian --provider=virtualbox
-#   vagrant up debian --provider=vmware_desktop
-#   vagrant up debian --provider=libvirt
+#   vagrant up debian-i3wm --provider=vmware_desktop   # desktop profile
 #   VAGRANT_DEFAULT_PROVIDER=libvirt vagrant up ubuntu
 #
 # All machines are autostart: false — you must name the machine explicitly.
 
+# Each entry: { box:, profile:, memory:, cpus:, gui: }
+# gui: true opens the VM display window (VirtualBox/VMware) — useful for
+#      verifying a desktop environment actually came up.
 MACHINES = {
-  "debian"    => "bento/debian-13",
-  "ubuntu"    => "bento/ubuntu-24.04",
-  "almalinux" => "bento/almalinux-10",
+  # ── Headless / CI machines ────────────────────────────────────────────────
+  "debian"    => { box: "bento/debian-13",    profile: "headless",     memory: 2048, cpus: 2, gui: false },
+  "ubuntu"    => { box: "bento/ubuntu-24.04", profile: "headless",     memory: 2048, cpus: 2, gui: false },
+  "almalinux" => { box: "bento/almalinux-10", profile: "headless",     memory: 2048, cpus: 2, gui: false },
+
+  # ── Desktop profile — i3wm ────────────────────────────────────────────────
+  # Set gui: true to open the VM window and visually verify the DE starts.
+  "debian-i3wm" => { box: "bento/debian-13",    profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: false },
+  "ubuntu-i3wm" => { box: "bento/ubuntu-24.04", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: false },
 }.freeze
 
 # Install Ansible via the system package manager.
@@ -45,9 +53,9 @@ INSTALL_ANSIBLE = <<~SHELL
 SHELL
 
 Vagrant.configure("2") do |config|
-  MACHINES.each do |name, box|
+  MACHINES.each do |name, cfg|
     config.vm.define name, autostart: false do |m|
-      m.vm.box      = box
+      m.vm.box      = cfg[:box]
       m.vm.hostname = "workstation-test-#{name}"
 
       # Map repo root (two levels up from tests/vagrant/) into the VM at the expected path.
@@ -55,22 +63,22 @@ Vagrant.configure("2") do |config|
 
       m.vm.provider "virtualbox" do |vb|
         vb.name   = "workstation-test-#{name}"
-        vb.memory = 2048
-        vb.cpus   = 2
-        vb.gui    = false
+        vb.memory = cfg[:memory]
+        vb.cpus   = cfg[:cpus]
+        vb.gui    = cfg[:gui]
       end
 
       m.vm.provider "vmware_desktop" do |vmw|
         vmw.vmx["displayName"] = "workstation-test-#{name}"
-        vmw.vmx["memsize"]     = "2048"
-        vmw.vmx["numvcpus"]    = "2"
-        vmw.gui                = false
+        vmw.vmx["memsize"]     = cfg[:memory].to_s
+        vmw.vmx["numvcpus"]    = cfg[:cpus].to_s
+        vmw.gui                = cfg[:gui]
       end
 
       m.vm.provider "libvirt" do |lv|
         lv.title  = "workstation-test-#{name}"
-        lv.memory = 2048
-        lv.cpus   = 2
+        lv.memory = cfg[:memory]
+        lv.cpus   = cfg[:cpus]
       end
 
       # Step 1: install Ansible inside the VM via system package manager.
@@ -86,7 +94,8 @@ Vagrant.configure("2") do |config|
       # Uses explicit env vars so paths are never relative to an ambiguous CWD.
       # ANSIBLE_CONFIG is set explicitly because VMware synced folders are
       # world-writable and Ansible refuses to auto-load cfg from such dirs.
-      # No --become: individual tasks that need root carry become: true already.
+      # profile and features are injected via extra-vars so the VM inventory
+      # does not need host_vars entries for non-localhost hostnames.
       m.vm.provision "shell", privileged: false, inline: <<~SHELL
         set -e
         REPO=/home/vagrant/workspace/workstation
@@ -94,7 +103,7 @@ Vagrant.configure("2") do |config|
         export ANSIBLE_ROLES_PATH="$REPO/roles"
         ansible-playbook \
           --inventory "$REPO/inventory/hosts.yml" \
-          --extra-vars '{"features": {"gui": false, "fpga": false}}' \
+          --extra-vars '{"profile": "#{cfg[:profile]}", "features": {"fpga": false, "xrdp": false}}' \
           "$REPO/playbooks/site.yml"
       SHELL
     end

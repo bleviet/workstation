@@ -178,24 +178,37 @@ Three providers are supported:
 | `libvirt` | WSL2 / native Linux | KVM + vagrant-libvirt (see below) |
 
 ```bash
-# VirtualBox (default)
+# VirtualBox (default) — headless machines only
 ./tests/run_vm_tests.sh
 
+# Desktop i3wm machines
+./tests/run_vm_tests.sh --desktop
+
+# All machines (headless + desktop)
+./tests/run_vm_tests.sh --all
+
 # VMware
-VAGRANT_PROVIDER=vmware_desktop ./tests/run_vm_tests.sh
+VAGRANT_PROVIDER=vmware_desktop ./tests/run_vm_tests.sh --desktop
 
 # KVM/libvirt (WSL2 or native Linux)
 VAGRANT_PROVIDER=libvirt ./tests/run_vm_tests.sh
 
-# Single machine
-./tests/run_vm_tests.sh ubuntu
+# Specific machine(s) by name
+./tests/run_vm_tests.sh debian-i3wm
 ```
 
 Or drive Vagrant directly from the `tests/vagrant/` directory:
 
 ```bash
 cd tests/vagrant
+
+# Headless
 vagrant up debian --provider=virtualbox
+
+# Desktop i3wm
+vagrant up debian-i3wm --provider=vmware_desktop
+vagrant up ubuntu-i3wm --provider=virtualbox
+
 vagrant up ubuntu --provider=vmware_desktop
 vagrant up almalinux --provider=libvirt
 vagrant destroy debian -f
