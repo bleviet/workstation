@@ -33,7 +33,12 @@
 
 - name: Apply dotfiles with chezmoi
   ansible.builtin.command:
-    cmd: "{{ brew_prefix }}/bin/chezmoi apply --no-tty"
+    argv:
+      - "{{ brew_prefix }}/bin/chezmoi"
+      - apply
+      - --no-tty
+      - --source
+      - "{{ workstation_root }}/dotfiles"
   environment:
     HOME: "{{ ansible_env.HOME }}"
   changed_when: true
