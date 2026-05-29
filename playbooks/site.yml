@@ -31,11 +31,14 @@
       when: "profile == 'desktop-xfce'"
     - role: i3wm
       when: "profile == 'desktop-i3wm' and not (ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10)"
+    # Sway is the intended WM for RHEL 10+ (Wayland-native, i3-compatible), but its
+    # packages (sway, waybar, wofi, mako, foot) are not yet in EPEL 10. Additionally,
+    # xrdp requires an X11 backend and is incompatible with Sway regardless.
+    # XFCE covers both cases: it runs over XWayland and works over RDP.
+    # Revisit when EPEL 10 ships sway and related packages.
     - role: sway
-      when: "profile == 'desktop-i3wm' and ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10 and not (features.xrdp | default(false))"
-    # xrdp requires an X11 backend; Sway (Wayland) is incompatible with it.
-    # Fall back to XFCE, which runs over XWayland and works flawlessly over RDP.
+      when: false
     - role: xfce
-      when: "profile == 'desktop-i3wm' and ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10 and (features.xrdp | default(false))"
+      when: "profile == 'desktop-i3wm' and ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10"
     - role: xrdp
       when: "features.xrdp | default(false)"
