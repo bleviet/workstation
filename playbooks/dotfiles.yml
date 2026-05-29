@@ -24,5 +24,4 @@
     - name: Gather facts
       ansible.builtin.gather_facts:
   roles:
-    - dev-tools
     - chezmoi

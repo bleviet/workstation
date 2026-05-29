@@ -1,13 +1,18 @@
 ---
 # Full workstation provisioning. Run order matters:
-#   packages → dev-tools → shell → chezmoi → fonts → fpga
-#   ssh is always applied (X11 forwarding, sshd config)
-#   desktop roles are applied based on the host's `profile` variable:
-#     headless      — SSH only, no GUI
-#     desktop-gnome — GNOME + GDM
-#     desktop-xfce  — XFCE + LightDM
-#     desktop-i3wm  — i3wm + LightDM
-#   xrdp is opt-in via features.xrdp: true
+#
+# Base roles (always applied):
+#   packages → dev-tools → shell → chezmoi → fonts → ssh
+#
+# Optional features (skipped unless the matching flag is set):
+#   fpga   — features.fpga: true
+#   xrdp   — features.xrdp: true
+#
+# Desktop roles (applied based on the host's `profile` variable):
+#   headless      — SSH only, no GUI
+#   desktop-gnome — GNOME + GDM
+#   desktop-xfce  — XFCE + LightDM
+#   desktop-i3wm  — i3wm + LightDM
 #
 # Usage:
 #   ansible-playbook playbooks/site.yml -K
@@ -32,13 +37,16 @@
     - name: Gather facts
       ansible.builtin.gather_facts:
   roles:
+    # ── Base ───────────────────────────────────────────────────────────────
     - packages
     - dev-tools
     - shell
     - chezmoi
     - fonts
-    - fpga
     - ssh
+    # ── Optional features ─────────────────────────────────────────────────
+    - role: fpga
+      when: "features.fpga | default(false)"
     - role: desktop
       when: "'desktop' in profile"
     - role: gnome
