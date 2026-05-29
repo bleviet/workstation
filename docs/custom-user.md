@@ -5,6 +5,35 @@ Vagrant VM, your own user on `localhost`). Set `dev_user` in
 `inventory/host_vars/<hostname>.yml` to create and provision a separate named
 account instead.
 
+## Automated setup (recommended)
+
+`scripts/add-dev-host.sh` does all three manual steps — writes the `host_vars`
+file, registers the host in `inventory/hosts.yml`, and (with `--run`) provisions
+it:
+
+```bash
+# Scaffold a remote XFCE box for user 'bach' with RDP, then provision:
+scripts/add-dev-host.sh -H devbox -i 192.168.1.40 -u admin \
+    -d bach -p desktop-xfce --xrdp --run
+```
+
+| Flag | Meaning |
+|---|---|
+| `-H, --host` | Inventory hostname (required) |
+| `-d, --dev-user` | Developer account to create (required) |
+| `-i, --ip` | `ansible_host` IP/DNS; omit for a local entry |
+| `-u, --ssh-user` | SSH login Ansible connects as (required with `--ip`) |
+| `-p, --profile` | `headless` \| `desktop-gnome` \| `desktop-xfce` \| `desktop-i3wm` (default: `desktop-xfce`) |
+| `--xrdp` / `--fpga` | Enable the matching feature flag |
+| `--run` | Run the playbook after scaffolding |
+| `-f, --force` | Overwrite an existing `host_vars` file |
+
+Omit `--run` to scaffold only and review the generated files before
+provisioning. Run `scripts/add-dev-host.sh --help` for the full reference.
+
+The rest of this document explains what the script generates and does, in case
+you prefer to wire it up by hand.
+
 ## What happens when dev_user is set
 
 The `user` role runs first and:
