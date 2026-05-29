@@ -1,20 +1,19 @@
 ---
-- name: Skip if FPGA tools not enabled
-  ansible.builtin.meta: end_host
-  when: not (features.fpga | default(false) | bool)
+- name: Install FPGA tools
+  when: features.fpga | default(false) | bool
+  block:
+    - name: Install GHDL (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: ghdl
+        state: present
+        update_cache: true
+      become: true
+      when: ansible_os_family == "Debian"
 
-- name: Install GHDL (Debian/Ubuntu)
-  ansible.builtin.apt:
-    name: ghdl
-    state: present
-    update_cache: true
-  become: true
-  when: ansible_os_family == "Debian"
-
-# Quartus Prime Lite requires manual installation (license agreement).
-# Installer: https://www.intel.com/content/www/us/en/software-kit/825278
-- name: Print Quartus manual installation note
-  ansible.builtin.debug:
-    msg: >
-      Quartus Prime Lite must be installed manually.
-      Download the Linux installer from Intel and run it as a regular user.
+    # Quartus Prime Lite requires manual installation (license agreement).
+    # Installer: https://www.intel.com/content/www/us/en/software-kit/825278
+    - name: Print Quartus manual installation note
+      ansible.builtin.debug:
+        msg: >
+          Quartus Prime Lite must be installed manually.
+          Download the Linux installer from Intel and run it as a regular user.
