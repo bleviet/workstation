@@ -1,5 +1,5 @@
 ---
-dev_tools_bin_dir: "{{ ansible_env.HOME }}/.local/bin"
+dev_tools_bin_dir: "{{ ansible_facts['env']['HOME'] }}/.local/bin"
 
 nvm_version: "0.40.1"
 node_version: "lts"

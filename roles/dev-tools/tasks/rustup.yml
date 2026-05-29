@@ -1,7 +1,7 @@
 ---
 - name: Check if rustup is installed
   ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/.cargo/bin/rustup"
+    path: "{{ ansible_facts['env']['HOME'] }}/.cargo/bin/rustup"
   register: rustup_stat
 
 - name: Install rustup

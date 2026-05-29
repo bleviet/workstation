@@ -21,7 +21,7 @@
   ansible.builtin.shell: |
     "{{ dev_tools_bin_dir }}/uv" tool install pyright
   environment:
-    HOME: "{{ ansible_env.HOME }}"
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
     UV_TOOL_BIN_DIR: "{{ dev_tools_bin_dir }}"
   when: not pyright_stat.stat.exists
   changed_when: true

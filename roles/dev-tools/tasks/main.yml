@@ -30,5 +30,5 @@
 
       # Rust / Cargo
       [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-    dest: "{{ ansible_env.HOME }}/.config/shell/dev-tools.sh"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/shell/dev-tools.sh"
     mode: "0644"

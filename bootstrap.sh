@@ -28,10 +28,16 @@ echo "=== Workstation Bootstrap (OS: $OS_ID) ==="
 case "$OS_ID" in
   debian|ubuntu)
     run_as_root apt-get update -y
-    run_as_root apt-get install -y ansible
+    # python3-pip is needed; ansible-core via pip ensures a current version
+    # (the distro apt package is typically 2-3 years behind).
+    run_as_root apt-get install -y python3-pip
+    pip3 install --user --quiet "ansible-core>=2.17"
+    export PATH="$HOME/.local/bin:$PATH"
     ;;
   almalinux|rocky|centos|rhel)
-    run_as_root dnf install -y ansible-core
+    run_as_root dnf install -y python3-pip
+    pip3 install --user --quiet "ansible-core>=2.17"
+    export PATH="$HOME/.local/bin:$PATH"
     ;;
   macos)
     if ! command -v brew >/dev/null 2>&1; then

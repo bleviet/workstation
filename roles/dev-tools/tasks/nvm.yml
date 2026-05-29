@@ -1,7 +1,7 @@
 ---
 - name: Check if nvm is installed
   ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+    path: "{{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh"
   register: nvm_stat
 
 # PROFILE=/dev/null prevents the installer from modifying shell configs.
@@ -14,14 +14,14 @@
 
 - name: Check if any Node.js version is installed
   ansible.builtin.find:
-    paths: "{{ ansible_env.HOME }}/.nvm/versions/node"
+    paths: "{{ ansible_facts['env']['HOME'] }}/.nvm/versions/node"
     file_type: directory
   register: nvm_node_dirs
   failed_when: false
 
 - name: Install Node.js LTS via nvm
   ansible.builtin.shell: |
-    . "{{ ansible_env.HOME }}/.nvm/nvm.sh"
+    . "{{ ansible_facts['env']['HOME'] }}/.nvm/nvm.sh"
     nvm install --lts
     nvm alias default 'lts/*'
   when: nvm_node_dirs.matched == 0

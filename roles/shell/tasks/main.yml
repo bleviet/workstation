@@ -1,19 +1,19 @@
 ---
 - name: Ensure ~/.config/shell directory exists
   ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/.config/shell"
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/shell"
     state: directory
     mode: "0755"
 
 - name: Place OS-specific shell snippet
   ansible.builtin.template:
     src: os.sh.j2
-    dest: "{{ ansible_env.HOME }}/.config/shell/os.sh"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/shell/os.sh"
     mode: "0644"
 
 - name: Check if oh-my-zsh is installed
   ansible.builtin.stat:
-    path: "{{ ansible_env.HOME }}/.oh-my-zsh"
+    path: "{{ ansible_facts['env']['HOME'] }}/.oh-my-zsh"
   register: omz_stat
 
 - name: Install oh-my-zsh

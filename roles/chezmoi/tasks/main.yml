@@ -4,9 +4,22 @@
     workstation_root: "{{ playbook_dir | dirname }}"
   when: chezmoi_init_repo == ""
 
+# Install chezmoi if not already present. This makes the chezmoi role
+# self-contained so that dotfiles.yml works without running dev-tools first.
+- name: Check if chezmoi is installed
+  ansible.builtin.stat:
+    path: "{{ chezmoi_bin }}"
+  register: chezmoi_stat
+
+- name: Install chezmoi via official installer
+  ansible.builtin.shell: |
+    sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$(dirname '{{ chezmoi_bin }}')"
+  when: not chezmoi_stat.stat.exists
+  changed_when: true
+
 - name: Ensure chezmoi config directory exists
   ansible.builtin.file:
-    path: "{{ ansible_env.HOME }}/.config/chezmoi"
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/chezmoi"
     state: directory
     mode: "0700"
 
@@ -17,8 +30,32 @@
 - name: Configure chezmoi source directory (local source)
   ansible.builtin.template:
     src: chezmoi.toml.j2
-    dest: "{{ ansible_env.HOME }}/.config/chezmoi/chezmoi.toml"
+    dest: "{{ ansible_facts['env']['HOME'] }}/.config/chezmoi/chezmoi.toml"
     mode: "0600"
+  when: chezmoi_init_repo == ""
+
+# When running against a remote host, the local dotfiles/ path does not exist
+# on the target. Sync it first so chezmoi can apply from it.
+- name: Sync dotfiles to remote for local-source mode
+  ansible.posix.synchronize:
+    src: "{{ workstation_root }}/dotfiles/"
+    dest: "/tmp/chezmoi-dotfiles-source/"
+    delete: true
+    rsync_opts:
+      - "--no-motd"
+  when:
+    - chezmoi_init_repo == ""
+    - inventory_hostname != "localhost"
+    - ansible_connection | default("ssh") != "local"
+
+- name: Set chezmoi source path
+  ansible.builtin.set_fact:
+    chezmoi_source_path: >-
+      {{
+        '/tmp/chezmoi-dotfiles-source'
+        if (inventory_hostname != 'localhost' and ansible_connection | default('ssh') != 'local')
+        else workstation_root + '/dotfiles'
+      }}
   when: chezmoi_init_repo == ""
 
 - name: Apply dotfiles with chezmoi (local source)
@@ -29,11 +66,20 @@
       - --no-tty
       - --force
       - --source
-      - "{{ workstation_root }}/dotfiles"
+      - "{{ chezmoi_source_path }}"
   environment:
-    HOME: "{{ ansible_env.HOME }}"
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
   changed_when: true
   when: chezmoi_init_repo == ""
+
+- name: Remove synced dotfiles from remote (cleanup)
+  ansible.builtin.file:
+    path: /tmp/chezmoi-dotfiles-source
+    state: absent
+  when:
+    - chezmoi_init_repo == ""
+    - inventory_hostname != "localhost"
+    - ansible_connection | default("ssh") != "local"
 
 # ── External repo mode (chezmoi_init_repo set) ─────────────────────────────
 # Each user points to their own dotfiles repo. chezmoi clones it to
@@ -61,7 +107,7 @@
     - chezmoi_init_repo != ""
     - chezmoi_init_repo is match("(git@|ssh://)")
     - chezmoi_ssh_key_file == ""
-    - ansible_env.SSH_AUTH_SOCK is not defined
+    - ansible_facts['env']['SSH_AUTH_SOCK'] is not defined
 
 # Unattended / CI: inject a passphrase-less deployment key via GIT_SSH_COMMAND.
 # BatchMode=yes makes ssh fail immediately instead of prompting for a passphrase.
@@ -75,7 +121,7 @@
       - --force
       - "{{ chezmoi_init_repo }}"
   environment:
-    HOME: "{{ ansible_env.HOME }}"
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
     GIT_SSH_COMMAND: >-
       ssh -i {{ chezmoi_ssh_key_file }}
       -o StrictHostKeyChecking=accept-new
@@ -95,8 +141,8 @@
       - --force
       - "{{ chezmoi_init_repo }}"
   environment:
-    HOME: "{{ ansible_env.HOME }}"
-    SSH_AUTH_SOCK: "{{ ansible_env.SSH_AUTH_SOCK | default('') }}"
+    HOME: "{{ ansible_facts['env']['HOME'] }}"
+    SSH_AUTH_SOCK: "{{ ansible_facts['env']['SSH_AUTH_SOCK'] | default('') }}"
   changed_when: true
   when:
     - chezmoi_init_repo != ""

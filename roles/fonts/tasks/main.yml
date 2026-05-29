@@ -4,7 +4,7 @@
   block:
     - name: Check if Nerd Fonts are installed
       ansible.builtin.stat:
-        path: "{{ ansible_env.HOME }}/.local/share/fonts/NerdFonts"
+        path: "{{ ansible_facts['env']['HOME'] }}/.local/share/fonts/NerdFonts"
       register: nerd_fonts_stat
       when: features.fonts | default(true) | bool
 
