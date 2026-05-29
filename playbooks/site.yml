@@ -32,6 +32,10 @@
     - role: i3wm
       when: "profile == 'desktop-i3wm' and not (ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10)"
     - role: sway
-      when: "profile == 'desktop-i3wm' and ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10"
+      when: "profile == 'desktop-i3wm' and ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10 and not (features.xrdp | default(false))"
+    # xrdp requires an X11 backend; Sway (Wayland) is incompatible with it.
+    # Fall back to XFCE, which runs over XWayland and works flawlessly over RDP.
+    - role: xfce
+      when: "profile == 'desktop-i3wm' and ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10 and (features.xrdp | default(false))"
     - role: xrdp
       when: "features.xrdp | default(false)"
