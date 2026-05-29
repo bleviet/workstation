@@ -14,14 +14,20 @@
 - name: Install chezmoi via official installer
   ansible.builtin.shell: |
     sh -c "$(curl -fsLS get.chezmoi.io)" -- -b "$(dirname '{{ chezmoi_bin }}')"
+  environment:
+    HOME: "{{ dev_user_home }}"
   when: not chezmoi_stat.stat.exists
   changed_when: true
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"
 
 - name: Ensure chezmoi config directory exists
   ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/.config/chezmoi"
+    path: "{{ dev_user_home }}/.config/chezmoi"
     state: directory
     mode: "0700"
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"
 
 # ── Local mode (chezmoi_init_repo not set) ─────────────────────────────────
 # The dotfiles/ folder inside this workstation repo is the chezmoi source.
@@ -37,7 +43,7 @@
   ansible.builtin.set_fact:
     chezmoi_source_path: >-
       {{
-        ansible_facts['env']['HOME'] + '/.local/share/chezmoi'
+        dev_user_home + '/.local/share/chezmoi'
         if (inventory_hostname != 'localhost' and ansible_connection | default('ssh') != 'local')
         else workstation_root + '/dotfiles'
       }}
@@ -46,9 +52,11 @@
 - name: Configure chezmoi source directory (local source)
   ansible.builtin.template:
     src: chezmoi.toml.j2
-    dest: "{{ ansible_facts['env']['HOME'] }}/.config/chezmoi/chezmoi.toml"
+    dest: "{{ dev_user_home }}/.config/chezmoi/chezmoi.toml"
     mode: "0600"
   when: chezmoi_init_repo == ""
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"
 
 # Copy dotfiles to the standard chezmoi source directory on the remote via
 # SFTP (copy module) so that shell stdout pollution during SSH startup does
@@ -63,6 +71,8 @@
     - chezmoi_init_repo == ""
     - inventory_hostname != "localhost"
     - ansible_connection | default("ssh") != "local"
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"
 
 - name: Apply dotfiles with chezmoi (local source)
   ansible.builtin.command:
@@ -74,9 +84,11 @@
       - --source
       - "{{ chezmoi_source_path }}"
   environment:
-    HOME: "{{ ansible_facts['env']['HOME'] }}"
+    HOME: "{{ dev_user_home }}"
   changed_when: true
   when: chezmoi_init_repo == ""
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"
 
 # ── External repo mode (chezmoi_init_repo set) ─────────────────────────────
 # Each user points to their own dotfiles repo. chezmoi clones it to
@@ -118,7 +130,7 @@
       - --force
       - "{{ chezmoi_init_repo }}"
   environment:
-    HOME: "{{ ansible_facts['env']['HOME'] }}"
+    HOME: "{{ dev_user_home }}"
     GIT_SSH_COMMAND: >-
       ssh -i {{ chezmoi_ssh_key_file }}
       -o StrictHostKeyChecking=accept-new
@@ -127,6 +139,8 @@
   when:
     - chezmoi_init_repo != ""
     - chezmoi_ssh_key_file != ""
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"
 
 # Interactive: forward the running ssh-agent socket so the agent handles auth.
 - name: Initialize and apply dotfiles from personal repo (SSH agent)
@@ -138,9 +152,11 @@
       - --force
       - "{{ chezmoi_init_repo }}"
   environment:
-    HOME: "{{ ansible_facts['env']['HOME'] }}"
+    HOME: "{{ dev_user_home }}"
     SSH_AUTH_SOCK: "{{ ansible_facts['env']['SSH_AUTH_SOCK'] | default('') }}"
   changed_when: true
   when:
     - chezmoi_init_repo != ""
     - chezmoi_ssh_key_file == ""
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"

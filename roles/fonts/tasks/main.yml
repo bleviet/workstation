@@ -4,7 +4,7 @@
   block:
     - name: Check if Nerd Fonts are installed
       ansible.builtin.stat:
-        path: "{{ ansible_facts['env']['HOME'] }}/.local/share/fonts/NerdFonts"
+        path: "{{ dev_user_home }}/.local/share/fonts/NerdFonts"
       register: nerd_fonts_stat
       when: features.fonts | default(true) | bool
 
@@ -16,5 +16,9 @@
           "$tmpdir/install.sh" FiraCode
           rm -rf "$tmpdir"
         executable: /bin/bash
+      environment:
+        HOME: "{{ dev_user_home }}"
       when: (features.fonts | default(true) | bool) and not nerd_fonts_stat.stat.exists
       changed_when: true
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"

@@ -4,28 +4,48 @@
     path: "{{ dev_tools_bin_dir }}"
     state: directory
     mode: "0755"
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"
 
 - name: Install GitHub release binaries
-  ansible.builtin.include_tasks: github_binaries.yml
+  ansible.builtin.include_tasks:
+    file: github_binaries.yml
+    apply:
+      become: "{{ dev_user != ansible_user_id }}"
+      become_user: "{{ dev_user }}"
   loop: "{{ github_binaries }}"
   loop_control:
     loop_var: tool
     label: "{{ tool.name }} {{ tool.version }}"
 
 - name: Install rustup
-  ansible.builtin.include_tasks: rustup.yml
+  ansible.builtin.include_tasks:
+    file: rustup.yml
+    apply:
+      become: "{{ dev_user != ansible_user_id }}"
+      become_user: "{{ dev_user }}"
 
 - name: Install nvm and Node.js
-  ansible.builtin.include_tasks: nvm.yml
+  ansible.builtin.include_tasks:
+    file: nvm.yml
+    apply:
+      become: "{{ dev_user != ansible_user_id }}"
+      become_user: "{{ dev_user }}"
 
 - name: Install uv and pyright
-  ansible.builtin.include_tasks: uv.yml
+  ansible.builtin.include_tasks:
+    file: uv.yml
+    apply:
+      become: "{{ dev_user != ansible_user_id }}"
+      become_user: "{{ dev_user }}"
 
 - name: Ensure ~/.config/shell exists
   ansible.builtin.file:
-    path: "{{ ansible_facts['env']['HOME'] }}/.config/shell"
+    path: "{{ dev_user_home }}/.config/shell"
     state: directory
     mode: "0755"
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"
 
 - name: Install shell init for nvm and cargo
   ansible.builtin.copy:
@@ -36,5 +56,7 @@
 
       # Rust / Cargo
       [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-    dest: "{{ ansible_facts['env']['HOME'] }}/.config/shell/dev-tools.sh"
+    dest: "{{ dev_user_home }}/.config/shell/dev-tools.sh"
     mode: "0644"
+  become: "{{ dev_user != ansible_user_id }}"
+  become_user: "{{ dev_user }}"

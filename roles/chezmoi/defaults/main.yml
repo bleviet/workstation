@@ -1,6 +1,6 @@
 ---
 # Path to the chezmoi binary. Installed by the dev-tools role.
-chezmoi_bin: "{{ ansible_facts['env']['HOME'] }}/.local/bin/chezmoi"
+chezmoi_bin: "{{ dev_user_home }}/.local/bin/chezmoi"
 
 # URL of a personal dotfiles repository to initialise with chezmoi.
 # When set, `chezmoi init --apply <url>` is used and chezmoi manages its own

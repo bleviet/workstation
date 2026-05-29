@@ -8,6 +8,7 @@
   ansible.builtin.shell: |
     curl -LsSf https://astral.sh/uv/install.sh | sh
   environment:
+    HOME: "{{ dev_user_home }}"
     UV_INSTALL_DIR: "{{ dev_tools_bin_dir }}"
   when: not uv_stat.stat.exists
   changed_when: true
@@ -21,7 +22,7 @@
   ansible.builtin.shell: |
     "{{ dev_tools_bin_dir }}/uv" tool install pyright
   environment:
-    HOME: "{{ ansible_facts['env']['HOME'] }}"
+    HOME: "{{ dev_user_home }}"
     UV_TOOL_BIN_DIR: "{{ dev_tools_bin_dir }}"
   when: not pyright_stat.stat.exists
   changed_when: true

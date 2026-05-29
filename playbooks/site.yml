@@ -2,7 +2,7 @@
 # Full workstation provisioning. Run order matters:
 #
 # Base roles (always applied):
-#   packages → dev-tools → shell → chezmoi → fonts → ssh
+#   user → packages → dev-tools → shell → chezmoi → fonts → ssh
 #
 # Optional features (skipped unless the matching flag is set):
 #   fpga   — features.fpga: true
@@ -38,6 +38,7 @@
       ansible.builtin.gather_facts:
   roles:
     # ── Base ───────────────────────────────────────────────────────────────
+    - user
     - packages
     - dev-tools
     - shell

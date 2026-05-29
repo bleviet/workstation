@@ -29,6 +29,14 @@ packages:
 # Git identity and settings are managed as a dotfile via chezmoi.
 # Edit dotfiles/dot_gitconfig (owner mode) or your personal dotfiles repo.
 
+# ── Developer user ────────────────────────────────────────────────────────────
+# Account that owns the dotfiles, dev tools, and shell config.
+# Defaults to the Ansible SSH user so existing setups need no changes.
+# Set per host in host_vars/<hostname>.yml to provision a different account:
+#   dev_user: bach
+dev_user: "{{ ansible_user_id }}"
+dev_user_home: "/home/{{ dev_user }}"
+
 # ── Environment profile ───────────────────────────────────────────────────────
 # Controls which desktop environment roles are applied.
 # Values: headless | desktop-gnome | desktop-xfce | desktop-i3wm

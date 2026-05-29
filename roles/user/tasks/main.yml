@@ -1,0 +1,26 @@
+---
+# Skipped when dev_user matches the Ansible SSH user — the account already
+# exists and is the connection user (e.g. vagrant on a Vagrant VM, or the
+# local user on a workstation provisioned with ansible_connection: local).
+# Only runs when a separate named developer account is requested, e.g.:
+#   dev_user: bach   (in host_vars/<hostname>.yml)
+
+- name: Create developer user account
+  become: true
+  ansible.builtin.user:
+    name: "{{ dev_user }}"
+    shell: /bin/zsh
+    create_home: true
+    groups: "{{ 'sudo' if ansible_os_family == 'Debian' else 'wheel' }}"
+    append: true
+    state: present
+  when: dev_user != ansible_user_id
+
+- name: Grant developer user passwordless sudo
+  become: true
+  ansible.builtin.copy:
+    content: "{{ dev_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    dest: "/etc/sudoers.d/{{ dev_user }}"
+    mode: "0440"
+    validate: /usr/sbin/visudo -cf %s
+  when: dev_user != ansible_user_id
