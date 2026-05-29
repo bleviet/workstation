@@ -15,7 +15,7 @@ OS-specific aliases land in `~/.config/shell/os.sh` via an Ansible template. The
 |---|---|
 | Debian 13 | apt |
 | Ubuntu 26.04 | apt |
-| AlmaLinux 10 | dnf |
+| AlmaLinux 9 | dnf |
 
 ## Quick start
 
@@ -25,7 +25,7 @@ cd ~/workspace/workstation
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` installs Ansible (`ansible-core` on AlmaLinux 10 via AppStream; `ansible` on Debian/Ubuntu via apt), pulls the required collections, and runs `playbooks/site.yml`.
+`bootstrap.sh` installs Ansible (`ansible-core` on AlmaLinux 9 via AppStream; `ansible` on Debian/Ubuntu via apt), pulls the required collections, and runs `playbooks/site.yml`.
 
 ## Daily use
 
