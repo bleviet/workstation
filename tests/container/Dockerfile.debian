@@ -18,5 +18,4 @@ RUN ansible-galaxy collection install -r requirements.yml
 
 # Validate playbook + role structure without executing any tasks.
 # Full integration runs on a real machine via bootstrap.sh.
-RUN ansible-playbook playbooks/site.yml --syntax-check && \
-    ansible-playbook playbooks/dotfiles.yml --syntax-check
+RUN ansible-playbook playbooks/site.yml --syntax-check

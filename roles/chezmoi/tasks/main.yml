@@ -5,7 +5,7 @@
   when: chezmoi_init_repo == ""
 
 # Install chezmoi if not already present. This makes the chezmoi role
-# self-contained so that dotfiles.yml works without running dev-tools first.
+# self-contained so that chezmoi apply works without running dev-tools first.
 - name: Check if chezmoi is installed
   ansible.builtin.stat:
     path: "{{ chezmoi_bin }}"

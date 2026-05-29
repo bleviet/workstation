@@ -25,7 +25,7 @@ it, edit that file before running `bootstrap.sh` — see
 
 ```bash
 # Re-apply dotfiles after editing dotfiles/
-ansible-playbook playbooks/dotfiles.yml
+chezmoi apply
 
 # Full re-provision (safe to run again — skips what is already done)
 ansible-playbook playbooks/site.yml -K

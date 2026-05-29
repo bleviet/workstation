@@ -18,7 +18,7 @@ to know which OS it's on.
 ```bash
 # Option A — edit the source directly, then apply
 $EDITOR ~/workspace/workstation/dotfiles/dot_bashrc
-ansible-playbook playbooks/dotfiles.yml
+chezmoi apply
 
 # Option B — edit the live file, then pull it back into the source
 $EDITOR ~/.bashrc
@@ -35,5 +35,5 @@ git push
 
 ```bash
 git pull
-ansible-playbook playbooks/dotfiles.yml
+chezmoi apply
 ```

@@ -77,7 +77,6 @@ inventory/
     localhost.yml         # local machine overrides
 playbooks/
   site.yml                # full provisioning (profile-aware)
-  dotfiles.yml            # chezmoi apply only
 roles/
   packages/               # apt / dnf system packages
   dev-tools/              # GitHub release binaries + rustup + nvm + uv
