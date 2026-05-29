@@ -21,6 +21,12 @@
 - name: Install uv and pyright
   ansible.builtin.include_tasks: uv.yml
 
+- name: Ensure ~/.config/shell exists
+  ansible.builtin.file:
+    path: "{{ ansible_facts['env']['HOME'] }}/.config/shell"
+    state: directory
+    mode: "0755"
+
 - name: Install shell init for nvm and cargo
   ansible.builtin.copy:
     content: |
