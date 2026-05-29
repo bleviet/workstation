@@ -14,12 +14,10 @@ i3wm_packages_apt:
 
 i3wm_packages_dnf:
   - i3
-  - polybar
+  - i3status
   - rofi
   - dunst
-  - picom
   - feh
   - kitty
   - lightdm
   - lightdm-gtk
-  - arandr

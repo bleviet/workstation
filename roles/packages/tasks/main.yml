@@ -6,6 +6,13 @@
   become: true
   when: ansible_os_family == "RedHat"
 
+- name: Enable CRB repository (required for EPEL dependencies on RedHat family)
+  ansible.builtin.command:
+    cmd: dnf config-manager --set-enabled crb
+  become: true
+  when: ansible_os_family == "RedHat"
+  changed_when: false
+
 - name: Install system packages (Debian/Ubuntu)
   ansible.builtin.apt:
     name: "{{ packages.common + packages.apt }}"
