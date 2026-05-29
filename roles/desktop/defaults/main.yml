@@ -13,8 +13,9 @@ desktop_base_packages_dnf:
   - google-noto-fonts-common
 
 # RHEL 10+ dropped the standalone Xorg server in favour of Wayland.
-# google-noto-fonts-common was renamed to fonts-noto-common in Fedora 38+ / RHEL 10.
+# Noto fonts are not bundled here — neither google-noto-fonts-common nor
+# fonts-noto-common is reliably available on AlmaLinux 10. Nerd Fonts are
+# handled separately by the fonts role.
 desktop_base_packages_dnf_wayland:
   - xorg-x11-server-Xwayland
   - dbus-x11
-  - fonts-noto-common
