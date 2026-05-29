@@ -4,13 +4,13 @@
 
 packages:
   common:
-    - bat
     - curl
     - file
     - fontconfig
     - git
     - procps
     - stow
+    - tmux
     - unzip
     - wget
     - zsh
@@ -21,31 +21,9 @@ packages:
     - p7zip
     - xclip
 
-# ── Homebrew formulae ─────────────────────────────────────────────────────────
-# chezmoi is installed separately by the chezmoi role.
-
-brew_formulae:
-  - eza
-  - fd
-  - fzf
-  - lazygit
-  - neovim
-  - node
-  - pyright
-  - ripgrep
-  - rust
-  - starship
-  - tmux
-  - uv
-  - yazi
-  - zoxide
-
 # ── Git ───────────────────────────────────────────────────────────────────────
-
-git_name: "Bach Le Viet"
-git_email: "vietbach.le@bahonavi.de"
-git_editor: nvim
-git_default_branch: main
+# Git identity and settings are managed as a dotfile via chezmoi.
+# Edit dotfiles/dot_gitconfig (owner mode) or your personal dotfiles repo.
 
 # ── Environment profile ───────────────────────────────────────────────────────
 # Controls which desktop environment roles are applied.

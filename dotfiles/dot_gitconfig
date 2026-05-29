@@ -1,0 +1,13 @@
+[user]
+    name = Bach Le Viet
+    email = bleviet@gmail.com
+
+[core]
+    editor = nvim
+    autocrlf = input
+
+[init]
+    defaultBranch = main
+
+[url "https://github.com/"]
+    insteadOf = gh:

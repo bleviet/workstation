@@ -1,0 +1,11 @@
+---
+- name: Check if rustup is installed
+  ansible.builtin.stat:
+    path: "{{ ansible_env.HOME }}/.cargo/bin/rustup"
+  register: rustup_stat
+
+- name: Install rustup
+  ansible.builtin.shell: |
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
+  when: not rustup_stat.stat.exists
+  changed_when: true

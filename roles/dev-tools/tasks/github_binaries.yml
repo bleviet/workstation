@@ -1,0 +1,47 @@
+---
+- name: "Check {{ tool.name }} {{ tool.version }} version marker"
+  ansible.builtin.stat:
+    path: "{{ dev_tools_bin_dir }}/.{{ tool.name }}-{{ tool.version }}"
+  register: dev_tool_marker
+
+- name: "Install {{ tool.name }} {{ tool.version }}"
+  when: not dev_tool_marker.stat.exists
+  block:
+    - name: "Create temp dir for {{ tool.name }}"
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: "_{{ tool.name }}"
+      register: dev_tool_tmp
+
+    - name: "Download {{ tool.name }} {{ tool.version }}"
+      ansible.builtin.get_url:
+        url: "{{ tool.url }}"
+        dest: "{{ dev_tool_tmp.path }}/archive"
+        mode: "0644"
+
+    - name: "Extract and install {{ tool.name }}"
+      ansible.builtin.shell: |
+        set -e
+        mkdir -p "{{ dev_tool_tmp.path }}/extracted"
+        case "{{ tool.url }}" in
+          *.zip)    unzip -q "{{ dev_tool_tmp.path }}/archive" -d "{{ dev_tool_tmp.path }}/extracted" ;;
+          *.tar.gz) tar -xzf "{{ dev_tool_tmp.path }}/archive" -C "{{ dev_tool_tmp.path }}/extracted" ;;
+        esac
+        BIN=$(find "{{ dev_tool_tmp.path }}/extracted" -name "{{ tool.binary }}" -type f -executable | head -1)
+        if [ -z "$BIN" ]; then
+          echo "ERROR: binary '{{ tool.binary }}' not found in archive" >&2
+          exit 1
+        fi
+        install -m 0755 "$BIN" "{{ dev_tools_bin_dir }}/{{ tool.binary }}"
+      changed_when: true
+
+    - name: "Write version marker for {{ tool.name }}"
+      ansible.builtin.file:
+        path: "{{ dev_tools_bin_dir }}/.{{ tool.name }}-{{ tool.version }}"
+        state: touch
+        mode: "0644"
+
+    - name: "Clean up temp dir for {{ tool.name }}"
+      ansible.builtin.file:
+        path: "{{ dev_tool_tmp.path }}"
+        state: absent

@@ -20,4 +20,4 @@ export EDITOR=nvim
 ###############################################################################
 ## PATH
 ###############################################################################
-export PATH=$HOME/miniconda3/bin:$HOME/.fzf/bin:$HOME/.local/bin:$PATH
+export PATH=$HOME/miniconda3/bin:$HOME/.local/bin:$PATH

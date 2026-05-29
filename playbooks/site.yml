@@ -1,6 +1,6 @@
 ---
 # Full workstation provisioning. Run order matters:
-#   packages → homebrew → git → shell → chezmoi → fonts → fpga
+#   packages → dev-tools → shell → chezmoi → fonts → fpga
 #   ssh is always applied (X11 forwarding, sshd config)
 #   desktop roles are applied based on the host's `profile` variable:
 #     headless      — SSH only, no GUI
@@ -16,8 +16,7 @@
   gather_facts: true
   roles:
     - packages
-    - homebrew
-    - git
+    - dev-tools
     - shell
     - chezmoi
     - fonts

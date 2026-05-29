@@ -1,23 +1,8 @@
 ---
-# Detect brew prefix independently so this role works when run standalone
-# (e.g. ansible-playbook playbooks/dotfiles.yml) without the homebrew role.
-- name: Detect Homebrew prefix
-  ansible.builtin.set_fact:
-    brew_prefix: >-
-      {{ '/home/linuxbrew/.linuxbrew' if ansible_system == 'Linux' else
-         '/opt/homebrew' if ansible_architecture == 'aarch64' else
-         '/usr/local' }}
-  when: brew_prefix == ""
-
 - name: Resolve workstation root from playbook location
   ansible.builtin.set_fact:
     workstation_root: "{{ playbook_dir | dirname }}"
-
-- name: Install chezmoi via Homebrew
-  community.general.homebrew:
-    name: chezmoi
-    state: present
-    path: "{{ brew_prefix }}/bin"
+  when: chezmoi_init_repo == ""
 
 - name: Ensure chezmoi config directory exists
   ansible.builtin.file:
@@ -25,16 +10,21 @@
     state: directory
     mode: "0700"
 
-- name: Configure chezmoi source directory
+# ── Local mode (chezmoi_init_repo not set) ─────────────────────────────────
+# The dotfiles/ folder inside this workstation repo is the chezmoi source.
+# Suited for the repo owner managing their own machines.
+
+- name: Configure chezmoi source directory (local source)
   ansible.builtin.template:
     src: chezmoi.toml.j2
     dest: "{{ ansible_env.HOME }}/.config/chezmoi/chezmoi.toml"
     mode: "0600"
+  when: chezmoi_init_repo == ""
 
-- name: Apply dotfiles with chezmoi
+- name: Apply dotfiles with chezmoi (local source)
   ansible.builtin.command:
     argv:
-      - "{{ brew_prefix }}/bin/chezmoi"
+      - "{{ chezmoi_bin }}"
       - apply
       - --no-tty
       - --force
@@ -43,3 +33,71 @@
   environment:
     HOME: "{{ ansible_env.HOME }}"
   changed_when: true
+  when: chezmoi_init_repo == ""
+
+# ── External repo mode (chezmoi_init_repo set) ─────────────────────────────
+# Each user points to their own dotfiles repo. chezmoi clones it to
+# ~/.local/share/chezmoi on first run and applies it. On subsequent runs
+# chezmoi skips the clone and re-applies from the existing source.
+# Users commit dotfiles changes via: chezmoi cd && git commit && git push
+#
+# SSH auth strategy (SSH URLs only):
+#   chezmoi_ssh_key_file set  → passphrase-less deployment key injected via
+#                               GIT_SSH_COMMAND (unattended / CI)
+#   chezmoi_ssh_key_file unset → ssh-agent forwarded via SSH_AUTH_SOCK
+#                               (interactive; run ssh-add first)
+
+- name: Assert SSH agent is available for SSH dotfiles URL
+  ansible.builtin.fail:
+    msg: >-
+      chezmoi_init_repo uses an SSH URL but no SSH agent socket was found
+      (SSH_AUTH_SOCK is unset). Load your key first:
+        ssh-add ~/.ssh/<key>
+      For remote hosts also add to ~/.ssh/config:
+        Host <hostname>
+          ForwardAgent yes
+      For unattended runs, set chezmoi_ssh_key_file to a passphrase-less key.
+  when:
+    - chezmoi_init_repo != ""
+    - chezmoi_init_repo is match("(git@|ssh://)")
+    - chezmoi_ssh_key_file == ""
+    - ansible_env.SSH_AUTH_SOCK is not defined
+
+# Unattended / CI: inject a passphrase-less deployment key via GIT_SSH_COMMAND.
+# BatchMode=yes makes ssh fail immediately instead of prompting for a passphrase.
+# StrictHostKeyChecking=accept-new trusts the host on first clone only.
+- name: Initialize and apply dotfiles from personal repo (deployment key)
+  ansible.builtin.command:
+    argv:
+      - "{{ chezmoi_bin }}"
+      - init
+      - --apply
+      - --force
+      - "{{ chezmoi_init_repo }}"
+  environment:
+    HOME: "{{ ansible_env.HOME }}"
+    GIT_SSH_COMMAND: >-
+      ssh -i {{ chezmoi_ssh_key_file }}
+      -o StrictHostKeyChecking=accept-new
+      -o BatchMode=yes
+  changed_when: true
+  when:
+    - chezmoi_init_repo != ""
+    - chezmoi_ssh_key_file != ""
+
+# Interactive: forward the running ssh-agent socket so the agent handles auth.
+- name: Initialize and apply dotfiles from personal repo (SSH agent)
+  ansible.builtin.command:
+    argv:
+      - "{{ chezmoi_bin }}"
+      - init
+      - --apply
+      - --force
+      - "{{ chezmoi_init_repo }}"
+  environment:
+    HOME: "{{ ansible_env.HOME }}"
+    SSH_AUTH_SOCK: "{{ ansible_env.SSH_AUTH_SOCK | default('') }}"
+  changed_when: true
+  when:
+    - chezmoi_init_repo != ""
+    - chezmoi_ssh_key_file == ""

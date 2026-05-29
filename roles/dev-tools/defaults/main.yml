@@ -1,0 +1,64 @@
+---
+dev_tools_bin_dir: "{{ ansible_env.HOME }}/.local/bin"
+
+nvm_version: "0.40.1"
+node_version: "lts"
+
+# Pre-built static binaries from GitHub Releases.
+# All Rust/Go tools ship statically linked musl binaries — no runtime library deps.
+# Bump a version string here to upgrade that tool.
+github_binaries:
+  - name: chezmoi
+    version: "2.57.0"
+    url: "https://github.com/twpayne/chezmoi/releases/download/v2.57.0/chezmoi_2.57.0_linux_amd64.tar.gz"
+    binary: chezmoi
+
+  - name: eza
+    version: "0.20.15"
+    url: "https://github.com/eza-community/eza/releases/download/v0.20.15/eza_x86_64-unknown-linux-musl.tar.gz"
+    binary: eza
+
+  - name: fd
+    version: "10.2.0"
+    url: "https://github.com/sharkdp/fd/releases/download/v10.2.0/fd-v10.2.0-x86_64-unknown-linux-musl.tar.gz"
+    binary: fd
+
+  - name: ripgrep
+    version: "14.1.1"
+    url: "https://github.com/BurntSushi/ripgrep/releases/download/14.1.1/ripgrep-14.1.1-x86_64-unknown-linux-musl.tar.gz"
+    binary: rg
+
+  - name: bat
+    version: "0.24.0"
+    url: "https://github.com/sharkdp/bat/releases/download/v0.24.0/bat-v0.24.0-x86_64-unknown-linux-musl.tar.gz"
+    binary: bat
+
+  - name: fzf
+    version: "0.56.3"
+    url: "https://github.com/junegunn/fzf/releases/download/v0.56.3/fzf-0.56.3-linux_amd64.tar.gz"
+    binary: fzf
+
+  - name: lazygit
+    version: "0.44.1"
+    url: "https://github.com/jesseduffield/lazygit/releases/download/v0.44.1/lazygit_0.44.1_Linux_x86_64.tar.gz"
+    binary: lazygit
+
+  - name: neovim
+    version: "0.10.2"
+    url: "https://github.com/neovim/neovim/releases/download/v0.10.2/nvim-linux-x86_64.tar.gz"
+    binary: nvim
+
+  - name: starship
+    version: "1.21.1"
+    url: "https://github.com/starship/starship/releases/download/v1.21.1/starship-x86_64-unknown-linux-musl.tar.gz"
+    binary: starship
+
+  - name: yazi
+    version: "0.4.2"
+    url: "https://github.com/sxyazi/yazi/releases/download/v0.4.2/yazi-x86_64-unknown-linux-musl.zip"
+    binary: yazi
+
+  - name: zoxide
+    version: "0.9.7"
+    url: "https://github.com/ajeetdsouza/zoxide/releases/download/v0.9.7/zoxide-0.9.7-x86_64-unknown-linux-musl.tar.gz"
+    binary: zoxide

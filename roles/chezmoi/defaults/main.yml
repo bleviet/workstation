@@ -1,2 +1,22 @@
 ---
-brew_prefix: ""
+# Path to the chezmoi binary. Installed by the dev-tools role.
+chezmoi_bin: "{{ ansible_env.HOME }}/.local/bin/chezmoi"
+
+# URL of a personal dotfiles repository to initialise with chezmoi.
+# When set, `chezmoi init --apply <url>` is used and chezmoi manages its own
+# source at ~/.local/share/chezmoi — each user keeps their dotfiles separate.
+# When empty (default), the dotfiles/ folder inside this repo is used as the
+# chezmoi source, which is the right choice for the repo owner.
+#
+# Set per host in inventory/host_vars/<hostname>.yml, e.g.:
+#   chezmoi_init_repo: "https://github.com/youruser/dotfiles"
+chezmoi_init_repo: ""
+
+# Path to a passphrase-less SSH private key used to clone chezmoi_init_repo.
+# Use this for unattended/CI runs where no interactive ssh-agent is available.
+# The key must have no passphrase; it is injected via GIT_SSH_COMMAND.
+# Leave empty (default) to use the running ssh-agent instead (interactive use).
+#
+# Example (per host):
+#   chezmoi_ssh_key_file: "~/.ssh/id_ed25519_deploy"
+chezmoi_ssh_key_file: ""

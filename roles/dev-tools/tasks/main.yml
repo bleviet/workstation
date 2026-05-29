@@ -1,0 +1,34 @@
+---
+- name: Ensure dev_tools_bin_dir exists
+  ansible.builtin.file:
+    path: "{{ dev_tools_bin_dir }}"
+    state: directory
+    mode: "0755"
+
+- name: Install GitHub release binaries
+  ansible.builtin.include_tasks: github_binaries.yml
+  loop: "{{ github_binaries }}"
+  loop_control:
+    loop_var: tool
+    label: "{{ tool.name }} {{ tool.version }}"
+
+- name: Install rustup
+  ansible.builtin.include_tasks: rustup.yml
+
+- name: Install nvm and Node.js
+  ansible.builtin.include_tasks: nvm.yml
+
+- name: Install uv and pyright
+  ansible.builtin.include_tasks: uv.yml
+
+- name: Install shell init for nvm and cargo
+  ansible.builtin.copy:
+    content: |
+      # nvm (Node Version Manager)
+      export NVM_DIR="$HOME/.nvm"
+      [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+      # Rust / Cargo
+      [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+    dest: "{{ ansible_env.HOME }}/.config/shell/dev-tools.sh"
+    mode: "0644"
