@@ -25,13 +25,12 @@
   ansible.builtin.stat:
     path: "{{ brew_prefix }}/bin/brew"
   register: brew_stat
-  when: brew_formulae | length > 0
 
 - name: Install Homebrew
   ansible.builtin.shell:
     cmd: NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     executable: /bin/bash
-  when: brew_formulae | length > 0 and not brew_stat.stat.exists
+  when: not brew_stat.stat.exists
   changed_when: true
 
 - name: Install Homebrew formulae
