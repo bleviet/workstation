@@ -13,7 +13,8 @@ desktop_base_packages_dnf:
   - google-noto-fonts-common
 
 # RHEL 10+ dropped the standalone Xorg server in favour of Wayland.
+# google-noto-fonts-common was renamed to fonts-noto-common in Fedora 38+ / RHEL 10.
 desktop_base_packages_dnf_wayland:
   - xorg-x11-server-Xwayland
   - dbus-x11
-  - google-noto-fonts-common
+  - fonts-noto-common
