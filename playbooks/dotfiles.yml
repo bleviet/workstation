@@ -5,6 +5,23 @@
 #   ansible-playbook playbooks/dotfiles.yml
 - name: Apply dotfiles
   hosts: all
-  gather_facts: true
+  gather_facts: false
+  pre_tasks:
+    - name: Require ansible-core >= 2.17
+      ansible.builtin.assert:
+        that:
+          - ansible_version.major > 2 or
+            (ansible_version.major == 2 and ansible_version.minor >= 17)
+        fail_msg: |
+          ansible-core >= 2.17 is required (found {{ ansible_version.full }}).
+
+          Fix:
+            pip3 install --user "ansible-core>=2.17"
+            export PATH="$HOME/.local/bin:$PATH"   # or open a new terminal
+      delegate_to: localhost
+      run_once: true
+
+    - name: Gather facts
+      ansible.builtin.gather_facts:
   roles:
     - chezmoi
