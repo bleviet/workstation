@@ -30,13 +30,6 @@
     - role: xfce
       when: "profile == 'desktop-xfce'"
     - role: i3wm
-      when: "profile == 'desktop-i3wm' and not (ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10)"
-    # RHEL 10+ has no Sway or XFCE packages in base repos or EPEL 10 yet.
-    # GNOME is the only desktop available from standard repos on AlmaLinux 10.
-    # Revisit when EPEL 10 matures (sway, xfce4-session, etc. become available).
-    - role: sway
-      when: false
-    - role: gnome
-      when: "profile == 'desktop-i3wm' and ansible_os_family == 'RedHat' and ansible_distribution_major_version | int >= 10"
+      when: "profile == 'desktop-i3wm'"
     - role: xrdp
       when: "features.xrdp | default(false)"

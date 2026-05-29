@@ -26,14 +26,14 @@ MACHINES = {
   # ── Headless / CI machines ────────────────────────────────────────────────
   "debian"    => { box: "bento/debian-13",    profile: "headless",     memory: 2048, cpus: 2, gui: false },
   "ubuntu"    => { box: "bento/ubuntu-24.04", profile: "headless",     memory: 2048, cpus: 2, gui: false },
-  "almalinux" => { box: "bento/almalinux-10", profile: "headless",     memory: 2048, cpus: 2, gui: false },
+  "almalinux" => { box: "bento/almalinux-9",  profile: "headless",     memory: 2048, cpus: 2, gui: false },
 
   # ── Desktop profile — i3wm ────────────────────────────────────────────────
   # gui: true opens the VM display window so you can visually verify the DE.
   # brew_formulae: [] skips Homebrew so the test focuses on the DE only.
   "debian-i3wm"    => { box: "bento/debian-13",    profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true,  brew_formulae: [] },
   "ubuntu-i3wm"    => { box: "bento/ubuntu-24.04", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true,  brew_formulae: [] },
-  "almalinux-i3wm" => { box: "bento/almalinux-10", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true,  brew_formulae: [] },
+  "almalinux-i3wm" => { box: "bento/almalinux-9",  profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true,  brew_formulae: [] },
 }.freeze
 
 # Install Ansible via the system package manager.
