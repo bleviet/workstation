@@ -7,13 +7,14 @@ account instead.
 
 ## Automated setup (recommended)
 
-`scripts/add-dev-host.sh` does all three manual steps — writes the `host_vars`
+`scripts/add_dev_host.py` does all three manual steps — writes the `host_vars`
 file, registers the host in `inventory/hosts.yml`, and (with `--run`) provisions
-it:
+it. It's a plain Python 3 script (standard library only) so it runs on Windows,
+Linux, and macOS:
 
 ```bash
 # Scaffold a remote XFCE box for user 'bach' with RDP, then provision:
-scripts/add-dev-host.sh -H devbox -i 192.168.1.40 -u admin \
+python scripts/add_dev_host.py -H devbox -i 192.168.1.40 -u admin \
     -d bach -p desktop-xfce --xrdp --run
 ```
 
@@ -29,7 +30,11 @@ scripts/add-dev-host.sh -H devbox -i 192.168.1.40 -u admin \
 | `-f, --force` | Overwrite an existing `host_vars` file |
 
 Omit `--run` to scaffold only and review the generated files before
-provisioning. Run `scripts/add-dev-host.sh --help` for the full reference.
+provisioning. Run `python scripts/add_dev_host.py --help` for the full reference.
+
+> **Windows note:** scaffolding (steps 1–2) works anywhere. `--run` shells out
+> to `ansible-playbook`, which only exists on Linux/WSL/macOS — on a Windows host
+> scaffold without `--run`, then provision from a Linux controller or WSL.
 
 The rest of this document explains what the script generates and does, in case
 you prefer to wire it up by hand.
