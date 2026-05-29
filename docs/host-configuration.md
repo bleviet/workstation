@@ -70,7 +70,7 @@ deploy/
 inventory/
   hosts.yml               # workstations + servers groups
   group_vars/
-    all.yml               # shared packages, brew formulae, git config
+    all.yml               # shared packages, git config
     workstations.yml      # workstation defaults (profile, features)
     servers.yml           # server defaults (headless, xrdp)
   host_vars/

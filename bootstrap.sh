@@ -11,8 +11,6 @@ detect_os() {
     # shellcheck disable=SC1091
     . /etc/os-release
     echo "$ID"
-  elif [ "$(uname)" = "Darwin" ]; then
-    echo "macos"
   else
     echo "unknown"
   fi
@@ -46,12 +44,6 @@ case "$OS_ID" in
       echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
     fi
     export PATH="$HOME/.local/bin:$PATH"
-    ;;
-  macos)
-    if ! command -v brew >/dev/null 2>&1; then
-      /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-    fi
-    brew install ansible
     ;;
   *)
     echo "Unsupported OS: $OS_ID" >&2
