@@ -15,9 +15,6 @@ i3wm_packages_apt:
 i3wm_packages_dnf:
   - i3
   - i3status
-  - rofi
-  - dunst
-  - feh
   - kitty
   - lightdm
   - lightdm-gtk
