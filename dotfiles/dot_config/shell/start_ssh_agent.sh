@@ -3,15 +3,19 @@
 # Purpose: start ssh-agent if necessary and add default key
 ###############################################################################
 
+# Only run in interactive shells — non-interactive shells (like those started
+# by Ansible, rsync, or scp) must stay silent on stdout.
+[[ $- == *i* ]] || return 0
+
 start_ssh_agent() {
   if [ -z "$SSH_AUTH_SOCK" ]; then
-    eval "$(ssh-agent -s)"
+    # Redirect stdout so "Agent pid XXXX" (echoed by ssh-agent -s) is silenced.
+    eval "$(ssh-agent -s)" > /dev/null
   fi
   ssh-add -l &>/dev/null
-  if [ $? -ne 0 ]; then
-    ssh-add ~/.ssh/id_rsa # Adjust the path to your private key if necessary
+  if [ $? -ne 0 ] && [ -f "$HOME/.ssh/id_rsa" ]; then
+    ssh-add "$HOME/.ssh/id_rsa"
   fi
 }
 
-# Auto-start the agent
 start_ssh_agent
