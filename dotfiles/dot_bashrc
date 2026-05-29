@@ -20,7 +20,9 @@ fi
 ###############################################################################
 # Prompt, completions, navigation
 ###############################################################################
-eval "$(starship init bash)"
+if command -v starship >/dev/null 2>&1; then
+  eval "$(starship init bash)"
+fi
 
 if command -v fzf >/dev/null 2>&1; then
   eval "$(fzf --bash)"

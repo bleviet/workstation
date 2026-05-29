@@ -35,14 +35,13 @@
   when: chezmoi_init_repo == ""
 
 # When running against a remote host, the local dotfiles/ path does not exist
-# on the target. Sync it first so chezmoi can apply from it.
-- name: Sync dotfiles to remote for local-source mode
-  ansible.posix.synchronize:
+# on the target. Copy it via SFTP (copy module) rather than rsync so that
+# shell stdout pollution during SSH startup does not cause a protocol error.
+- name: Copy dotfiles to remote for local-source mode
+  ansible.builtin.copy:
     src: "{{ workstation_root }}/dotfiles/"
-    dest: "/tmp/chezmoi-dotfiles-source/"
-    delete: true
-    rsync_opts:
-      - "--no-motd"
+    dest: /tmp/chezmoi-dotfiles-source/
+    mode: preserve
   when:
     - chezmoi_init_repo == ""
     - inventory_hostname != "localhost"

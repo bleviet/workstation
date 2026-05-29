@@ -1,5 +1,9 @@
 ---
-# ── System packages ───────────────────────────────────────────────────────────
+# ── Ansible ───────────────────────────────────────────────────────────────────
+# Use Python 3 on all managed hosts; suppress interpreter discovery warnings.
+ansible_python_interpreter: /usr/bin/python3
+
+
 # "common" names are identical across apt and dnf.
 
 packages:
