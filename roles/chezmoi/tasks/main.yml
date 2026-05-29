@@ -27,6 +27,22 @@
 # The dotfiles/ folder inside this workstation repo is the chezmoi source.
 # Suited for the repo owner managing their own machines.
 
+# Determine source path first so both the config template and the copy task
+# use the same value.
+# - Remote hosts: use ~/.local/share/chezmoi (the standard chezmoi source
+#   directory) so that `chezmoi diff`, `chezmoi cd`, and `chezmoi update` all
+#   work after provisioning without needing the Ansible controller's filesystem.
+# - Local execution: point directly at dotfiles/ inside this repo.
+- name: Set chezmoi source path
+  ansible.builtin.set_fact:
+    chezmoi_source_path: >-
+      {{
+        ansible_facts['env']['HOME'] + '/.local/share/chezmoi'
+        if (inventory_hostname != 'localhost' and ansible_connection | default('ssh') != 'local')
+        else workstation_root + '/dotfiles'
+      }}
+  when: chezmoi_init_repo == ""
+
 - name: Configure chezmoi source directory (local source)
   ansible.builtin.template:
     src: chezmoi.toml.j2
@@ -34,28 +50,19 @@
     mode: "0600"
   when: chezmoi_init_repo == ""
 
-# When running against a remote host, the local dotfiles/ path does not exist
-# on the target. Copy it via SFTP (copy module) rather than rsync so that
-# shell stdout pollution during SSH startup does not cause a protocol error.
+# Copy dotfiles to the standard chezmoi source directory on the remote via
+# SFTP (copy module) so that shell stdout pollution during SSH startup does
+# not cause a protocol error. Files are kept at ~/.local/share/chezmoi so
+# chezmoi commands work on the remote after provisioning.
 - name: Copy dotfiles to remote for local-source mode
   ansible.builtin.copy:
     src: "{{ workstation_root }}/dotfiles/"
-    dest: /tmp/chezmoi-dotfiles-source/
+    dest: "{{ chezmoi_source_path }}/"
     mode: preserve
   when:
     - chezmoi_init_repo == ""
     - inventory_hostname != "localhost"
     - ansible_connection | default("ssh") != "local"
-
-- name: Set chezmoi source path
-  ansible.builtin.set_fact:
-    chezmoi_source_path: >-
-      {{
-        '/tmp/chezmoi-dotfiles-source'
-        if (inventory_hostname != 'localhost' and ansible_connection | default('ssh') != 'local')
-        else workstation_root + '/dotfiles'
-      }}
-  when: chezmoi_init_repo == ""
 
 - name: Apply dotfiles with chezmoi (local source)
   ansible.builtin.command:
@@ -70,15 +77,6 @@
     HOME: "{{ ansible_facts['env']['HOME'] }}"
   changed_when: true
   when: chezmoi_init_repo == ""
-
-- name: Remove synced dotfiles from remote (cleanup)
-  ansible.builtin.file:
-    path: /tmp/chezmoi-dotfiles-source
-    state: absent
-  when:
-    - chezmoi_init_repo == ""
-    - inventory_hostname != "localhost"
-    - ansible_connection | default("ssh") != "local"
 
 # ── External repo mode (chezmoi_init_repo set) ─────────────────────────────
 # Each user points to their own dotfiles repo. chezmoi clones it to
