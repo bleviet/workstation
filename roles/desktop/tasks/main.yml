@@ -1,4 +1,7 @@
 ---
+- name: Install VM guest tools for desktop integration
+  ansible.builtin.include_tasks: guest_tools.yml
+
 - name: Install Xorg and display server base (Debian/Ubuntu)
   ansible.builtin.apt:
     name: "{{ desktop_base_packages_apt }}"
