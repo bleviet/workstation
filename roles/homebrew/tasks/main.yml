@@ -12,25 +12,26 @@
     state: present
     update_cache: true
   become: true
-  when: ansible_os_family == "Debian"
+  when: brew_formulae | length > 0 and ansible_os_family == "Debian"
 
 - name: Install Homebrew build dependencies (RedHat)
   ansible.builtin.dnf:
     name: "@Development Tools"
     state: present
   become: true
-  when: ansible_os_family == "RedHat"
+  when: brew_formulae | length > 0 and ansible_os_family == "RedHat"
 
 - name: Check if Homebrew is installed
   ansible.builtin.stat:
     path: "{{ brew_prefix }}/bin/brew"
   register: brew_stat
+  when: brew_formulae | length > 0
 
 - name: Install Homebrew
   ansible.builtin.shell:
     cmd: NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
     executable: /bin/bash
-  when: not brew_stat.stat.exists
+  when: brew_formulae | length > 0 and not brew_stat.stat.exists
   changed_when: true
 
 - name: Install Homebrew formulae
@@ -38,3 +39,4 @@
     name: "{{ brew_formulae }}"
     state: present
     path: "{{ brew_prefix }}/bin"
+  when: brew_formulae | length > 0

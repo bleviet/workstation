@@ -17,9 +17,11 @@
 #
 # All machines are autostart: false — you must name the machine explicitly.
 
-# Each entry: { box:, profile:, memory:, cpus:, gui: }
+# Each entry: { box:, profile:, memory:, cpus:, gui:, brew_formulae: (optional) }
 # gui: true opens the VM display window (VirtualBox/VMware) — useful for
 #      verifying a desktop environment actually came up.
+# brew_formulae: [] skips Homebrew entirely (speeds up desktop-only tests).
+#   Omit the key to use the full list from group_vars/all.yml.
 MACHINES = {
   # ── Headless / CI machines ────────────────────────────────────────────────
   "debian"    => { box: "bento/debian-13",    profile: "headless",     memory: 2048, cpus: 2, gui: false },
@@ -28,10 +30,10 @@ MACHINES = {
 
   # ── Desktop profile — i3wm ────────────────────────────────────────────────
   # gui: true opens the VM display window so you can visually verify the DE.
-  # Set to false to provision headlessly (faster, no window).
-  "debian-i3wm" => { box: "bento/debian-13",    profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true },
-  "ubuntu-i3wm" => { box: "bento/ubuntu-24.04", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true },
-  "almalinux-i3wm" => { box: "bento/almalinux-10", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true },
+  # brew_formulae: [] skips Homebrew so the test focuses on the DE only.
+  "debian-i3wm"    => { box: "bento/debian-13",    profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true,  brew_formulae: [] },
+  "ubuntu-i3wm"    => { box: "bento/ubuntu-24.04", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true,  brew_formulae: [] },
+  "almalinux-i3wm" => { box: "bento/almalinux-10", profile: "desktop-i3wm", memory: 4096, cpus: 2, gui: true,  brew_formulae: [] },
 }.freeze
 
 # Install Ansible via the system package manager.
@@ -98,6 +100,11 @@ Vagrant.configure("2") do |config|
       # world-writable and Ansible refuses to auto-load cfg from such dirs.
       # profile and features are injected via extra-vars so the VM inventory
       # does not need host_vars entries for non-localhost hostnames.
+      # brew_formulae is injected only when the machine entry overrides it
+      # (e.g. [] for desktop VMs to skip Homebrew and speed up the test).
+      extra_vars = { "profile" => cfg[:profile], "features" => { "fpga" => false, "xrdp" => false } }
+      extra_vars["brew_formulae"] = cfg[:brew_formulae] if cfg.key?(:brew_formulae)
+
       m.vm.provision "shell", privileged: false, inline: <<~SHELL
         set -e
         REPO=/home/vagrant/workspace/workstation
@@ -105,7 +112,7 @@ Vagrant.configure("2") do |config|
         export ANSIBLE_ROLES_PATH="$REPO/roles"
         ansible-playbook \
           --inventory "$REPO/inventory/hosts.yml" \
-          --extra-vars '{"profile": "#{cfg[:profile]}", "features": {"fpga": false, "xrdp": false}}' \
+          --extra-vars '#{extra_vars.to_json}' \
           "$REPO/playbooks/site.yml"
       SHELL
     end
