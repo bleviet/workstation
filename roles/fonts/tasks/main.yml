@@ -7,6 +7,7 @@
   ansible.builtin.stat:
     path: "{{ ansible_env.HOME }}/.local/share/fonts/NerdFonts"
   register: nerd_fonts_stat
+  when: features.fonts | default(true) | bool
 
 - name: Install FiraCode Nerd Font
   ansible.builtin.shell:
@@ -16,5 +17,5 @@
       "$tmpdir/install.sh" FiraCode
       rm -rf "$tmpdir"
     executable: /bin/bash
-  when: not nerd_fonts_stat.stat.exists
+  when: (features.fonts | default(true) | bool) and not nerd_fonts_stat.stat.exists
   changed_when: true

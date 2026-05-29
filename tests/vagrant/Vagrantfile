@@ -102,7 +102,7 @@ Vagrant.configure("2") do |config|
       # does not need host_vars entries for non-localhost hostnames.
       # brew_formulae is injected only when the machine entry overrides it
       # (e.g. [] for desktop VMs to skip Homebrew and speed up the test).
-      extra_vars = { "profile" => cfg[:profile], "features" => { "fpga" => false, "xrdp" => false, "gui" => cfg.fetch(:gui, false) } }
+      extra_vars = { "profile" => cfg[:profile], "features" => { "fpga" => false, "xrdp" => false, "gui" => cfg.fetch(:gui, false), "fonts" => !cfg.fetch(:gui, false) } }
       extra_vars["brew_formulae"] = cfg[:brew_formulae] if cfg.key?(:brew_formulae)
 
       m.vm.provision "shell", privileged: false, inline: <<~SHELL
