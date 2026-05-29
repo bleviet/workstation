@@ -32,11 +32,19 @@ case "$OS_ID" in
     # (the distro apt package is typically 2-3 years behind).
     run_as_root apt-get install -y python3-pip
     pip3 install --user --quiet "ansible-core>=2.17"
+    # Permanently add ~/.local/bin to PATH in ~/.bashrc so new terminals
+    # also find the pip-installed ansible (not the outdated system package).
+    if ! grep -q 'local/bin' "$HOME/.bashrc" 2>/dev/null; then
+      echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    fi
     export PATH="$HOME/.local/bin:$PATH"
     ;;
   almalinux|rocky|centos|rhel)
     run_as_root dnf install -y python3-pip
     pip3 install --user --quiet "ansible-core>=2.17"
+    if ! grep -q 'local/bin' "$HOME/.bashrc" 2>/dev/null; then
+      echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    fi
     export PATH="$HOME/.local/bin:$PATH"
     ;;
   macos)

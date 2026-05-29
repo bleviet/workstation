@@ -15,15 +15,15 @@
   hosts: all
   gather_facts: false
   pre_tasks:
-    - name: Require ansible-core >= 2.17
+    - name: Require ansible-core >= 2.12
       ansible.builtin.assert:
         that:
           - ansible_version.major > 2 or
-            (ansible_version.major == 2 and ansible_version.minor >= 17)
+            (ansible_version.major == 2 and ansible_version.minor >= 12)
         fail_msg: |
-          ansible-core >= 2.17 is required (found {{ ansible_version.full }}).
+          ansible-core >= 2.12 is required (found {{ ansible_version.full }}).
+          The system apt/dnf package is usually too old — install via pip:
 
-          Fix:
             pip3 install --user "ansible-core>=2.17"
             export PATH="$HOME/.local/bin:$PATH"   # or open a new terminal
       delegate_to: localhost
