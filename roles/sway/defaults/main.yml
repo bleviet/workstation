@@ -1,0 +1,17 @@
+---
+# Wayland-native i3-compatible WM. Used on RHEL 10+ where Xorg is unavailable.
+sway_packages_apt:
+  - sway
+  - waybar
+  - wofi
+  - mako-notifier
+  - foot
+  - sddm
+
+sway_packages_dnf:
+  - sway
+  - waybar
+  - wofi
+  - mako
+  - foot
+  - sddm
