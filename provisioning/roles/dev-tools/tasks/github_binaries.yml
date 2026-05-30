@@ -22,12 +22,21 @@
     - name: "Extract and install {{ tool.name }}"
       ansible.builtin.shell: |
         set -e
-        mkdir -p "{{ dev_tool_tmp.path }}/extracted"
         case "{{ tool.url }}" in
-          *.zip)    unzip -q "{{ dev_tool_tmp.path }}/archive" -d "{{ dev_tool_tmp.path }}/extracted" ;;
-          *.tar.gz) tar -xzf "{{ dev_tool_tmp.path }}/archive" -C "{{ dev_tool_tmp.path }}/extracted" ;;
+          *.zip)
+            mkdir -p "{{ dev_tool_tmp.path }}/extracted"
+            unzip -q "{{ dev_tool_tmp.path }}/archive" -d "{{ dev_tool_tmp.path }}/extracted"
+            BIN=$(find "{{ dev_tool_tmp.path }}/extracted" -name "{{ tool.binary }}" -type f -executable | head -1)
+            ;;
+          *.tar.gz)
+            mkdir -p "{{ dev_tool_tmp.path }}/extracted"
+            tar -xzf "{{ dev_tool_tmp.path }}/archive" -C "{{ dev_tool_tmp.path }}/extracted"
+            BIN=$(find "{{ dev_tool_tmp.path }}/extracted" -name "{{ tool.binary }}" -type f | head -1)
+            ;;
+          *)
+            BIN="{{ dev_tool_tmp.path }}/archive"
+            ;;
         esac
-        BIN=$(find "{{ dev_tool_tmp.path }}/extracted" -name "{{ tool.binary }}" -type f -executable | head -1)
         if [ -z "$BIN" ]; then
           echo "ERROR: binary '{{ tool.binary }}' not found in archive" >&2
           exit 1

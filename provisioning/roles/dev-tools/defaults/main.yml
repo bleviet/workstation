@@ -12,6 +12,11 @@ neovim_url: "https://github.com/neovim/neovim/releases/download/v{{ neovim_versi
 # All Rust/Go tools ship statically linked musl binaries — no runtime library deps.
 # Bump a version string here to upgrade that tool.
 github_binaries:
+  - name: direnv
+    version: "2.35.0"
+    url: "https://github.com/direnv/direnv/releases/download/v2.35.0/direnv.linux-amd64"
+    binary: direnv
+
   - name: chezmoi
     version: "2.57.0"
     url: "https://github.com/twpayne/chezmoi/releases/download/v2.57.0/chezmoi_2.57.0_linux_amd64.tar.gz"
