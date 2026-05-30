@@ -144,6 +144,15 @@
     - features.fpga.vivado | default(false) | bool or features.fpga.quartus | default(false) | bool or features.fpga.oss | default(false) | bool
     - ansible_facts['os_family'] == "RedHat"
 
+- name: Ensure plugdev group exists (RedHat — not created by default)
+  ansible.builtin.group:
+    name: plugdev
+    state: present
+  become: true
+  when:
+    - ansible_facts['os_family'] == "RedHat"
+    - features.fpga.vivado | default(false) | bool or features.fpga.quartus | default(false) | bool or features.fpga.oss | default(false) | bool
+
 - name: Add {{ dev_user }} to hardware access groups
   ansible.builtin.user:
     name: "{{ dev_user }}"
