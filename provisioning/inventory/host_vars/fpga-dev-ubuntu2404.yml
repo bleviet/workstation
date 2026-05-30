@@ -1,0 +1,3 @@
+---
+# fpga-dev-ubuntu2404 — Ubuntu 24.04 FPGA development VM (environments/fpga-ubuntu/).
+# Profile and features are inherited from group_vars/fpga_vms.yml.

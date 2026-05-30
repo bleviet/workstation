@@ -16,6 +16,10 @@
 #   VAGRANT_DEFAULT_PROVIDER=libvirt vagrant up ubuntu
 #
 # All machines are autostart: false — you must name the machine explicitly.
+#
+# Provisioning (run once after "vagrant up <machine>"):
+#   Add the VM's IP to provisioning/inventory/hosts.yml, then from the admin machine:
+#   ansible-playbook provisioning/site.yml --limit workstation-test-<machine>
 
 # Each entry: { box:, profile:, memory:, cpus:, gui: }
 # gui: true opens the VM display window (VirtualBox/VMware) — useful for
@@ -44,26 +48,6 @@ MACHINES = {
   "ubuntu-gnome"    => { box: "bento/ubuntu-24.04", profile: "desktop-gnome", memory: 4096, cpus: 2, gui: true },
   "almalinux-gnome" => { box: "bento/almalinux-9",  profile: "desktop-gnome", memory: 4096, cpus: 2, gui: true },
 }.freeze
-
-# Install Ansible via the system package manager.
-# Mirrors the install logic in bootstrap.sh, without running the playbook.
-INSTALL_ANSIBLE = <<~SHELL
-  set -e
-  . /etc/os-release
-  case "$ID" in
-    debian|ubuntu)
-      apt-get update -y
-      apt-get install -y ansible
-      ;;
-    almalinux|rocky|rhel|centos)
-      dnf install -y ansible-core
-      ;;
-    *)
-      echo "Unsupported OS: $ID" >&2
-      exit 1
-      ;;
-  esac
-SHELL
 
 Vagrant.configure("2") do |config|
   MACHINES.each do |name, cfg|
@@ -94,40 +78,7 @@ Vagrant.configure("2") do |config|
         lv.cpus   = cfg[:cpus]
       end
 
-      # Step 1: install Ansible inside the VM via system package manager.
-      m.vm.provision "shell", privileged: true, inline: INSTALL_ANSIBLE
-
-      # Step 2: install Ansible Galaxy collections (requirements.yml uses
-      # collections:, which ansible_local's galaxy_role_file does not handle).
-      m.vm.provision "shell", privileged: false,
-        inline: "cd /home/vagrant/workspace/workstation && " \
-                "ansible-galaxy collection install -r requirements.yml"
-
-      # Step 3: run the full provisioning playbook.
-      # Uses explicit env vars so paths are never relative to an ambiguous CWD.
-      # ANSIBLE_CONFIG is set explicitly because VMware synced folders are
-      # world-writable and Ansible refuses to auto-load cfg from such dirs.
-      # profile and features are injected via extra-vars so the VM inventory
-      # does not need host_vars entries for non-localhost hostnames.
-      extra_vars = {
-        "profile"  => cfg[:profile],
-        "features" => {
-          "editor"  => { "neovim" => true, "lazyvim" => false, "vscode" => false },
-          "fpga"    => { "vivado" => false, "quartus" => false, "oss" => false },
-          "xrdp"    => false
-        }
-      }
-
-      m.vm.provision "shell", privileged: false, inline: <<~SHELL
-        set -e
-        REPO=/home/vagrant/workspace/workstation
-        export ANSIBLE_CONFIG="$REPO/ansible.cfg"
-        export ANSIBLE_ROLES_PATH="$REPO/provisioning/roles"
-        ansible-playbook \
-          --inventory "$REPO/provisioning/inventory/hosts.yml" \
-          --extra-vars '#{extra_vars.to_json}' \
-          "$REPO/provisioning/site.yml"
-      SHELL
+      # Ansible provisioning is NOT run here — see provision.sh.
     end
   end
 end

@@ -31,7 +31,9 @@
 #   To forward a physical programmer: VM → Removable Devices → Connect.
 #
 # Usage:
-#   vagrant up       # first boot + Ansible provisioning (~20 min)
+#   vagrant up       # create VM and grow disk (~5 min)
+#   # From the admin machine (after filling in the VM IP in hosts.yml):
+#   ansible-playbook provisioning/site.yml --limit fpga-dev-ubuntu2404
 #   vagrant reload   # reboot (apply kernel/desktop changes)
 #   vagrant halt     # graceful shutdown
 #   vagrant destroy  # delete VM entirely
@@ -48,35 +50,6 @@ VM_CPUS     = 8        # logical CPUs visible inside the VM
 VM_DISK_GB  = "512GB"  # virtual disk size (provisioned on first vagrant up)
 VM_VRAM_MB  = 256      # video RAM for the XFCE session
 VM_3D_ACCEL = "TRUE"   # set to "FALSE" if the host GPU causes glitches
-
-# Install Ansible via the system package manager (mirrors bootstrap.sh logic).
-INSTALL_ANSIBLE = <<~SHELL
-  set -e
-  . /etc/os-release
-  case "$ID" in
-    debian|ubuntu)
-      apt-get update -y
-      apt-get install -y ansible
-      ;;
-    almalinux|rocky|rhel|centos)
-      dnf install -y ansible-core
-      ;;
-    *)
-      echo "Unsupported OS: $ID" >&2; exit 1 ;;
-  esac
-SHELL
-
-# Extra vars passed to the Ansible playbook.
-# profile + features drive which roles are applied (see provisioning/site.yml).
-EXTRA_VARS = {
-  "profile"             => "desktop-xfce",
-  "features"            => {
-    "editor"  => { "neovim" => true, "lazyvim" => false, "vscode" => false },
-    "fpga"    => { "vivado" => true, "quartus" => true, "oss" => true },
-    "xrdp"    => false
-  },
-  "xfce_autologin_user" => "vagrant"
-}.freeze
 
 # ---------------------------------------------------------------------------
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
@@ -150,10 +123,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vmw.vmx["time.synchronize.resume"]    = "TRUE"
   end
 
-  # ── Provisioning (three steps, matching tests/vagrant/Vagrantfile) ───────
+  # ── First-boot provisioning ──────────────────────────────────────────────
 
-  # Step 0: grow root partition + ext4 filesystem to fill the 512 GB disk.
+  # Grow root partition + ext4 filesystem to fill the 512 GB disk.
   # growpart is idempotent (exits 0 if already at max size).
+  # Ansible provisioning is NOT run here — see provision.sh.
   config.vm.provision "shell", privileged: true, name: "grow-disk", inline: <<~SHELL
     set -e
     ROOT_DEV=$(findmnt -n -o SOURCE /)
@@ -161,28 +135,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     PART_NUM=$(cat /sys/class/block/${ROOT_DEV##*/}/partition)
     growpart "/dev/$DISK" "$PART_NUM" || true
     resize2fs "$ROOT_DEV"
-  SHELL
-
-  # Step 1: install Ansible via the OS package manager.
-  config.vm.provision "shell", privileged: true, inline: INSTALL_ANSIBLE
-
-  # Step 2: install Ansible Galaxy collections declared in requirements.yml.
-  config.vm.provision "shell", privileged: false,
-    inline: "cd /home/vagrant/workspace/workstation && " \
-            "ansible-galaxy collection install -r requirements.yml"
-
-  # Step 3: run the full provisioning playbook.
-  # ANSIBLE_CONFIG is set explicitly because VMware synced folders are
-  # world-writable and Ansible refuses to auto-load config from such dirs.
-  config.vm.provision "shell", privileged: false, inline: <<~SHELL
-    set -e
-    REPO=/home/vagrant/workspace/workstation
-    export ANSIBLE_CONFIG="$REPO/ansible.cfg"
-    export ANSIBLE_ROLES_PATH="$REPO/provisioning/roles"
-    ansible-playbook \
-      --inventory "$REPO/provisioning/inventory/hosts.yml" \
-      --extra-vars '#{EXTRA_VARS.to_json}' \
-      "$REPO/provisioning/site.yml"
   SHELL
 
 end

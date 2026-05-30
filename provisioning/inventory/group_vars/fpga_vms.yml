@@ -1,0 +1,17 @@
+---
+# Defaults for all FPGA development VMs.
+# Override per host in host_vars/<hostname>.yml if needed.
+
+profile: desktop-xfce
+xfce_autologin_user: vagrant
+
+features:
+  editor:
+    neovim: true
+    lazyvim: false
+    vscode: false
+  fpga:
+    vivado: true
+    quartus: true
+    oss: true
+  xrdp: false
