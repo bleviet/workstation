@@ -54,13 +54,20 @@ VM_DISK_GB  = "512GB"  # virtual disk size (provisioned on first vagrant up)
 VM_VRAM_MB  = 256      # video RAM for the XFCE session
 VM_3D_ACCEL = "TRUE"   # set to "FALSE" if the host GPU causes glitches
 
-# SSH public key from the host's ~/.ssh/ — injected into the VM so the admin
-# machine can run ansible-playbook without the Vagrant-generated private key.
-# Checked in order: id_ed25519.pub → id_rsa.pub → id_ecdsa.pub.
-_admin_key_file = %w[id_ed25519.pub id_rsa.pub id_ecdsa.pub]
-  .map  { |f| File.expand_path("~/.ssh/#{f}") }
-  .find { |p| File.exist?(p) }
-ADMIN_PUBKEY = _admin_key_file ? File.read(_admin_key_file).strip : ""
+# SSH public key injected into the VM so the admin machine can run
+# ansible-playbook without the Vagrant-generated private key.
+#
+# Resolution order:
+#   1. admin.pub alongside this Vagrantfile  (gitignored — paste your key there)
+#   2. ~/.ssh/id_ed25519.pub / id_rsa.pub / id_ecdsa.pub on the Windows host
+#   3. Empty → provisioner prints a warning and skips
+_admin_pubkey_file = [
+  File.join(__dir__, "admin.pub"),
+  *%w[id_ed25519.pub id_rsa.pub id_ecdsa.pub].map { |f|
+    File.join(ENV.fetch("USERPROFILE", File.expand_path("~")), ".ssh", f)
+  }
+].find { |p| File.exist?(p) }
+ADMIN_PUBKEY = _admin_pubkey_file ? File.read(_admin_pubkey_file).strip : ""
 
 # ---------------------------------------------------------------------------
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
