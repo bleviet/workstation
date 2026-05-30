@@ -14,7 +14,7 @@
 
 set -euo pipefail
 
-VAGRANT_DIR="$(cd "$(dirname "$0")/vagrant" && pwd)"
+VAGRANT_DIR="$(cd "$(dirname "$0")/vm" && pwd)"
 PROVIDER="${VAGRANT_PROVIDER:-virtualbox}"
 
 HEADLESS_MACHINES=(debian ubuntu almalinux)

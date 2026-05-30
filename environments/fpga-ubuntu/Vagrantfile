@@ -6,7 +6,7 @@
 # Guest: Ubuntu 24.04 LTS + XFCE4 desktop
 #
 # VM creation is handled here; all software provisioning is delegated to the
-# Ansible playbooks in this repository (playbooks/site.yml).
+# Ansible playbooks in this repository (provisioning/site.yml).
 #
 # Prerequisites (install on Windows host before "vagrant up"):
 #   1. VMware Workstation Pro  – https://www.vmware.com/products/workstation-pro.html
@@ -67,7 +67,7 @@ INSTALL_ANSIBLE = <<~SHELL
 SHELL
 
 # Extra vars passed to the Ansible playbook.
-# profile + features drive which roles are applied (see playbooks/site.yml).
+# profile + features drive which roles are applied (see provisioning/site.yml).
 EXTRA_VARS = {
   "profile"             => "desktop-xfce",
   "features"            => { "fpga" => true, "xrdp" => false },
@@ -174,11 +174,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     set -e
     REPO=/home/vagrant/workspace/workstation
     export ANSIBLE_CONFIG="$REPO/ansible.cfg"
-    export ANSIBLE_ROLES_PATH="$REPO/roles"
+    export ANSIBLE_ROLES_PATH="$REPO/provisioning/roles"
     ansible-playbook \
-      --inventory "$REPO/inventory/hosts.yml" \
+      --inventory "$REPO/provisioning/inventory/hosts.yml" \
       --extra-vars '#{EXTRA_VARS.to_json}' \
-      "$REPO/playbooks/site.yml"
+      "$REPO/provisioning/site.yml"
   SHELL
 
 end

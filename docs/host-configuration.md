@@ -3,7 +3,7 @@
 ## Environment profiles
 
 Each host has a `profile` variable that controls which desktop environment (if
-any) is installed. Set it in `inventory/host_vars/<hostname>.yml`:
+any) is installed. Set it in `provisioning/inventory/host_vars/<hostname>.yml`:
 
 | Profile | Description |
 |---|---|
@@ -17,7 +17,7 @@ SSH and X11 forwarding (`X11Forwarding yes`, `AllowAgentForwarding yes`) are
 
 ## Optional features
 
-Override per host in `inventory/host_vars/<hostname>.yml`:
+Override per host in `provisioning/inventory/host_vars/<hostname>.yml`:
 
 | Variable | Default | Effect |
 |---|---|---|
@@ -27,7 +27,7 @@ Override per host in `inventory/host_vars/<hostname>.yml`:
 ## Example host\_vars
 
 ```yaml
-# inventory/host_vars/my_laptop.yml
+# provisioning/inventory/host_vars/my_laptop.yml
 profile: desktop-xfce
 features:
   fpga: false
@@ -35,7 +35,7 @@ features:
 ```
 
 ```yaml
-# inventory/host_vars/dev_server.yml
+# provisioning/inventory/host_vars/dev_server.yml
 profile: headless
 features:
   fpga: false
@@ -44,7 +44,7 @@ features:
 
 ## Shared tunables
 
-Defaults live in `inventory/group_vars/all.yml` and can be overridden per
+Defaults live in `provisioning/inventory/group_vars/all.yml` and can be overridden per
 group or host:
 
 | Variable | Description |
@@ -68,39 +68,42 @@ a user other than the Ansible SSH user.
 
 ```
 bootstrap.sh              # entry point — installs Ansible, runs site.yml
-deploy/
+controller/
   Containerfile           # Ansible controller image (Podman/Docker)
-  deploy.sh               # wrapper: build image + run ansible-playbook
-inventory/
-  hosts.yml               # workstations + servers groups
-  group_vars/
-    all.yml               # shared packages, git config
-    workstations.yml      # workstation defaults (profile, features)
-    servers.yml           # server defaults (headless, xrdp)
-  host_vars/
-    localhost.yml         # local machine overrides
-playbooks/
-  site.yml                # full provisioning (profile-aware)
-roles/
-  user/                   # create dev_user account + passwordless sudo
-  packages/               # apt / dnf system packages
-  dev-tools/              # GitHub release binaries + rustup + nvm + uv
-  shell/                  # oh-my-zsh + os.sh template
-  chezmoi/                # configure chezmoi source, apply dotfiles
-  fonts/                  # Nerd Fonts
-  fpga/                   # FPGA tools (features.fpga)
-  ssh/                    # openssh-server + X11 forwarding (always on)
-  desktop/                # Xorg base (when profile contains 'desktop')
-  gnome/                  # GNOME Shell + GDM (desktop-gnome)
-  xfce/                   # XFCE 4 + LightDM (desktop-xfce)
-  i3wm/                   # i3wm stack + LightDM (desktop-i3wm)
-  xrdp/                   # xrdp RDP server (features.xrdp)
+  run.sh                  # wrapper: build image + run ansible-playbook
+provisioning/
+  site.yml                # full provisioning playbook (profile-aware)
+  inventory/
+    hosts.yml             # workstations + servers groups
+    group_vars/
+      all.yml             # shared packages, git config
+      workstations.yml    # workstation defaults (profile, features)
+      servers.yml         # server defaults (headless, xrdp)
+    host_vars/
+      localhost.yml       # local machine overrides
+  roles/
+    user/                 # create dev_user account + passwordless sudo
+    packages/             # apt / dnf system packages
+    dev-tools/            # GitHub release binaries + rustup + nvm + uv
+    shell/                # oh-my-zsh + os.sh template
+    chezmoi/              # configure chezmoi source, apply dotfiles
+    fonts/                # Nerd Fonts
+    fpga/                 # FPGA tools (features.fpga)
+    ssh/                  # openssh-server + X11 forwarding (always on)
+    desktop/              # Xorg base (when profile contains 'desktop')
+    gnome/                # GNOME Shell + GDM (desktop-gnome)
+    xfce/                 # XFCE 4 + LightDM (desktop-xfce)
+    i3wm/                 # i3wm stack + LightDM (desktop-i3wm)
+    xrdp/                 # xrdp RDP server (features.xrdp)
 dotfiles/                 # chezmoi source — flat, no conditionals
+environments/
+  fpga-ubuntu/            # FPGA dev VM (Ubuntu 24.04, VMware)
+  fpga-alma/              # FPGA dev VM (AlmaLinux 9, VMware)
 tests/
   container/
     Dockerfile.{debian,ubuntu,almalinux}
-  vagrant/
-    Vagrantfile             # multi-machine (debian/ubuntu/almalinux), multi-provider
+  vm/
+    Vagrantfile           # multi-machine (debian/ubuntu/almalinux), multi-provider
   run_container_tests.sh  # parallel syntax-check via Podman
   run_vm_tests.sh         # full provisioning via Vagrant VMs
 ```

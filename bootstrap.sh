@@ -55,4 +55,4 @@ echo "Installing Ansible collections..."
 ansible-galaxy collection install -r "$ROOT_DIR/requirements.yml"
 
 echo "Running provisioning playbook..."
-ansible-playbook "$ROOT_DIR/playbooks/site.yml" --ask-become-pass
+ansible-playbook "$ROOT_DIR/provisioning/site.yml" --ask-become-pass

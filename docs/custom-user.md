@@ -2,13 +2,13 @@
 
 By default the playbook provisions the account it connects as (`vagrant` on a
 Vagrant VM, your own user on `localhost`). Set `dev_user` in
-`inventory/host_vars/<hostname>.yml` to create and provision a separate named
+`provisioning/inventory/host_vars/<hostname>.yml` to create and provision a separate named
 account instead.
 
 ## Automated setup (recommended)
 
 `scripts/add_dev_host.py` does all three manual steps — writes the `host_vars`
-file, registers the host in `inventory/hosts.yml`, and (with `--run`) provisions
+file, registers the host in `provisioning/inventory/hosts.yml`, and (with `--run`) provisions
 it. It's a plain Python 3 script (standard library only) so it runs on Windows,
 Linux, and macOS:
 
@@ -54,7 +54,7 @@ All subsequent roles (dev-tools, shell, chezmoi, fonts) then install into
 ## Example — shared team machine
 
 ```yaml
-# inventory/host_vars/devbox.yml
+# provisioning/inventory/host_vars/devbox.yml
 profile: desktop-xfce
 
 dev_user: bach
@@ -67,7 +67,7 @@ features:
 Provision with:
 
 ```bash
-ansible-playbook playbooks/site.yml -l devbox
+ansible-playbook provisioning/site.yml -l devbox
 ```
 
 Ansible connects as its normal SSH user (which must have sudo), the `user`
@@ -83,7 +83,7 @@ vagrant up ubuntu --provider=libvirt
 vagrant provision ubuntu -- --extra-vars '{"dev_user": "bach"}'
 ```
 
-Or set it permanently in the `MACHINES` table in `tests/vagrant/Vagrantfile`:
+Or set it permanently in the `MACHINES` table in `tests/vm/Vagrantfile`:
 
 ```ruby
 "ubuntu" => { box: "bento/ubuntu-24.04", profile: "headless",
@@ -130,11 +130,11 @@ After setting a password the user can log in via the desktop login screen
 
 ### SSH key login (recommended)
 
-Set `dev_user_ssh_pubkey` in `inventory/host_vars/<hostname>.yml` and the
+Set `dev_user_ssh_pubkey` in `provisioning/inventory/host_vars/<hostname>.yml` and the
 playbook will install the key during provisioning:
 
 ```yaml
-# inventory/host_vars/devbox.yml
+# provisioning/inventory/host_vars/devbox.yml
 profile: desktop-xfce
 dev_user: bach
 dev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"

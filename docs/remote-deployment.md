@@ -2,10 +2,10 @@
 
 ## From an admin PC (Ansible installed)
 
-Add target hosts to `inventory/hosts.yml`, then run:
+Add target hosts to `provisioning/inventory/hosts.yml`, then run:
 
 ```bash
-ansible-playbook playbooks/site.yml -K -l my_laptop
+ansible-playbook provisioning/site.yml -K -l my_laptop
 ```
 
 ## From a controller container (no Ansible on admin PC)
@@ -15,13 +15,13 @@ Docker:
 
 ```bash
 # Run site.yml against all hosts
-./deploy/deploy.sh
+./controller/run.sh
 
 # Limit to a single host
-./deploy/deploy.sh -l my_laptop
+./controller/run.sh -l my_laptop
 
 # Limit to servers, prompt for become password
-./deploy/deploy.sh -l servers -K
+./controller/run.sh -l servers -K
 ```
 
 The container mounts `~/.ssh` read-only so your SSH keys are available without

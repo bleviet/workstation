@@ -115,11 +115,11 @@ Vagrant.configure("2") do |config|
         set -e
         REPO=/home/vagrant/workspace/workstation
         export ANSIBLE_CONFIG="$REPO/ansible.cfg"
-        export ANSIBLE_ROLES_PATH="$REPO/roles"
+        export ANSIBLE_ROLES_PATH="$REPO/provisioning/roles"
         ansible-playbook \
-          --inventory "$REPO/inventory/hosts.yml" \
+          --inventory "$REPO/provisioning/inventory/hosts.yml" \
           --extra-vars '#{extra_vars.to_json}' \
-          "$REPO/playbooks/site.yml"
+          "$REPO/provisioning/site.yml"
       SHELL
     end
   end

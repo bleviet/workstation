@@ -281,7 +281,7 @@
           options: [
             {
               id: "adminpc", label: "Admin PC (Ansible)",
-              how: `# add the host to inventory/hosts.yml first\nansible-playbook playbooks/site.yml -K -l my_laptop`,
+              how: `# add the host to provisioning/inventory/hosts.yml first\nansible-playbook provisioning/site.yml -K -l my_laptop`,
               diagram: `flowchart LR
     subgraph admin["Admin PC"]
       P["ansible-playbook<br/>-l my_laptop"]
@@ -291,11 +291,11 @@
     class P a; class R done;`
             },
             {
-              id: "container", label: "Container (deploy.sh)",
-              how: `# builds the controller image, mounts ~/.ssh read-only\n./deploy/deploy.sh -l my_laptop`,
+              id: "container", label: "Container (run.sh)",
+              how: `# builds the controller image, mounts ~/.ssh read-only\n./controller/run.sh -l my_laptop`,
               diagram: `flowchart LR
     subgraph admin["Admin PC (Podman/Docker)"]
-      D["./deploy/deploy.sh"] --> I["controller image"]
+      D["./controller/run.sh"] --> I["controller image"]
       K["~/.ssh (ro)"] -. mount .-> I
     end
     I -- "SSH" --> H["target host"]
@@ -343,7 +343,7 @@
             },
             {
               id: "sshkey", label: "SSH key",
-              how: `# inventory/host_vars/devbox.yml\ndev_user: bach\ndev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"`,
+              how: `# provisioning/inventory/host_vars/devbox.yml\ndev_user: bach\ndev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"`,
               diagram: `flowchart TD
     K["dev_user_ssh_pubkey<br/>in host_vars"] --> T["user role:<br/>authorized_key for bach"]
     T --> L["ssh bach@devbox"]
@@ -376,7 +376,7 @@
             },
             {
               id: "shared", label: "Shared (own repo)",
-              how: `# inventory/host_vars/alice_laptop.yml\nchezmoi_init_repo: "https://github.com/alice/dotfiles"`,
+              how: `# provisioning/inventory/host_vars/alice_laptop.yml\nchezmoi_init_repo: "https://github.com/alice/dotfiles"`,
               diagram: `flowchart TD
     CFG["chezmoi_init_repo set"] --> AUTH{"URL type?"}
     AUTH -- "https://" --> NA["no auth"]

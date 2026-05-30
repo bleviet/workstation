@@ -39,10 +39,10 @@ VAGRANT_PROVIDER=libvirt ./tests/run_vm_tests.sh
 ./tests/run_vm_tests.sh debian-i3wm
 ```
 
-Or drive Vagrant directly from `tests/vagrant/`:
+Or drive Vagrant directly from `tests/vm/`:
 
 ```bash
-cd tests/vagrant
+cd tests/vm
 
 vagrant up debian --provider=virtualbox
 vagrant up debian-i3wm --provider=vmware_desktop
@@ -59,7 +59,7 @@ Clone the repo to a Windows path first:
 
 ```powershell
 git clone <repo> C:\workspace\workstation
-cd C:\workspace\workstation\tests\vagrant
+cd C:\workspace\workstation\tests\vm
 ```
 
 Bring up a VM with the installed provider:
@@ -101,7 +101,7 @@ Then run `wsl --shutdown` and restart.
 
 `bento/*` boxes are used because they ship pre-built for VirtualBox, VMware,
 and libvirt. Each VM installs Ansible inside the guest via a shell provisioner
-and runs the full `playbooks/site.yml`.
+and runs the full `provisioning/site.yml`.
 
 `features.xrdp` and `features.fpga` are forced to `false` in VMs. Override via
 `--extra-vars` if needed.
