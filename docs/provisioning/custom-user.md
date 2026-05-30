@@ -25,7 +25,8 @@ python scripts/add_dev_host.py -H devbox -i 192.168.1.40 -u admin \
 | `-i, --ip` | `ansible_host` IP/DNS; omit for a local entry |
 | `-u, --ssh-user` | SSH login Ansible connects as (required with `--ip`) |
 | `-p, --profile` | `headless` \| `desktop-gnome` \| `desktop-xfce` \| `desktop-i3wm` (default: `desktop-xfce`) |
-| `--xrdp` / `--fpga` | Enable the matching feature flag |
+| `--xrdp` | Enable `features.xrdp` (RDP access) |
+| `--fpga` | Enable `features.fpga.vivado`, `.quartus`, and `.oss` |
 | `--run` | Run the playbook after scaffolding |
 | `-f, --force` | Overwrite an existing `host_vars` file |
 
@@ -60,7 +61,14 @@ profile: desktop-xfce
 dev_user: bach
 
 features:
-  fpga: false
+  editor:
+    neovim: true
+    lazyvim: false
+    vscode: false
+  fpga:
+    vivado: false
+    quartus: false
+    oss: false
   xrdp: true      # RDP access from Windows
 ```
 
@@ -140,7 +148,14 @@ dev_user: bach
 dev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"
 
 features:
-  fpga: false
+  editor:
+    neovim: true
+    lazyvim: false
+    vscode: false
+  fpga:
+    vivado: false
+    quartus: false
+    oss: false
   xrdp: false
 ```
 

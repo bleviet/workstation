@@ -257,7 +257,7 @@
         when: `You're configuring the computer you're sitting at — your own laptop or workstation.`,
         why: `One command, zero prerequisites: bootstrap installs a current ansible-core via pip (the distro package is usually years behind), pulls the Galaxy collections, and provisions everything.`,
         how: `git clone &lt;repo&gt; ~/workspace/workstation\ncd ~/workspace/workstation\n./bootstrap.sh`,
-        links: [{ label: "Quick start", href: "quick-start.md" }, { label: "Host configuration", href: "host-configuration.md" }],
+        links: [{ label: "Quick start", href: "provisioning/quick-start.md" }, { label: "Host configuration", href: "provisioning/host-configuration.md" }],
         diagram: `flowchart TD
     A["git clone + cd"] --> B["./bootstrap.sh"]
     B --> C["detect OS<br/>(apt / dnf)"]
@@ -275,7 +275,7 @@
         what: `Run the playbook from an admin machine against a remote host over SSH — either with Ansible installed locally, or from a throwaway controller container.`,
         when: `You're setting up a server or someone else's workstation that you reach over SSH.`,
         why: `Keeps the target clean: nothing but SSH is required on it. The container path means the admin PC needs no Ansible install at all — just Podman/Docker.`,
-        links: [{ label: "Remote deployment", href: "remote-deployment.md" }],
+        links: [{ label: "Remote deployment", href: "provisioning/remote-deployment.md" }],
         subOptions: {
           label: "Run from",
           options: [
@@ -313,7 +313,7 @@
         what: `Provision a dedicated developer account (not the SSH login user). The <span class="${C}">user</span> role creates it with passwordless sudo; every later role installs into that account's home.`,
         when: `A shared box where the person using it differs from the account Ansible connects as (e.g. connect as <span class="${C}">vagrant</span>, provision for <span class="${C}">bach</span>).`,
         why: `Decouples "who provisions" from "who uses". Tools, dotfiles and shell land in <span class="${C}">/home/&lt;dev_user&gt;</span>, not the SSH user's home.`,
-        links: [{ label: "Custom developer user", href: "custom-user.md" }],
+        links: [{ label: "Custom developer user", href: "provisioning/custom-user.md" }],
         subOptions: {
           label: "Account access",
           options: [
@@ -361,7 +361,7 @@
         what: `chezmoi applies dotfiles. Either this repo's <span class="${C}">dotfiles/</span> folder is the source (owner), or each user points <span class="${C}">chezmoi_init_repo</span> at their own repo (shared).`,
         when: `Owner: one person across their own machines. Shared: several people, each with their own dotfiles repository.`,
         why: `Owner mode needs no external repo — the workstation repo is the source. Shared mode keeps everyone's dotfiles separate and lets chezmoi commands work on the target after provisioning.`,
-        links: [{ label: "Dotfiles — owner", href: "dotfiles-owner.md" }, { label: "Dotfiles — shared", href: "dotfiles-shared.md" }],
+        links: [{ label: "Dotfiles — owner", href: "dotfiles/owner.md" }, { label: "Dotfiles — shared", href: "dotfiles/shared.md" }],
         subOptions: {
           label: "Mode",
           options: [
@@ -400,7 +400,7 @@
         what: `The <span class="${C}">profile</span> variable selects the desktop environment. SSH + X11 forwarding are always installed regardless of profile.`,
         when: `Set it per host in <span class="${C}">host_vars/&lt;hostname&gt;.yml</span>. Headless for servers; a desktop profile for workstations.`,
         why: `One variable drives which roles run. Desktop roles are mutually exclusive — exactly one environment is installed.`,
-        links: [{ label: "Host configuration", href: "host-configuration.md" }],
+        links: [{ label: "Host configuration", href: "provisioning/host-configuration.md" }],
         subOptions: {
           label: "Profile",
           options: [
@@ -415,30 +415,47 @@
         id: "features",
         icon: "🧩",
         title: "Enable features",
-        subtitle: "xrdp · fpga",
-        what: `Optional feature flags under <span class="${C}">features</span> turn on extra roles: <span class="${C}">xrdp</span> (Windows Remote Desktop, port 3389) and <span class="${C}">fpga</span> (FPGA toolchain).`,
-        when: `Per host in <span class="${C}">host_vars/&lt;hostname&gt;.yml</span>. Enable xrdp when you need RDP access; fpga for hardware dev boxes.`,
-        why: `Off by default so a base machine stays lean. Each flag gates its role independently of the desktop profile.`,
-        links: [{ label: "Host configuration", href: "host-configuration.md" }],
+        subtitle: "editor · fpga · xrdp",
+        what: `Feature flags are organised in three groups: <span class="${C}">editor</span> (neovim, lazyvim, vscode), <span class="${C}">fpga</span> (vivado, quartus, oss), and <span class="${C}">xrdp</span>. All default to the conservative option — enable only what you need.`,
+        when: `Per host in <span class="${C}">provisioning/inventory/host_vars/&lt;hostname&gt;.yml</span>.`,
+        why: `Off by default so a base machine stays lean. Each sub-flag is independent — Quartus-only shops skip Vivado libs; vim users skip VS Code.`,
+        links: [{ label: "Host configuration", href: "provisioning/host-configuration.md" }],
         subOptions: {
-          label: "Feature",
+          label: "Feature group",
           options: [
             {
+              id: "editor", label: "editor",
+              how: `features:\n  editor:\n    neovim: true    # binary from GitHub releases\n    lazyvim: true   # pre-install plugins (implies neovim)\n    vscode: false   # VS Code via Microsoft repo`,
+              diagram: `flowchart TD
+    F["features.editor.*"] --> NV["neovim binary"]
+    F --> LV["LazyVim plugins\n(post_task after chezmoi)"]
+    F --> VS["VS Code\n(Microsoft apt/dnf repo)"]
+    NV --> D(["editors ready ✔"])
+    LV --> D
+    VS --> D
+    class F a; class D done;`
+            },
+            {
+              id: "fpga", label: "fpga",
+              how: `features:\n  fpga:\n    vivado: true    # AMD/Xilinx runtime libs + udev\n    quartus: false  # Intel/Altera runtime libs + udev\n    oss: true       # iverilog, gtkwave, verilator, ghdl, nvc`,
+              diagram: `flowchart TD
+    F["features.fpga.*"] --> VI["Vivado libs\n+ Xilinx udev"]
+    F --> QU["Quartus libs\n+ USB-Blaster udev"]
+    F --> OS["OSS EDA\n(iverilog, gtkwave…)"]
+    F --> USB["USB/JTAG libs\nhw-access groups"]
+    VI --> D(["FPGA env ready ✔"])
+    QU --> D
+    OS --> D
+    USB --> D
+    class F a; class D done;`
+            },
+            {
               id: "xrdp", label: "xrdp (RDP)",
-              how: `# host_vars/<hostname>.yml\nfeatures:\n  xrdp: true`,
+              how: `features:\n  xrdp: true`,
               diagram: `flowchart TD
     F["features.xrdp: true"] --> R["xrdp role"]
     R --> SVC["install + enable xrdp<br/>open port 3389"]
     SVC --> D(["RDP ready ✔"])
-    class F a; class D done;`
-            },
-            {
-              id: "fpga", label: "fpga (toolchain)",
-              how: `# host_vars/<hostname>.yml\nfeatures:\n  fpga: true`,
-              diagram: `flowchart TD
-    F["features.fpga: true"] --> R["fpga role"]
-    R --> T["install GHDL<br/>(Quartus: manual note)"]
-    T --> D(["toolchain ✔"])
     class F a; class D done;`
             }
           ]
@@ -462,7 +479,7 @@
     SSH --> XF["xfce<br/>(desktop-xfce)"]
     SSH --> I3["i3wm<br/>(desktop-i3wm)"]
     SSH -.->|features.xrdp| XR["xrdp"]
-    SSH -.->|features.fpga| FP["fpga"]
+    SSH -.->|features.fpga.*| FP["fpga"]
     class B a;
     ${mark}`;
     }

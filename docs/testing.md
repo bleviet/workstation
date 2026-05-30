@@ -103,5 +103,6 @@ Then run `wsl --shutdown` and restart.
 and libvirt. Each VM installs Ansible inside the guest via a shell provisioner
 and runs the full `provisioning/site.yml`.
 
-`features.xrdp` and `features.fpga` are forced to `false` in VMs. Override via
+All `features.fpga.*` and `features.xrdp` flags default to `false` in test VMs.
+`features.editor.neovim` defaults to `true`. Override any flag via
 `--extra-vars` if needed.
