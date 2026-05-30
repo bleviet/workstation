@@ -36,6 +36,10 @@ packages:
 #   dev_user: bach
 dev_user: "{{ ansible_facts['user_id'] }}"
 dev_user_home: "/home/{{ dev_user }}"
+# SSH public key to install for dev_user. Leave empty to skip (password login
+# or manual key setup). Set per host in host_vars/<hostname>.yml, e.g.:
+#   dev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"
+dev_user_ssh_pubkey: ""
 
 # ── Environment profile ───────────────────────────────────────────────────────
 # Controls which desktop environment roles are applied.

@@ -24,3 +24,13 @@
     mode: "0440"
     validate: /usr/sbin/visudo -cf %s
   when: dev_user != ansible_facts['user_id']
+
+- name: Add SSH public key for developer user
+  become: true
+  ansible.posix.authorized_key:
+    user: "{{ dev_user }}"
+    key: "{{ dev_user_ssh_pubkey }}"
+    state: present
+  when:
+    - dev_user != ansible_facts['user_id']
+    - dev_user_ssh_pubkey | length > 0

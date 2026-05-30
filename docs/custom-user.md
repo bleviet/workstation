@@ -128,12 +128,31 @@ sudo passwd bach
 After setting a password the user can log in via the desktop login screen
 (LightDM / GDM) or over RDP if `features.xrdp` is enabled.
 
-### SSH key login
+### SSH key login (recommended)
 
-Add the developer's public key to `/home/bach/.ssh/authorized_keys` on the
-machine. The cleanest way is to add it during provisioning by extending the
-`user` role with an `authorized_key` task and a `dev_user_ssh_pubkey` variable
-in `host_vars/<hostname>.yml`.
+Set `dev_user_ssh_pubkey` in `inventory/host_vars/<hostname>.yml` and the
+playbook will install the key during provisioning:
+
+```yaml
+# inventory/host_vars/devbox.yml
+profile: desktop-xfce
+dev_user: bach
+dev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"
+
+features:
+  fpga: false
+  xrdp: false
+```
+
+After provisioning, connect directly:
+
+```bash
+ssh -i ~/.ssh/id_ed25519 bach@devbox
+```
+
+To add or rotate a key on an already-provisioned machine, update the value in
+`host_vars` and re-run the playbook — `ansible.posix.authorized_key` is
+idempotent and will add the key if missing without touching existing ones.
 
 ## Connecting as the new user after provisioning
 
