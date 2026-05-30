@@ -26,3 +26,12 @@
     UV_TOOL_BIN_DIR: "{{ dev_tools_bin_dir }}"
   when: not pyright_stat.stat.exists
   changed_when: true
+
+- name: Pre-install Python 3.13 via uv
+  ansible.builtin.command:
+    argv: ["{{ dev_tools_bin_dir }}/uv", "python", "install", "3.13"]
+  environment:
+    HOME: "{{ dev_user_home }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  changed_when: false

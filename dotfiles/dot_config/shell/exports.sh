@@ -20,5 +20,4 @@ export EDITOR=nvim
 ###############################################################################
 ## PATH
 ###############################################################################
-[ -d "$HOME/miniconda3" ] && export PATH="$HOME/miniconda3/bin:$PATH"
 export PATH="$HOME/.local/bin:$PATH"

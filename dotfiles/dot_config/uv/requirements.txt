@@ -1,0 +1,6 @@
+# Global base requirements — installed into every new project venv by mkvenv.
+# Add project-specific dependencies to the project's own requirements.txt
+# or pyproject.toml rather than here.
+pytest
+cocotb
+cocotbext-axi

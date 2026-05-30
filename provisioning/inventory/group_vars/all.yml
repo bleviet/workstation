@@ -9,6 +9,7 @@ ansible_python_interpreter: /usr/bin/python3
 packages:
   common:
     - curl
+    - direnv
     - file
     - fontconfig
     - git
