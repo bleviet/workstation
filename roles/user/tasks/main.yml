@@ -11,10 +11,10 @@
     name: "{{ dev_user }}"
     shell: /bin/zsh
     create_home: true
-    groups: "{{ 'sudo' if ansible_os_family == 'Debian' else 'wheel' }}"
+    groups: "{{ 'sudo' if ansible_facts['os_family'] == 'Debian' else 'wheel' }}"
     append: true
     state: present
-  when: dev_user != ansible_user_id
+  when: dev_user != ansible_facts['user_id']
 
 - name: Grant developer user passwordless sudo
   become: true
@@ -23,4 +23,4 @@
     dest: "/etc/sudoers.d/{{ dev_user }}"
     mode: "0440"
     validate: /usr/sbin/visudo -cf %s
-  when: dev_user != ansible_user_id
+  when: dev_user != ansible_facts['user_id']

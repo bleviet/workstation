@@ -20,5 +20,5 @@
         HOME: "{{ dev_user_home }}"
       when: (features.fonts | default(true) | bool) and not nerd_fonts_stat.stat.exists
       changed_when: true
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"

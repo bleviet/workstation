@@ -4,13 +4,13 @@
     name: epel-release
     state: present
   become: true
-  when: ansible_os_family == "RedHat"
+  when: ansible_facts['os_family'] == "RedHat"
 
 - name: Enable CRB repository (required for EPEL dependencies on RedHat family)
   ansible.builtin.command:
     cmd: dnf config-manager --set-enabled crb
   become: true
-  when: ansible_os_family == "RedHat"
+  when: ansible_facts['os_family'] == "RedHat"
   changed_when: false
 
 - name: Install system packages (Debian/Ubuntu)
@@ -19,11 +19,11 @@
     state: present
     update_cache: true
   become: true
-  when: ansible_os_family == "Debian"
+  when: ansible_facts['os_family'] == "Debian"
 
 - name: Install system packages (RedHat/AlmaLinux)
   ansible.builtin.dnf:
     name: "{{ packages.common + packages.dnf }}"
     state: present
   become: true
-  when: ansible_os_family == "RedHat"
+  when: ansible_facts['os_family'] == "RedHat"

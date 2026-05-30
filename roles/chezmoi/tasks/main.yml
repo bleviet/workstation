@@ -10,6 +10,8 @@
   ansible.builtin.stat:
     path: "{{ chezmoi_bin }}"
   register: chezmoi_stat
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
 
 - name: Install chezmoi via official installer
   ansible.builtin.shell: |
@@ -18,7 +20,7 @@
     HOME: "{{ dev_user_home }}"
   when: not chezmoi_stat.stat.exists
   changed_when: true
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
 - name: Ensure chezmoi config directory exists
@@ -26,7 +28,7 @@
     path: "{{ dev_user_home }}/.config/chezmoi"
     state: directory
     mode: "0700"
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
 # ── Local mode (chezmoi_init_repo not set) ─────────────────────────────────
@@ -55,7 +57,7 @@
     dest: "{{ dev_user_home }}/.config/chezmoi/chezmoi.toml"
     mode: "0600"
   when: chezmoi_init_repo == ""
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
 # Copy dotfiles to the standard chezmoi source directory on the remote via
@@ -71,7 +73,7 @@
     - chezmoi_init_repo == ""
     - inventory_hostname != "localhost"
     - ansible_connection | default("ssh") != "local"
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
 - name: Apply dotfiles with chezmoi (local source)
@@ -87,7 +89,7 @@
     HOME: "{{ dev_user_home }}"
   changed_when: true
   when: chezmoi_init_repo == ""
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
 # ── External repo mode (chezmoi_init_repo set) ─────────────────────────────
@@ -139,7 +141,7 @@
   when:
     - chezmoi_init_repo != ""
     - chezmoi_ssh_key_file != ""
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
 # Interactive: forward the running ssh-agent socket so the agent handles auth.
@@ -158,5 +160,5 @@
   when:
     - chezmoi_init_repo != ""
     - chezmoi_ssh_key_file == ""
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"

@@ -34,7 +34,7 @@ packages:
 # Defaults to the Ansible SSH user so existing setups need no changes.
 # Set per host in host_vars/<hostname>.yml to provision a different account:
 #   dev_user: bach
-dev_user: "{{ ansible_user_id }}"
+dev_user: "{{ ansible_facts['user_id'] }}"
 dev_user_home: "/home/{{ dev_user }}"
 
 # ── Environment profile ───────────────────────────────────────────────────────

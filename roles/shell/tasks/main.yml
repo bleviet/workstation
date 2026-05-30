@@ -4,7 +4,7 @@
     path: "{{ dev_user_home }}/.config/shell"
     state: directory
     mode: "0755"
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
 - name: Place OS-specific shell snippet
@@ -12,13 +12,15 @@
     src: os.sh.j2
     dest: "{{ dev_user_home }}/.config/shell/os.sh"
     mode: "0644"
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
 - name: Check if oh-my-zsh is installed
   ansible.builtin.stat:
     path: "{{ dev_user_home }}/.oh-my-zsh"
   register: omz_stat
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
 
 - name: Install oh-my-zsh
   ansible.builtin.shell:
@@ -28,5 +30,5 @@
     HOME: "{{ dev_user_home }}"
   when: not omz_stat.stat.exists
   changed_when: true
-  become: "{{ dev_user != ansible_user_id }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
