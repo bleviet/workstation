@@ -150,12 +150,25 @@ fpga_usb_libs_rpm:
   - fxload                   # EPEL
 
 # ── Simulation / waveform tools (AlmaLinux 9 / RHEL 9 via EPEL) ──────────────
-# ghdl and nvc are not available in EPEL 9; install manually from
-# https://github.com/ghdl/ghdl/releases if VHDL simulation is needed.
+# ghdl and nvc are not in EPEL 9 — installed separately via dedicated tasks.
 fpga_oss_tools_rpm:
   - iverilog
   - gtkwave
   - verilator
+
+# ── ghdl (RHEL only — installed from GitHub pre-built release) ───────────────
+# Uses the Ubuntu 20.04 mcode build (glibc 2.31) which is compatible with
+# AlmaLinux 9 / RHEL 9 (glibc 2.34). Building from source is not feasible
+# on RHEL 9 because gcc-gnat is absent from standard and EPEL repos.
+# v6.0.0+ only ships Ubuntu 24.04 binaries (glibc 2.39 — incompatible).
+ghdl_version: "4.1.0"
+ghdl_rhel_url: "https://github.com/ghdl/ghdl/releases/download/v{{ ghdl_version }}/ghdl-gha-ubuntu-20.04-mcode.tgz"
+
+# ── nvc (RHEL only — built from source) ──────────────────────────────────────
+# nvc publishes only .deb packages and source tarballs. Builds cleanly on
+# AlmaLinux 9 with standard packages + llvm-devel. Takes ~5 min on 8 vCPUs.
+nvc_version: "1.21.0"
+nvc_source_url: "https://github.com/nickg/nvc/releases/download/r{{ nvc_version }}/nvc-{{ nvc_version }}.tar.gz"
 
 # ── Groups the dev_user is added to for JTAG / serial access ─────────────────
 fpga_user_groups:

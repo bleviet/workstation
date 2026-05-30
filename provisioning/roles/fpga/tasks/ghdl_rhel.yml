@@ -1,0 +1,58 @@
+---
+# Installs ghdl from the Ubuntu 20.04 mcode pre-built release (glibc 2.31),
+# which is compatible with AlmaLinux 9 / RHEL 9 (glibc 2.34).
+# The mcode backend requires no LLVM or Ada runtime at install time.
+# ghdl is not packaged in EPEL 9 and building from source requires gcc-gnat
+# which is also absent from RHEL 9 repos.
+
+- name: Check ghdl {{ ghdl_version }} version marker
+  ansible.builtin.stat:
+    path: /usr/local/lib/.ghdl-{{ ghdl_version }}
+  register: _ghdl_marker
+
+- name: Install ghdl {{ ghdl_version }}
+  when: not _ghdl_marker.stat.exists
+  block:
+    - name: Create ghdl temp directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: _ghdl
+      register: _ghdl_tmp
+
+    - name: Download ghdl tarball
+      ansible.builtin.get_url:
+        url: "{{ ghdl_rhel_url }}"
+        dest: "{{ _ghdl_tmp.path }}/ghdl.tgz"
+        mode: "0644"
+
+    - name: Extract ghdl tarball
+      ansible.builtin.unarchive:
+        src: "{{ _ghdl_tmp.path }}/ghdl.tgz"
+        dest: "{{ _ghdl_tmp.path }}"
+        remote_src: true
+
+    - name: Install ghdl to /usr/local
+      # The tarball may or may not have a top-level wrapper directory.
+      # Find the actual prefix by locating the ghdl binary inside the extract.
+      ansible.builtin.shell: |
+        set -e
+        BIN=$(find "{{ _ghdl_tmp.path }}" -name "ghdl" -type f -executable | head -1)
+        [ -z "$BIN" ] && { echo "ERROR: ghdl binary not found in tarball" >&2; exit 1; }
+        PREFIX=$(dirname "$(dirname "$BIN")")
+        [ -d "$PREFIX/bin" ]   && cp -r "$PREFIX/bin/."   /usr/local/bin/
+        [ -d "$PREFIX/lib" ]   && cp -r "$PREFIX/lib/."   /usr/local/lib/
+        [ -d "$PREFIX/share" ] && cp -r "$PREFIX/share/." /usr/local/share/
+      changed_when: true
+
+    - name: Write ghdl version marker
+      ansible.builtin.file:
+        path: /usr/local/lib/.ghdl-{{ ghdl_version }}
+        state: touch
+        mode: "0644"
+
+  always:
+    - name: Clean up ghdl temp directory
+      ansible.builtin.file:
+        path: "{{ _ghdl_tmp.path }}"
+        state: absent
+      when: _ghdl_tmp.path is defined

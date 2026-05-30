@@ -1,0 +1,71 @@
+---
+# Builds nvc from source. nvc is not packaged in EPEL 9.
+# Only .deb packages and source tarballs are published on GitHub Releases.
+# Build takes ~5 minutes on 8 vCPUs.
+
+- name: Check nvc {{ nvc_version }} version marker
+  ansible.builtin.stat:
+    path: /usr/local/lib/.nvc-{{ nvc_version }}
+  register: _nvc_marker
+
+- name: Install nvc {{ nvc_version }} from source
+  when: not _nvc_marker.stat.exists
+  block:
+    - name: Install nvc build dependencies
+      ansible.builtin.dnf:
+        name:
+          - autoconf
+          - automake
+          - flex
+          - gcc
+          - make
+          - pkg-config
+          - llvm-devel
+          - libffi-devel
+          - zlib-ng-compat-devel
+          - libzstd-devel
+          - elfutils-devel
+        state: present
+
+    - name: Create nvc temp directory
+      ansible.builtin.tempfile:
+        state: directory
+        suffix: _nvc
+      register: _nvc_tmp
+
+    - name: Download nvc source tarball
+      ansible.builtin.get_url:
+        url: "{{ nvc_source_url }}"
+        dest: "{{ _nvc_tmp.path }}/nvc.tar.gz"
+        mode: "0644"
+
+    - name: Extract nvc source tarball
+      ansible.builtin.unarchive:
+        src: "{{ _nvc_tmp.path }}/nvc.tar.gz"
+        dest: "{{ _nvc_tmp.path }}"
+        remote_src: true
+
+    - name: Configure, build, and install nvc
+      ansible.builtin.shell: |
+        set -e
+        SRC=$(find "{{ _nvc_tmp.path }}" -maxdepth 1 -name "nvc-*" -type d | head -1)
+        [ -z "$SRC" ] && { echo "ERROR: nvc source directory not found" >&2; exit 1; }
+        cd "$SRC"
+        mkdir build && cd build
+        ../configure --prefix=/usr/local
+        make -j$(nproc)
+        make install
+      changed_when: true
+
+    - name: Write nvc version marker
+      ansible.builtin.file:
+        path: /usr/local/lib/.nvc-{{ nvc_version }}
+        state: touch
+        mode: "0644"
+
+  always:
+    - name: Clean up nvc temp directory
+      ansible.builtin.file:
+        path: "{{ _nvc_tmp.path }}"
+        state: absent
+      when: _nvc_tmp.path is defined

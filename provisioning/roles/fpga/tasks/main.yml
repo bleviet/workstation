@@ -182,6 +182,18 @@
     - features.fpga.oss | default(false) | bool
     - ansible_facts['os_family'] == "RedHat"
 
+- name: Install ghdl (RedHat/AlmaLinux — not in EPEL, use pre-built binary)
+  ansible.builtin.include_tasks: ghdl_rhel.yml
+  when:
+    - features.fpga.oss | default(false) | bool
+    - ansible_facts['os_family'] == "RedHat"
+
+- name: Install nvc (RedHat/AlmaLinux — not in EPEL, build from source)
+  ansible.builtin.include_tasks: nvc_rhel.yml
+  when:
+    - features.fpga.oss | default(false) | bool
+    - ansible_facts['os_family'] == "RedHat"
+
 # ── FPGA environment variable stubs ──────────────────────────────────────────
 # Only written when a commercial tool is requested; OSS tools need no stubs.
 
