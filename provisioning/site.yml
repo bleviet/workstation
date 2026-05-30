@@ -47,7 +47,10 @@
     - ssh
     # ── Optional features ─────────────────────────────────────────────────
     - role: fpga
-      when: "features.fpga | default(false)"
+      when: >-
+        features.fpga.vivado  | default(false) | bool or
+        features.fpga.quartus | default(false) | bool or
+        features.fpga.oss     | default(false) | bool
     - role: desktop
       when: "'desktop' in profile"
     - role: gnome
@@ -58,3 +61,20 @@
       when: "profile == 'desktop-i3wm'"
     - role: xrdp
       when: "features.xrdp | default(false)"
+  # ── Post-provisioning ──────────────────────────────────────────────────────
+  # Runs after all roles. Neovim binary and dotfiles (including LazyVim config)
+  # must both be in place before plugins can be synced.
+  post_tasks:
+    - name: Pre-install LazyVim plugins
+      ansible.builtin.command:
+        argv:
+          - "{{ dev_tools_bin_dir }}/nvim"
+          - "--headless"
+          - "+Lazy! sync"
+          - "+qa"
+      environment:
+        HOME: "{{ dev_user_home }}"
+      become: "{{ dev_user != ansible_facts['user_id'] }}"
+      become_user: "{{ dev_user }}"
+      changed_when: true
+      when: features.editor.lazyvim | default(false) | bool

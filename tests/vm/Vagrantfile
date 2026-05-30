@@ -109,7 +109,14 @@ Vagrant.configure("2") do |config|
       # world-writable and Ansible refuses to auto-load cfg from such dirs.
       # profile and features are injected via extra-vars so the VM inventory
       # does not need host_vars entries for non-localhost hostnames.
-      extra_vars = { "profile" => cfg[:profile], "features" => { "fpga" => false, "xrdp" => false, "gui" => cfg.fetch(:gui, false), "fonts" => !cfg.fetch(:gui, false) } }
+      extra_vars = {
+        "profile"  => cfg[:profile],
+        "features" => {
+          "editor"  => { "neovim" => true, "lazyvim" => false, "vscode" => false },
+          "fpga"    => { "vivado" => false, "quartus" => false, "oss" => false },
+          "xrdp"    => false
+        }
+      }
 
       m.vm.provision "shell", privileged: false, inline: <<~SHELL
         set -e

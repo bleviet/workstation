@@ -70,7 +70,11 @@ SHELL
 # profile + features drive which roles are applied (see provisioning/site.yml).
 EXTRA_VARS = {
   "profile"             => "desktop-xfce",
-  "features"            => { "fpga" => true, "xrdp" => false },
+  "features"            => {
+    "editor"  => { "neovim" => true, "lazyvim" => false, "vscode" => false },
+    "fpga"    => { "vivado" => true, "quartus" => true, "oss" => true },
+    "xrdp"    => false
+  },
   "xfce_autologin_user" => "vagrant"
 }.freeze
 

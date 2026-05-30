@@ -7,5 +7,12 @@ profile: desktop-xfce
 dev_user: bach
 
 features:
-  fpga: false
+  editor:
+    neovim: true
+    lazyvim: false
+    vscode: false
+  fpga:
+    vivado: false
+    quartus: false
+    oss: false
   xrdp: false

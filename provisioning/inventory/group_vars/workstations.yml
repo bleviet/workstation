@@ -5,5 +5,12 @@
 profile: desktop-xfce
 
 features:
-  fpga: false
+  editor:
+    neovim: true
+    lazyvim: false
+    vscode: false
+  fpga:
+    vivado: false
+    quartus: false
+    oss: false
   xrdp: false

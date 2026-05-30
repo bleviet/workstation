@@ -4,7 +4,11 @@ dev_tools_bin_dir: "{{ dev_user_home }}/.local/bin"
 nvm_version: "0.40.1"
 node_version: "lts"
 
-# Pre-built static binaries from GitHub Releases.
+# Neovim — installed separately so features.editor.neovim controls it.
+neovim_version: "0.12.2"
+neovim_url: "https://github.com/neovim/neovim/releases/download/v{{ neovim_version }}/nvim-linux-x86_64.tar.gz"
+
+# Pre-built static binaries from GitHub Releases — always installed as base dev tools.
 # All Rust/Go tools ship statically linked musl binaries — no runtime library deps.
 # Bump a version string here to upgrade that tool.
 github_binaries:
@@ -42,11 +46,6 @@ github_binaries:
     version: "0.44.1"
     url: "https://github.com/jesseduffield/lazygit/releases/download/v0.44.1/lazygit_0.44.1_Linux_x86_64.tar.gz"
     binary: lazygit
-
-  - name: neovim
-    version: "0.12.2"
-    url: "https://github.com/neovim/neovim/releases/download/v0.12.2/nvim-linux-x86_64.tar.gz"
-    binary: nvim
 
   - name: starship
     version: "1.21.1"

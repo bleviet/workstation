@@ -49,7 +49,29 @@ profile: headless
 
 # ── Feature flags ─────────────────────────────────────────────────────────────
 # Override per host in host_vars/ if needed.
+#
+# editor:
+#   neovim  — install the neovim binary; dotfiles supply the config via chezmoi
+#   lazyvim — pre-install LazyVim plugins during provisioning (implies neovim)
+#             so the first launch is instant rather than downloading on first open
+#   vscode  — install VS Code via the Microsoft apt/dnf repository
+#
+# fpga:
+#   vivado  — AMD/Xilinx runtime libs + Xilinx/Digilent udev rules
+#   quartus — Intel/Altera runtime libs + USB-Blaster udev rules
+#   oss     — open-source EDA toolchain (iverilog, gtkwave, verilator, ghdl, nvc)
+#   USB/JTAG libraries and hardware-access groups are added whenever any fpga
+#   sub-flag is true; they are shared across all commercial and OSS tools.
+#
+# xrdp — install xrdp for Windows Remote Desktop access (port 3389)
 
 features:
-  fpga: false
+  editor:
+    neovim: true    # most machines want neovim; set false to skip entirely
+    lazyvim: false  # pre-install LazyVim plugins (slow first launch otherwise)
+    vscode: false
+  fpga:
+    vivado: false
+    quartus: false
+    oss: false
   xrdp: false

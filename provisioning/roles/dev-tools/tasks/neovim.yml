@@ -1,0 +1,15 @@
+---
+# Installed via the same marker-based pattern as github_binaries so re-runs
+# are idempotent and a version bump triggers a fresh download.
+- name: Install neovim
+  ansible.builtin.include_tasks:
+    file: github_binaries.yml
+    apply:
+      become: "{{ dev_user != ansible_facts['user_id'] }}"
+      become_user: "{{ dev_user }}"
+  vars:
+    tool:
+      name: neovim
+      version: "{{ neovim_version }}"
+      url: "{{ neovim_url }}"
+      binary: nvim
