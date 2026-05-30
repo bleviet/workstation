@@ -34,6 +34,7 @@
     - name: Install ghdl to /usr/local
       # The tarball may or may not have a top-level wrapper directory.
       # Find the actual prefix by locating the ghdl binary inside the extract.
+      become: true
       ansible.builtin.shell: |
         set -e
         BIN=$(find "{{ _ghdl_tmp.path }}" -name "ghdl" -type f -executable | head -1)
@@ -45,6 +46,7 @@
       changed_when: true
 
     - name: Write ghdl version marker
+      become: true
       ansible.builtin.file:
         path: /usr/local/lib/.ghdl-{{ ghdl_version }}
         state: touch
