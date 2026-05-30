@@ -75,8 +75,7 @@ source "vmware-iso" "debian13" {
   shutdown_command = "echo 'vagrant' | sudo -S shutdown -P now"
 
   vmx_data = {
-    "ethernet0.virtualDev" = "vmxnet3"
-    "tools.syncTime"       = "TRUE"
+    "tools.syncTime" = "TRUE"
   }
 
   output_directory = "${path.root}/output"
@@ -104,7 +103,7 @@ build {
   # Package as a Vagrant box in the environment root.
   post-processor "vagrant" {
     output              = "${path.root}/../debian13.box"
-    provider_override   = "vmware_desktop"
+    provider_override   = "vmware"
     keep_input_artifact = false
   }
 }
