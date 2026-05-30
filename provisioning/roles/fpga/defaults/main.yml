@@ -150,12 +150,12 @@ fpga_usb_libs_rpm:
   - fxload                   # EPEL
 
 # ── Simulation / waveform tools (AlmaLinux 9 / RHEL 9 via EPEL) ──────────────
-# nvc is not yet available in EPEL 9.
+# ghdl and nvc are not available in EPEL 9; install manually from
+# https://github.com/ghdl/ghdl/releases if VHDL simulation is needed.
 fpga_oss_tools_rpm:
   - iverilog
   - gtkwave
   - verilator
-  - ghdl
 
 # ── Groups the dev_user is added to for JTAG / serial access ─────────────────
 fpga_user_groups:
