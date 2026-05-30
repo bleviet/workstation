@@ -13,6 +13,16 @@
   when: ansible_facts['os_family'] == "RedHat"
   changed_when: false
 
+- name: Remove legacy VS Code apt source (conflicts with deb822 entry)
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  become: true
+  loop:
+    - /etc/apt/sources.list.d/vscode.list
+    - /etc/apt/keyrings/microsoft.asc
+  when: ansible_facts['os_family'] == "Debian"
+
 - name: Install system packages (Debian/Ubuntu)
   ansible.builtin.apt:
     name: "{{ packages.common + packages.apt }}"

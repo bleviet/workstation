@@ -11,14 +11,6 @@
         name: python3-debian
         state: present
 
-    - name: Remove legacy VS Code apt source files (old apt_repository format)
-      ansible.builtin.file:
-        path: "{{ item }}"
-        state: absent
-      loop:
-        - /etc/apt/sources.list.d/vscode.list
-        - /etc/apt/keyrings/microsoft.asc
-
     - name: Add VS Code apt repository
       ansible.builtin.deb822_repository:
         name: vscode
