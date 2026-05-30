@@ -3,7 +3,10 @@
 #
 # FPGA Development VM – Vivado (Xilinx/AMD) + Quartus (Intel/Altera)
 # Host: Windows 11, 64 GB RAM
-# Guest: Debian 13 + XFCE4 desktop
+# Guest: Debian 12 (Bookworm) + XFCE4 desktop
+#
+# Note: debian/trixie64 and generic/debian13 have no VMware build yet.
+# Switch to Debian 13 once a VMware-compatible box is published.
 #
 # VM creation is handled here; all software provisioning is delegated to the
 # Ansible playbooks in this repository (provisioning/site.yml).
@@ -44,7 +47,7 @@ VAGRANTFILE_API_VERSION = "2"
 # ---------------------------------------------------------------------------
 # Tuneable constants – adjust to taste
 # ---------------------------------------------------------------------------
-VM_NAME     = "fpga-dev-debian13"
+VM_NAME     = "fpga-dev-debian12"
 VM_RAM_MB   = 32_768   # 32 GB  (leaves 32 GB for the Windows host)
 VM_CPUS     = 8        # logical CPUs visible inside the VM
 VM_DISK_GB  = "512GB"  # virtual disk size (provisioned on first vagrant up)
@@ -70,8 +73,12 @@ ADMIN_PUBKEY = _admin_pubkey_file ? File.read(_admin_pubkey_file).strip : ""
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── Base box ────────────────────────────────────────────────────────────
-  config.vm.box         = "generic/debian13"
-  config.vm.box_version = ">= 4.0.0"
+  # Box built locally from the official Debian 13 ISO via Packer.
+  # Build steps (run from environments/fpga-debian/packer/ on Windows):
+  #   packer init debian13.pkr.hcl
+  #   packer build debian13.pkr.hcl
+  #   vagrant box add --name fpga-debian13 ../debian13.box
+  config.vm.box = "fpga-debian13"
   config.vm.hostname    = "fpga-dev"
 
   # ── Disk size ────────────────────────────────────────────────────────────

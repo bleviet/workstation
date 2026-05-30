@@ -7,3 +7,7 @@ projects/
 
 # Admin SSH public key (drop your public key here; read by Vagrantfile)
 admin.pub
+
+# Packer build outputs
+*.box
+packer/output/
