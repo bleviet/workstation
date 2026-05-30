@@ -15,11 +15,10 @@
 #      (requires a paid HashiCorp license)
 #
 # Disk space:
-#   The bento/ubuntu-24.04 box ships with a 64 GB virtual disk.
-#   Vivado (full) ~100 GB + Quartus ~40 GB means you WILL need more space.
-#   Before running "vagrant up", open VMware Workstation → Edit VM settings →
-#   Hard Disk → Expand to ≥ 300 GB, then resize the partition inside the VM:
-#     sudo growpart /dev/sda 3 && sudo resize2fs /dev/sda3
+#   The virtual disk is provisioned at 512 GB (config.vm.disk below).
+#   Vivado (full) ~100 GB + Quartus ~40 GB + projects leaves plenty of room.
+#   The first-boot provisioner automatically grows the root partition and
+#   ext4 filesystem to fill the expanded disk — no manual steps needed.
 #
 # Tool installers:
 #   Drop Vivado / Quartus installer archives into the local "installers/" folder
@@ -46,6 +45,7 @@ VAGRANTFILE_API_VERSION = "2"
 VM_NAME     = "fpga-dev-ubuntu2404"
 VM_RAM_MB   = 32_768   # 32 GB  (leaves 32 GB for the Windows host)
 VM_CPUS     = 8        # logical CPUs visible inside the VM
+VM_DISK_GB  = "512GB"  # virtual disk size (provisioned on first vagrant up)
 VM_VRAM_MB  = 256      # video RAM for the XFCE session
 VM_3D_ACCEL = "TRUE"   # set to "FALSE" if the host GPU causes glitches
 
@@ -81,6 +81,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.box         = "bento/ubuntu-24.04"
   config.vm.box_version = ">= 202404.0.0"
   config.vm.hostname    = "fpga-dev"
+
+  # ── Disk size ────────────────────────────────────────────────────────────
+  # Requires Vagrant >= 2.2.8. The vagrant-vmware-desktop plugin handles the
+  # VMDK expansion before first boot; the step-0 provisioner below grows the
+  # partition and ext4 filesystem to use the full allocated space.
+  config.vm.disk :disk, size: VM_DISK_GB, primary: true
 
   # Disable the default /vagrant mount (explicit mounts are set up below).
   config.vm.synced_folder ".", "/vagrant", disabled: true
@@ -141,6 +147,17 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   # ── Provisioning (three steps, matching tests/vagrant/Vagrantfile) ───────
+
+  # Step 0: grow root partition + ext4 filesystem to fill the 512 GB disk.
+  # growpart is idempotent (exits 0 if already at max size).
+  config.vm.provision "shell", privileged: true, name: "grow-disk", inline: <<~SHELL
+    set -e
+    ROOT_DEV=$(findmnt -n -o SOURCE /)
+    DISK=$(lsblk -no PKNAME "$ROOT_DEV")
+    PART_NUM=$(cat /sys/class/block/${ROOT_DEV##*/}/partition)
+    growpart "/dev/$DISK" "$PART_NUM" || true
+    resize2fs "$ROOT_DEV"
+  SHELL
 
   # Step 1: install Ansible via the OS package manager.
   config.vm.provision "shell", privileged: true, inline: INSTALL_ANSIBLE
