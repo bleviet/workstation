@@ -23,6 +23,8 @@ cd ~/workspace/workstation
 
 ## Documentation
 
+📊 **[Interactive guide](docs/index.html)** — visual scenario explorer (open in a browser).
+
 | Doc | Scenario |
 |---|---|
 | [Quick start — local installation](docs/quick-start.md) | Clone repo on this machine and run `bootstrap.sh` (owner flow) |
