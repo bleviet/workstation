@@ -34,15 +34,17 @@
     - name: Install ghdl to /usr/local
       # The tarball may or may not have a top-level wrapper directory.
       # Find the actual prefix by locating the ghdl binary inside the extract.
+      # -executable is intentionally omitted: some tarballs strip execute bits.
       become: true
       ansible.builtin.shell: |
         set -e
-        BIN=$(find "{{ _ghdl_tmp.path }}" -name "ghdl" -type f -executable | head -1)
+        BIN=$(find "{{ _ghdl_tmp.path }}" -name "ghdl" -type f | head -1)
         [ -z "$BIN" ] && { echo "ERROR: ghdl binary not found in tarball" >&2; exit 1; }
         PREFIX=$(dirname "$(dirname "$BIN")")
-        [ -d "$PREFIX/bin" ]   && cp -r "$PREFIX/bin/."   /usr/local/bin/
+        [ -d "$PREFIX/bin" ]   && cp -r "$PREFIX/bin/."   /usr/local/bin/   && chmod +x /usr/local/bin/ghdl
         [ -d "$PREFIX/lib" ]   && cp -r "$PREFIX/lib/."   /usr/local/lib/
         [ -d "$PREFIX/share" ] && cp -r "$PREFIX/share/." /usr/local/share/
+        [ -f /usr/local/bin/ghwdump ] && chmod +x /usr/local/bin/ghwdump || true
       changed_when: true
 
     - name: Write ghdl version marker
