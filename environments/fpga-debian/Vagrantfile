@@ -70,8 +70,8 @@ ADMIN_PUBKEY = _admin_pubkey_file ? File.read(_admin_pubkey_file).strip : ""
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── Base box ────────────────────────────────────────────────────────────
-  config.vm.box         = "debian/trixie64"
-  config.vm.box_version = ">= 13.0"
+  config.vm.box         = "generic/debian13"
+  config.vm.box_version = ">= 4.0.0"
   config.vm.hostname    = "fpga-dev"
 
   # ── Disk size ────────────────────────────────────────────────────────────
