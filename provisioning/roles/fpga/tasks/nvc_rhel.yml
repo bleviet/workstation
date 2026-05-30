@@ -21,7 +21,6 @@
           - gcc
           - make
           - pkg-config
-          - llvm-devel
           - libffi-devel
           - zlib-devel
           - libzstd-devel
@@ -47,19 +46,17 @@
         remote_src: true
 
     - name: Configure and build nvc
+      # LLVM is disabled: nvc's configure checks for the 'engine' component
+      # which was removed in LLVM 20+. AlmaLinux 9 ships LLVM 21 so detection
+      # always fails. --disable-llvm falls back to nvc's bytecode interpreter
+      # (slower JIT but fully correct for VHDL simulation).
       ansible.builtin.shell: |
         set -e
         SRC=$(find "{{ _nvc_tmp.path }}" -maxdepth 1 -name "nvc-*" -type d | head -1)
         [ -z "$SRC" ] && { echo "ERROR: nvc source directory not found" >&2; exit 1; }
-        # AlmaLinux 9 installs llvm-config with a versioned name or under /usr/lib64/llvm/
-        LLVM_CONFIG=$(command -v llvm-config 2>/dev/null \
-          || command -v llvm-config-64 2>/dev/null \
-          || find /usr -name "llvm-config*" -type f 2>/dev/null | sort -V | tail -1)
-        [ -z "$LLVM_CONFIG" ] && { echo "ERROR: llvm-config not found" >&2; exit 1; }
-        echo "Using LLVM config: $LLVM_CONFIG"
         cd "$SRC"
         mkdir build && cd build
-        ../configure --prefix=/usr/local --with-llvm="$LLVM_CONFIG"
+        ../configure --prefix=/usr/local --disable-llvm
         make -j$(nproc)
       changed_when: true
 
