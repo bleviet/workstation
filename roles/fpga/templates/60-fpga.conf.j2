@@ -1,0 +1,15 @@
+# /etc/environment.d/60-fpga.conf
+# FPGA tool environment stubs — managed by Ansible (fpga role).
+# Uncomment and adjust the paths that match your installed tool versions.
+
+# ── Vivado / Vitis (AMD/Xilinx) ───────────────────────────────────────────────
+# VIVADO_HOME=/opt/Xilinx/Vivado/2025.2
+# PATH="$PATH:/opt/Xilinx/Vivado/2025.2/bin"
+# VITIS_HOME=/opt/Xilinx/Vitis/2025.2
+# XILINX_LOCAL_USER_DATA={{ dev_user_home }}/.Xilinx
+
+# ── Quartus Prime / Questa (Intel) ────────────────────────────────────────────
+# QUARTUS_ROOTDIR=/opt/intelFPGA_pro/24.1/quartus
+# QSYS_ROOTDIR=/opt/intelFPGA_pro/24.1/qsys/bin
+# PATH="$PATH:/opt/intelFPGA_pro/24.1/quartus/bin"
+# PATH="$PATH:/opt/intelFPGA_pro/24.1/questa_fse/bin"

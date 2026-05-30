@@ -15,3 +15,7 @@ xfce_packages_dnf:
   - xfce4-terminal
   - lightdm
   - lightdm-gtk
+
+# Set to a username to configure LightDM auto-login for that user.
+# Leave empty (default) to require a password on the login screen.
+xfce_autologin_user: ""

@@ -1,0 +1,6 @@
+# Vagrant runtime state
+.vagrant/
+
+# Shared folders created by Vagrantfile
+installers/
+projects/

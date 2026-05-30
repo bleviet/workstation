@@ -20,3 +20,27 @@
     enabled: true
     state: started
   become: true
+
+- name: Ensure /etc/lightdm/lightdm.conf.d exists
+  ansible.builtin.file:
+    path: /etc/lightdm/lightdm.conf.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+  when: xfce_autologin_user | default("") | length > 0
+
+- name: Configure LightDM autologin for {{ xfce_autologin_user }}
+  ansible.builtin.copy:
+    content: |
+      [Seat:*]
+      autologin-user={{ xfce_autologin_user }}
+      autologin-user-timeout=0
+      user-session=xfce
+    dest: /etc/lightdm/lightdm.conf.d/10-autologin.conf
+    owner: root
+    group: root
+    mode: "0644"
+  become: true
+  when: xfce_autologin_user | default("") | length > 0

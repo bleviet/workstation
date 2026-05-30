@@ -1,3 +1,165 @@
 ---
 features:
   fpga: false
+
+# ── Vivado runtime dependencies (Ubuntu 24.04 / Debian) ──────────────────────
+# Covers Vivado 2025.2.  Both amd64 and i386 variants where available.
+# Note: libpng12 is NOT in Ubuntu 24.04 repos; Vivado 2025.2 bundles it internally.
+fpga_vivado_libs_apt:
+  - libx11-6
+  - libx11-6:i386
+  - libxrender1
+  - libxrender1:i386
+  - libxtst6
+  - libxtst6:i386
+  - libxi6
+  - libxi6:i386
+  - libxcursor1
+  - libxcursor1:i386
+  - libxrandr2
+  - libxrandr2:i386
+  - libxft2
+  - libxft2:i386
+  - libxext6
+  - libxext6:i386
+  - libxfixes3
+  - libxfixes3:i386
+  - libfreetype6
+  - libfreetype6:i386
+  - libfontconfig1
+  - libfontconfig1:i386
+  - libglib2.0-0t64         # amd64 only — Ubuntu 24.04 t64 variant
+  - libglib2.0-0:i386       # i386 keeps the pre-t64 name on Noble
+  - libgtk-3-0t64           # GTK3 — new hard dep in Vivado 2025.x (replaces GTK2)
+  - libsm6
+  - libsm6:i386
+  - libice6
+  - libice6:i386
+  - libc6:i386
+  - libstdc++6
+  - libstdc++6:i386
+  - libgcc-s1
+  - libgcc-s1:i386
+  - zlib1g
+  - zlib1g:i386
+  - libssl3t64
+  - libcrypt1               # libxcrypt compat — provides libcrypt.so.1 for internal Vivado tools
+  - libncurses6
+  - libncurses6:i386
+  - libtinfo6
+  - libtinfo6:i386
+  - libgomp1
+  - libgomp1:i386
+  - cpio                    # Vivado 2025.x installer and post-processing scripts
+  - x11-utils               # Provides xlsclients — checked by Vivado at startup
+
+# ── Quartus Prime runtime dependencies (Ubuntu 24.04 / Debian) ───────────────
+fpga_quartus_libs_apt:
+  - libpng16-16t64
+  - libqt5widgets5t64
+  - libqt5core5t64
+  - libqt5gui5t64
+  - libqt5xml5t64
+  - libqt5network5t64
+  - libqt5printsupport5t64
+  - libqt5svg5
+  - libexpat1
+  - libexpat1:i386
+
+# ── USB / JTAG libraries ──────────────────────────────────────────────────────
+fpga_usb_libs_apt:
+  - libusb-1.0-0
+  - libusb-1.0-0-dev
+  - libusb-0.1-4
+  - usbutils
+  - fxload
+
+# ── Simulation / waveform tools (Vivado/Quartus-agnostic) ────────────────────
+fpga_oss_tools_apt:
+  - iverilog    # Verilog/SystemVerilog simulator
+  - gtkwave     # waveform viewer for VCD/FST files
+  - verilator   # fast Verilog simulator and linter
+  - ghdl        # VHDL simulator (supports VHDL-2008)
+  - nvc         # VHDL simulator (supports VHDL-2019)
+
+# ── Vivado runtime dependencies (AlmaLinux 9 / RHEL 9) ───────────────────────
+# Covers Vivado 2025.2. Both x86_64 and i686 variants where available.
+# EPEL + CRB are assumed enabled (done by the packages role).
+# ncurses-compat-libs ships libtinfo.so.5 + libncurses.so.5 natively on RHEL —
+# no symlinks required.
+fpga_vivado_libs_rpm:
+  - libX11
+  - libX11.i686
+  - libXrender
+  - libXrender.i686
+  - libXtst
+  - libXtst.i686
+  - libXi
+  - libXi.i686
+  - libXcursor
+  - libXcursor.i686
+  - libXrandr
+  - libXrandr.i686
+  - libXft
+  - libXft.i686
+  - libXext
+  - libXext.i686
+  - libXfixes
+  - libXfixes.i686
+  - freetype
+  - freetype.i686
+  - fontconfig
+  - fontconfig.i686
+  - glib2
+  - glib2.i686
+  - gtk3                     # GTK3 — hard dep in Vivado 2025.x
+  - libSM
+  - libSM.i686
+  - libICE
+  - libICE.i686
+  - glibc.i686
+  - libstdc++
+  - libstdc++.i686
+  - libgcc
+  - libgcc.i686
+  - zlib
+  - zlib.i686
+  - openssl-libs
+  - ncurses-libs
+  - ncurses-libs.i686
+  - ncurses-compat-libs      # provides libtinfo.so.5 + libncurses.so.5
+  - libgomp
+  - libgomp.i686
+  - cpio                     # Vivado 2025.x installer/post-processing
+  - xorg-x11-utils           # provides xlsclients — checked by Vivado at startup
+  - libxcrypt-compat         # provides libcrypt.so.1 for internal Vivado tools
+
+# ── Quartus Prime runtime dependencies (AlmaLinux 9 / RHEL 9) ────────────────
+fpga_quartus_libs_rpm:
+  - libpng
+  - qt5-qtbase
+  - qt5-qtsvg
+  - expat
+  - expat.i686
+
+# ── USB / JTAG libraries (AlmaLinux 9 / RHEL 9) ──────────────────────────────
+fpga_usb_libs_rpm:
+  - libusb1                  # libusb 1.0 (libusbx in older RHEL)
+  - libusb1-devel
+  - usbutils
+  - fxload                   # EPEL
+
+# ── Simulation / waveform tools (AlmaLinux 9 / RHEL 9 via EPEL) ──────────────
+# nvc is not yet available in EPEL 9.
+fpga_oss_tools_rpm:
+  - iverilog
+  - gtkwave
+  - verilator
+  - ghdl
+
+# ── Groups the dev_user is added to for JTAG / serial access ─────────────────
+fpga_user_groups:
+  - plugdev
+  - dialout
+  - video
+  - tty

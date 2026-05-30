@@ -1,0 +1,3 @@
+# Digilent USB-JTAG cables (Arty, Nexys, Cmod, Basys — used by Vivado / XSDB)
+ATTR{idVendor}=="1443", MODE:="0666", GROUP="plugdev"
+ACTION=="add", ATTR{idVendor}=="0403", ATTR{manufacturer}=="Digilent", MODE:="0666", GROUP="plugdev"

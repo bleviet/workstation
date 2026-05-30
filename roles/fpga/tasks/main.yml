@@ -1,19 +1,188 @@
 ---
-- name: Install FPGA tools
+- name: Provision FPGA development environment
   when: features.fpga | default(false) | bool
   block:
-    - name: Install GHDL (Debian/Ubuntu)
+
+    # ── 32-bit architecture support ──────────────────────────────────────────
+    - name: Check registered foreign architectures
+      ansible.builtin.command: dpkg --print-foreign-architectures
+      register: _dpkg_arches
+      changed_when: false
+      become: false
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Enable i386 (32-bit) architecture
+      ansible.builtin.command: dpkg --add-architecture i386
+      become: true
+      when:
+        - ansible_facts['os_family'] == "Debian"
+        - '"i386" not in _dpkg_arches.stdout'
+
+    - name: Update apt cache after adding i386 architecture
       ansible.builtin.apt:
-        name: ghdl
-        state: present
         update_cache: true
       become: true
       when: ansible_facts['os_family'] == "Debian"
 
-    # Quartus Prime Lite requires manual installation (license agreement).
-    # Installer: https://www.intel.com/content/www/us/en/software-kit/825278
+    # ── Vivado runtime libraries ─────────────────────────────────────────────
+    - name: Install Vivado runtime libraries (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: "{{ fpga_vivado_libs_apt }}"
+        state: present
+      become: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    # libtinfo5 / libncurses5 were dropped in Ubuntu 24.04.
+    # Create .so.5 → .so.6 symlinks so that Vivado < 2023.2 can dlopen them.
+    - name: Create libtinfo.so.5 → libtinfo.so.6 compat symlink
+      ansible.builtin.file:
+        src: /usr/lib/x86_64-linux-gnu/libtinfo.so.6
+        dest: /usr/lib/x86_64-linux-gnu/libtinfo.so.5
+        state: link
+      become: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Create libncurses.so.5 → libncurses.so.6 compat symlink
+      ansible.builtin.file:
+        src: /usr/lib/x86_64-linux-gnu/libncurses.so.6
+        dest: /usr/lib/x86_64-linux-gnu/libncurses.so.5
+        state: link
+      become: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Refresh ldconfig cache
+      ansible.builtin.command: ldconfig
+      become: true
+      changed_when: false
+      when: ansible_facts['os_family'] == "Debian"
+
+    # ── Quartus Prime runtime libraries ──────────────────────────────────────
+    - name: Install Quartus runtime libraries (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: "{{ fpga_quartus_libs_apt }}"
+        state: present
+      become: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    # ── Vivado runtime libraries (RedHat/AlmaLinux) ──────────────────────────
+    - name: Install Vivado runtime libraries (RedHat/AlmaLinux)
+      ansible.builtin.dnf:
+        name: "{{ fpga_vivado_libs_rpm }}"
+        state: present
+        update_cache: true
+      become: true
+      when: ansible_facts['os_family'] == "RedHat"
+
+    # ── Quartus Prime runtime libraries (RedHat/AlmaLinux) ───────────────────
+    - name: Install Quartus runtime libraries (RedHat/AlmaLinux)
+      ansible.builtin.dnf:
+        name: "{{ fpga_quartus_libs_rpm }}"
+        state: present
+      become: true
+      when: ansible_facts['os_family'] == "RedHat"
+
+    # ── USB / JTAG libraries ──────────────────────────────────────────────────
+    - name: Install USB and JTAG libraries (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: "{{ fpga_usb_libs_apt }}"
+        state: present
+      become: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Install USB and JTAG libraries (RedHat/AlmaLinux)
+      ansible.builtin.dnf:
+        name: "{{ fpga_usb_libs_rpm }}"
+        state: present
+      become: true
+      when: ansible_facts['os_family'] == "RedHat"
+
+    # ── udev rules for JTAG programmers ──────────────────────────────────────
+    - name: Deploy Intel USB-Blaster udev rules
+      ansible.builtin.copy:
+        src: udev/51-usbblaster.rules
+        dest: /etc/udev/rules.d/51-usbblaster.rules
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+      notify: Reload udev rules
+
+    - name: Deploy Digilent USB-JTAG udev rules
+      ansible.builtin.copy:
+        src: udev/52-xilinx-digilent.rules
+        dest: /etc/udev/rules.d/52-xilinx-digilent.rules
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+      notify: Reload udev rules
+
+    - name: Deploy Xilinx Platform Cable / FTDI udev rules
+      ansible.builtin.copy:
+        src: udev/52-xilinx-ftdi.rules
+        dest: /etc/udev/rules.d/52-xilinx-ftdi.rules
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+      notify: Reload udev rules
+
+    # ── Hardware access groups ────────────────────────────────────────────────
+    - name: Add {{ dev_user }} to hardware access groups
+      ansible.builtin.user:
+        name: "{{ dev_user }}"
+        groups: "{{ item }}"
+        append: true
+      become: true
+      loop: "{{ fpga_user_groups }}"
+
+    # ── Open-source FPGA / EDA toolchain ─────────────────────────────────────
+    - name: Install simulation / waveform tools (Debian/Ubuntu)
+      ansible.builtin.apt:
+        name: "{{ fpga_oss_tools_apt }}"
+        state: present
+      become: true
+      when: ansible_facts['os_family'] == "Debian"
+
+    - name: Install simulation / waveform tools (RedHat/AlmaLinux)
+      ansible.builtin.dnf:
+        name: "{{ fpga_oss_tools_rpm }}"
+        state: present
+      become: true
+      when: ansible_facts['os_family'] == "RedHat"
+
+    # ── FPGA environment variable stubs ──────────────────────────────────────
+    - name: Ensure /etc/environment.d exists
+      ansible.builtin.file:
+        path: /etc/environment.d
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+      become: true
+
+    - name: Deploy FPGA environment stubs
+      ansible.builtin.template:
+        src: 60-fpga.conf.j2
+        dest: /etc/environment.d/60-fpga.conf
+        owner: root
+        group: root
+        mode: "0644"
+      become: true
+
+    # ── Manual installation notes ─────────────────────────────────────────────
+    - name: Print Vivado manual installation note
+      ansible.builtin.debug:
+        msg: >
+          Vivado must be installed manually.
+          Download the Linux unified installer from AMD and run it as a regular user.
+          Installer path inside the VM: /opt/fpga-installers/
+          https://www.amd.com/en/support/downloads/xilinx-tools/vivado.html
+
     - name: Print Quartus manual installation note
       ansible.builtin.debug:
         msg: >
-          Quartus Prime Lite must be installed manually.
+          Quartus Prime must be installed manually (license agreement required).
           Download the Linux installer from Intel and run it as a regular user.
+          Installer path inside the VM: /opt/fpga-installers/
+          https://www.intel.com/content/www/us/en/software/programmable/quartus-prime/download.html
