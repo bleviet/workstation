@@ -54,6 +54,14 @@ VM_DISK_GB  = "512GB"  # virtual disk size (provisioned on first vagrant up)
 VM_VRAM_MB  = 256      # video RAM for the XFCE session
 VM_3D_ACCEL = "TRUE"   # set to "FALSE" if the host GPU causes glitches
 
+# SSH public key from the host's ~/.ssh/ — injected into the VM so the admin
+# machine can run ansible-playbook without the Vagrant-generated private key.
+# Checked in order: id_ed25519.pub → id_rsa.pub → id_ecdsa.pub.
+_admin_key_file = %w[id_ed25519.pub id_rsa.pub id_ecdsa.pub]
+  .map  { |f| File.expand_path("~/.ssh/#{f}") }
+  .find { |p| File.exist?(p) }
+ADMIN_PUBKEY = _admin_key_file ? File.read(_admin_key_file).strip : ""
+
 # ---------------------------------------------------------------------------
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
@@ -128,9 +136,19 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── First-boot provisioning ──────────────────────────────────────────────
 
+  # Inject the admin's SSH public key so ansible-playbook can connect from
+  # the admin machine without the Vagrant-generated private key.
+  # Idempotent: skips if the key is already present or if no key was found.
+  config.vm.provision "shell", privileged: false, name: "admin-ssh-key", inline: <<~SHELL
+    KEY="#{ADMIN_PUBKEY}"
+    [ -z "$KEY" ] && { echo "WARNING: no SSH public key found on host; skipping."; exit 0; }
+    mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    grep -qxF "$KEY" ~/.ssh/authorized_keys 2>/dev/null || echo "$KEY" >> ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+  SHELL
+
   # Grow root partition + XFS filesystem to fill the 512 GB disk.
   # growpart is idempotent (exits 0 if already at max size).
-  # Ansible provisioning is NOT run here — see provision.sh.
   config.vm.provision "shell", privileged: true, name: "grow-disk", inline: <<~SHELL
     set -e
     ROOT_DEV=$(findmnt -n -o SOURCE /)
