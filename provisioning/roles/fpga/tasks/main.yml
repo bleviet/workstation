@@ -173,6 +173,13 @@
     - features.fpga.oss | default(false) | bool
     - ansible_facts['os_family'] == "Debian"
 
+- name: Install nvc (Debian/Ubuntu — not in apt, use GitHub .deb)
+  ansible.builtin.include_tasks: nvc_debian.yml
+  when:
+    - features.fpga.oss | default(false) | bool
+    - ansible_facts['os_family'] == "Debian"
+    - ansible_facts['distribution'] == "Ubuntu"
+
 - name: Install open-source simulation / waveform tools (RedHat/AlmaLinux)
   ansible.builtin.dnf:
     name: "{{ fpga_oss_tools_rpm }}"

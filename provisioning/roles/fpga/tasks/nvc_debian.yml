@@ -1,0 +1,32 @@
+---
+# Installs nvc from the GitHub .deb release for Ubuntu 22.04 / 24.04.
+# nvc is not packaged in Ubuntu's apt repositories.
+# Debian (no pre-built .deb) is not supported by this task.
+
+- name: Check nvc {{ nvc_version }} version marker
+  ansible.builtin.stat:
+    path: /usr/local/lib/.nvc-{{ nvc_version }}
+  register: _nvc_marker
+
+- name: Install nvc {{ nvc_version }} from GitHub .deb
+  when: not _nvc_marker.stat.exists
+  block:
+    - name: Verify Ubuntu version has a matching nvc .deb
+      ansible.builtin.assert:
+        that: ansible_facts['distribution_version'] in nvc_debian_urls
+        fail_msg: >
+          No pre-built nvc .deb for Ubuntu {{ ansible_facts['distribution_version'] }}.
+          See https://github.com/nickg/nvc/releases to check for a new package.
+
+    - name: Install nvc .deb from GitHub
+      become: true
+      ansible.builtin.apt:
+        deb: "{{ nvc_debian_urls[ansible_facts['distribution_version']] }}"
+        state: present
+
+    - name: Write nvc version marker
+      become: true
+      ansible.builtin.file:
+        path: /usr/local/lib/.nvc-{{ nvc_version }}
+        state: touch
+        mode: "0644"
