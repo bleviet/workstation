@@ -70,8 +70,8 @@ ADMIN_PUBKEY = _admin_pubkey_file ? File.read(_admin_pubkey_file).strip : ""
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── Base box ────────────────────────────────────────────────────────────
-  config.vm.box         = "bento/debian-13"
-  config.vm.box_version = ">= 202404.0.0"
+  config.vm.box         = "debian/trixie64"
+  config.vm.box_version = ">= 13.0"
   config.vm.hostname    = "fpga-dev"
 
   # ── Disk size ────────────────────────────────────────────────────────────
@@ -151,15 +151,31 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     chmod 600 ~/.ssh/authorized_keys
   SHELL
 
-  # Grow root partition + ext4 filesystem to fill the 512 GB disk.
-  # growpart is idempotent (exits 0 if already at max size).
+  # Grow root filesystem to fill the 512 GB disk.
+  # bento/debian-13 uses LVM, so the process is:
+  #   growpart (physical partition) → pvresize → lvextend → resize2fs
   config.vm.provision "shell", privileged: true, name: "grow-disk", inline: <<~SHELL
     set -e
+    apt-get install -y -q cloud-guest-utils lvm2
+
     ROOT_DEV=$(findmnt -n -o SOURCE /)
-    DISK=$(lsblk -no PKNAME "$ROOT_DEV")
-    PART_NUM=$(cat /sys/class/block/${ROOT_DEV##*/}/partition)
-    growpart "/dev/$DISK" "$PART_NUM" || true
-    resize2fs "$ROOT_DEV"
+
+    if lvs "$ROOT_DEV" > /dev/null 2>&1; then
+      # LVM root — grow underlying physical partition first
+      PV=$(pvs --noheadings -o pv_name | awk '{print $1}' | head -1)
+      DISK=$(lsblk -no PKNAME "$PV")
+      PART_NUM=$(cat /sys/class/block/${PV##*/}/partition)
+      growpart "/dev/$DISK" "$PART_NUM" || true
+      pvresize "$PV"
+      lvextend -l +100%FREE "$ROOT_DEV"
+      resize2fs "$ROOT_DEV"
+    else
+      # Plain partition (no LVM)
+      DISK=$(lsblk -no PKNAME "$ROOT_DEV")
+      PART_NUM=$(cat /sys/class/block/${ROOT_DEV##*/}/partition)
+      growpart "/dev/$DISK" "$PART_NUM" || true
+      resize2fs "$ROOT_DEV"
+    fi
   SHELL
 
 end
