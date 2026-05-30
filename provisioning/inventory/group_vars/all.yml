@@ -19,6 +19,7 @@ packages:
     - wget
     - zsh
   apt:
+    - acl        # required for Ansible become_user with unprivileged accounts
     - p7zip-full
     - xclip
   dnf:
