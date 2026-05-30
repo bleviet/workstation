@@ -5,9 +5,11 @@ desktop_base_packages_apt:
   - dbus-x11
   - fonts-noto
   - fonts-noto-color-emoji
+  - kitty
 
 desktop_base_packages_dnf:
   - xorg-x11-server-Xorg
   - xorg-x11-xinit
   - dbus-x11
   - google-noto-fonts-common
+  - kitty
