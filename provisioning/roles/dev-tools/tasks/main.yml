@@ -39,6 +39,10 @@
       become: "{{ dev_user != ansible_facts['user_id'] }}"
       become_user: "{{ dev_user }}"
 
+- name: Install VS Code
+  ansible.builtin.include_tasks:
+    file: vscode.yml
+
 - name: Ensure ~/.config/shell exists
   ansible.builtin.file:
     path: "{{ dev_user_home }}/.config/shell"

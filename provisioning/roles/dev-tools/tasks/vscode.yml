@@ -1,0 +1,54 @@
+---
+# VS Code is installed system-wide via the Microsoft package repository so that
+# the OS package manager keeps it current on subsequent upgrades.
+
+- name: Install VS Code (Debian/Ubuntu)
+  when: ansible_facts['os_family'] == 'Debian'
+  become: true
+  block:
+    - name: Ensure /etc/apt/keyrings exists
+      ansible.builtin.file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: "0755"
+
+    - name: Download Microsoft GPG key
+      ansible.builtin.get_url:
+        url: https://packages.microsoft.com/keys/microsoft.asc
+        dest: /etc/apt/keyrings/microsoft.asc
+        mode: "0644"
+
+    - name: Add VS Code apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [arch=amd64 signed-by=/etc/apt/keyrings/microsoft.asc] https://packages.microsoft.com/repos/code stable main"
+        filename: vscode
+        state: present
+
+    - name: Install code
+      ansible.builtin.apt:
+        name: code
+        state: present
+        update_cache: true
+
+- name: Install VS Code (AlmaLinux/RHEL)
+  when: ansible_facts['os_family'] == 'RedHat'
+  become: true
+  block:
+    - name: Import Microsoft GPG key
+      ansible.builtin.rpm_key:
+        key: https://packages.microsoft.com/keys/microsoft.asc
+        state: present
+
+    - name: Add VS Code dnf repository
+      ansible.builtin.yum_repository:
+        name: code
+        description: Visual Studio Code
+        baseurl: https://packages.microsoft.com/yumrepos/vscode
+        enabled: true
+        gpgcheck: true
+        gpgkey: https://packages.microsoft.com/keys/microsoft.asc
+
+    - name: Install code
+      ansible.builtin.dnf:
+        name: code
+        state: present
