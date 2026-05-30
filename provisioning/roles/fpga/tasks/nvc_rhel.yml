@@ -23,7 +23,7 @@
           - pkg-config
           - llvm-devel
           - libffi-devel
-          - zlib-ng-compat-devel
+          - zlib-devel
           - libzstd-devel
           - elfutils-devel
         state: present
