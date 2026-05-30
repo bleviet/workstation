@@ -1,0 +1,165 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+#
+# FPGA Development VM – Vivado (Xilinx/AMD) + Quartus (Intel/Altera)
+# Host: Windows 11, 64 GB RAM
+# Guest: Debian 13 + XFCE4 desktop
+#
+# VM creation is handled here; all software provisioning is delegated to the
+# Ansible playbooks in this repository (provisioning/site.yml).
+#
+# Prerequisites (install on Windows host before "vagrant up"):
+#   1. VMware Workstation Pro  – https://www.vmware.com/products/workstation-pro.html
+#   2. Vagrant                 – https://developer.hashicorp.com/vagrant/downloads
+#   3. Vagrant VMware plugin   – "vagrant plugin install vagrant-vmware-desktop"
+#      (requires a paid HashiCorp license)
+#
+# Disk space:
+#   The virtual disk is provisioned at 512 GB (config.vm.disk below).
+#   Vivado (full) ~100 GB + Quartus ~40 GB + projects leaves plenty of room.
+#   The first-boot provisioner automatically grows the root partition and
+#   ext4 filesystem to fill the expanded disk — no manual steps needed.
+#
+# Tool installers:
+#   Drop Vivado / Quartus installer archives into the local "installers/" folder
+#   (auto-created next to this Vagrantfile). They appear at /opt/fpga-installers
+#   inside the VM so you can run them without re-downloading.
+#
+# USB / JTAG programmers:
+#   Ansible pre-installs udev rules for Digilent JTAG, Xilinx Platform Cable
+#   USB II, and Intel USB-Blaster / USB-Blaster II.
+#   To forward a physical programmer: VM → Removable Devices → Connect.
+#
+# Usage:
+#   vagrant up       # create VM and grow disk (~5 min)
+#   # From the admin machine (after filling in the VM IP in hosts.yml):
+#   ansible-playbook provisioning/site.yml --limit fpga-dev-debian13
+#   vagrant reload   # reboot (apply kernel/desktop changes)
+#   vagrant halt     # graceful shutdown
+#   vagrant destroy  # delete VM entirely
+# ---------------------------------------------------------------------------
+
+VAGRANTFILE_API_VERSION = "2"
+
+# ---------------------------------------------------------------------------
+# Tuneable constants – adjust to taste
+# ---------------------------------------------------------------------------
+VM_NAME     = "fpga-dev-debian13"
+VM_RAM_MB   = 32_768   # 32 GB  (leaves 32 GB for the Windows host)
+VM_CPUS     = 8        # logical CPUs visible inside the VM
+VM_DISK_GB  = "512GB"  # virtual disk size (provisioned on first vagrant up)
+VM_VRAM_MB  = 256      # video RAM for the XFCE session
+VM_3D_ACCEL = "TRUE"   # set to "FALSE" if the host GPU causes glitches
+
+# SSH public key injected into the VM so the admin machine can run
+# ansible-playbook without the Vagrant-generated private key.
+#
+# Resolution order:
+#   1. admin.pub alongside this Vagrantfile  (gitignored — paste your key there)
+#   2. ~/.ssh/id_ed25519.pub / id_rsa.pub / id_ecdsa.pub on the Windows host
+#   3. Empty → provisioner prints a warning and skips
+_admin_pubkey_file = [
+  File.join(__dir__, "admin.pub"),
+  *%w[id_ed25519.pub id_rsa.pub id_ecdsa.pub].map { |f|
+    File.join(ENV.fetch("USERPROFILE", File.expand_path("~")), ".ssh", f)
+  }
+].find { |p| File.exist?(p) }
+ADMIN_PUBKEY = _admin_pubkey_file ? File.read(_admin_pubkey_file).strip : ""
+
+# ---------------------------------------------------------------------------
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+
+  # ── Base box ────────────────────────────────────────────────────────────
+  config.vm.box         = "bento/debian-13"
+  config.vm.box_version = ">= 202404.0.0"
+  config.vm.hostname    = "fpga-dev"
+
+  # ── Disk size ────────────────────────────────────────────────────────────
+  # Requires Vagrant >= 2.2.8. The vagrant-vmware-desktop plugin handles the
+  # VMDK expansion before first boot; the step-0 provisioner below grows the
+  # partition and ext4 filesystem to use the full allocated space.
+  config.vm.disk :disk, size: VM_DISK_GB, primary: true
+
+  # Disable the default /vagrant mount (explicit mounts are set up below).
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+
+  # ── Shared folders ──────────────────────────────────────────────────────
+  # Repository root — Ansible reads roles, playbooks, and inventory from here.
+  # NOTE: VMware synced folders are world-writable, so ANSIBLE_CONFIG must be
+  # set explicitly in the provisioner (Ansible refuses config from world-writable dirs).
+  config.vm.synced_folder "../..", "/home/vagrant/workspace/workstation"
+
+  # FPGA project sources — edit HDL on the host, build inside the VM.
+  config.vm.synced_folder "projects", "/home/vagrant/projects", create: true
+
+  # FPGA tool installer archives (Vivado / Quartus .bin / .run files).
+  config.vm.synced_folder "installers", "/opt/fpga-installers", create: true
+
+  # ── VMware Workstation provider ─────────────────────────────────────────
+  config.vm.provider "vmware_workstation" do |vmw|
+    vmw.vmx["displayName"] = VM_NAME
+    vmw.memory             = VM_RAM_MB
+    vmw.cpus               = VM_CPUS
+    vmw.gui                = true    # open VMware console on boot
+    vmw.linked_clone       = false   # full clone – better I/O for large tool sets
+
+    # ── CPU topology (4 cores × 2 sockets = 8 logical CPUs)
+    vmw.vmx["cpuid.coresPerSocket"] = "4"
+
+    # ── Video / display
+    vmw.vmx["svga.vramSize"]                  = (VM_VRAM_MB * 1024 * 1024).to_s
+    vmw.vmx["mks.enable3d"]                   = VM_3D_ACCEL
+    vmw.vmx["mks.gl.allowBlacklistedDrivers"] = "TRUE"
+    vmw.vmx["svga.autodetect"]                = "TRUE"
+
+    # ── Memory — prevent swap thrashing during synthesis
+    vmw.vmx["MemTrimRate"]          = "-1"
+    vmw.vmx["mem.hotadd"]           = "FALSE"
+    vmw.vmx["mainMem.useNamedFile"] = "FALSE"
+
+    # ── Storage controller — paravirtual SCSI for better sequential I/O
+    vmw.vmx["scsi0.virtualDev"] = "pvscsi"
+
+    # ── USB controllers (required for JTAG programmers)
+    vmw.vmx["usb.present"]      = "TRUE"
+    vmw.vmx["ehci.present"]     = "TRUE"   # USB 2.0 (USB-Blaster, Platform Cable)
+    vmw.vmx["usb_xhci.present"] = "TRUE"   # USB 3.0 (USB-Blaster II, modern Digilent)
+
+    # ── VMware Tools integration (clipboard, drag-and-drop, shared folders)
+    vmw.vmx["isolation.tools.copy.disable"]  = "FALSE"
+    vmw.vmx["isolation.tools.paste.disable"] = "FALSE"
+    vmw.vmx["isolation.tools.dnd.disable"]   = "FALSE"
+    vmw.vmx["isolation.tools.hgfs.disable"]  = "FALSE"
+
+    # ── Time sync
+    vmw.vmx["tools.syncTime"]             = "TRUE"
+    vmw.vmx["time.synchronize.continue"]  = "TRUE"
+    vmw.vmx["time.synchronize.restore"]   = "TRUE"
+    vmw.vmx["time.synchronize.resume"]    = "TRUE"
+  end
+
+  # ── First-boot provisioning ──────────────────────────────────────────────
+
+  # Inject the admin's SSH public key so ansible-playbook can connect from
+  # the admin machine without the Vagrant-generated private key.
+  # Idempotent: skips if the key is already present or if no key was found.
+  config.vm.provision "shell", privileged: false, name: "admin-ssh-key", inline: <<~SHELL
+    KEY="#{ADMIN_PUBKEY}"
+    [ -z "$KEY" ] && { echo "WARNING: no SSH public key found on host; skipping."; exit 0; }
+    mkdir -p ~/.ssh && chmod 700 ~/.ssh
+    grep -qxF "$KEY" ~/.ssh/authorized_keys 2>/dev/null || echo "$KEY" >> ~/.ssh/authorized_keys
+    chmod 600 ~/.ssh/authorized_keys
+  SHELL
+
+  # Grow root partition + ext4 filesystem to fill the 512 GB disk.
+  # growpart is idempotent (exits 0 if already at max size).
+  config.vm.provision "shell", privileged: true, name: "grow-disk", inline: <<~SHELL
+    set -e
+    ROOT_DEV=$(findmnt -n -o SOURCE /)
+    DISK=$(lsblk -no PKNAME "$ROOT_DEV")
+    PART_NUM=$(cat /sys/class/block/${ROOT_DEV##*/}/partition)
+    growpart "/dev/$DISK" "$PART_NUM" || true
+    resize2fs "$ROOT_DEV"
+  SHELL
+
+end

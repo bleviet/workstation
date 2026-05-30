@@ -1,0 +1,9 @@
+# Vagrant runtime state
+.vagrant/
+
+# Shared folders created by Vagrantfile
+installers/
+projects/
+
+# Admin SSH public key (drop your public key here; read by Vagrantfile)
+admin.pub
