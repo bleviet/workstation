@@ -106,9 +106,38 @@ When `dev_user` is not set it resolves to `ansible_user_id` — the SSH user
 Ansible connects as. No account is created, no sudo entry is written, and all
 paths resolve to that user's existing home directory.
 
+## Account password
+
+The account is created with a **locked password** — no password is set, so
+password-based login is disabled by default.
+
+### Switch to the account from the SSH user (Vagrant)
+
+```bash
+vagrant ssh <machine>
+sudo su - bach
+```
+
+### Set a password manually
+
+```bash
+vagrant ssh <machine>   # or ssh admin@devbox
+sudo passwd bach
+```
+
+After setting a password the user can log in via the desktop login screen
+(LightDM / GDM) or over RDP if `features.xrdp` is enabled.
+
+### SSH key login
+
+Add the developer's public key to `/home/bach/.ssh/authorized_keys` on the
+machine. The cleanest way is to add it during provisioning by extending the
+`user` role with an `authorized_key` task and a `dev_user_ssh_pubkey` variable
+in `host_vars/<hostname>.yml`.
+
 ## Connecting as the new user after provisioning
 
-Once provisioned you can SSH directly as the developer account:
+Once a password or SSH key is in place you can log in directly:
 
 ```bash
 ssh bach@devbox
