@@ -152,7 +152,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   SHELL
 
   # Grow root filesystem to fill the 512 GB disk.
-  # bento/debian-13 uses LVM, so the process is:
+  # Debian uses LVM by default, so the process is:
   #   growpart (physical partition) → pvresize → lvextend → resize2fs
   config.vm.provision "shell", privileged: true, name: "grow-disk", inline: <<~SHELL
     set -e
