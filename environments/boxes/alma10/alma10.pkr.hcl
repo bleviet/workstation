@@ -16,8 +16,8 @@ packer {
 # ---------------------------------------------------------------------------
 
 variable "alma_version" {
-  default     = "10.0"
-  description = "AlmaLinux minor release to download (matches the ISO filename)."
+  default     = "10.2"
+  description = "AlmaLinux release to download — used in both the repo path and ISO filename (e.g. 10.2)."
 }
 
 
@@ -45,9 +45,10 @@ source "vmware-iso" "alma10" {
   # rhel9-64 is the closest available guest OS type until VMware adds rhel10-64.
   guest_os_type = "rhel9-64"
 
-  iso_url      = "https://repo.almalinux.org/almalinux/10/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso"
-  # Per-ISO sha256sum file — Packer resolves the correct hash by filename.
-  iso_checksum = "file:https://repo.almalinux.org/almalinux/10/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso.sha256sum"
+  # AlmaLinux 10 embeds the minor version in the repo path (unlike AlmaLinux 9).
+  iso_url      = "https://repo.almalinux.org/almalinux/${var.alma_version}/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso"
+  # CHECKSUM is GPG-signed but Packer scans it line-by-line and matches by filename.
+  iso_checksum = "file:https://repo.almalinux.org/almalinux/${var.alma_version}/isos/x86_64/CHECKSUM"
 
   memory    = var.memory_mb
   cpus      = var.cpus
