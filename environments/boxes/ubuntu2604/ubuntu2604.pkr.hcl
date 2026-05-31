@@ -57,12 +57,16 @@ source "vmware-iso" "ubuntu2604" {
   http_directory = "${path.root}/http"
   headless       = false
 
-  # Ubuntu 26.04 uses GRUB2. Press 'c' to enter the GRUB command line, then boot
-  # with the autoinstall datasource URL. This command-line approach is independent
-  # of the menu-entry layout (unlike editing the entry with 'e'), matching the
-  # proven 24.04 box. ds=nocloud — nocloud-net is deprecated since cloud-init 24.1,
-  # and '\;' escapes the semicolon so GRUB passes it literally to the kernel.
-  boot_wait    = "5s"
+  # Ubuntu 26.04 uses GRUB2. Press 'c' for the GRUB command line, then boot with
+  # the autoinstall datasource URL — this is independent of the menu-entry layout
+  # (unlike editing with 'e'). boot_wait must land after the GRUB menu renders
+  # (VMware POST takes several seconds) but before its ~30s timeout; 5s fired too
+  # early and let the menu time out into an interactive install.
+  # boot_keygroup_interval slows VNC typing so VMware doesn't drop characters from
+  # the long kernel line. ds=nocloud — nocloud-net is deprecated since cloud-init
+  # 24.1, and '\;' escapes the semicolon so GRUB passes it literally to the kernel.
+  boot_wait              = "15s"
+  boot_keygroup_interval = "250ms"
   boot_command = [
     "c<wait>",
     "linux /casper/vmlinuz autoinstall ds=nocloud\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter><wait3>",

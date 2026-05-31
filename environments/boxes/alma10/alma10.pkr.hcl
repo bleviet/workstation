@@ -60,11 +60,21 @@ source "vmware-iso" "alma10" {
   http_directory = "${path.root}/http"
   headless       = false
 
-  # Wait for isolinux menu, press Tab to edit the boot command, append kickstart URL.
-  boot_wait    = "15s"
+  # AlmaLinux 10 dropped isolinux: the ISO boots GRUB2 in both BIOS and UEFI mode,
+  # so the EL9-style <tab> (an isolinux key) does nothing and the menu times out
+  # into an interactive install. Drive GRUB instead — 'e' edits the default entry,
+  # two <down> reach the kernel line, Ctrl+E jumps to its end, we append the
+  # kickstart URL, and Ctrl+X boots. Editing keeps the entry's existing inst.stage2=
+  # line intact, so we don't need to know the ISO volume label.
+  # boot_keygroup_interval slows VNC typing so VMware doesn't drop characters.
+  boot_wait              = "15s"
+  boot_keygroup_interval = "250ms"
   boot_command = [
-    "<tab><wait>",
-    " inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg<enter>"
+    "e<wait>",
+    "<down><down><wait>",
+    "<leftCtrlOn>e<leftCtrlOff>",
+    " inst.text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg",
+    "<wait><leftCtrlOn>x<leftCtrlOff>"
   ]
 
   ssh_username = "vagrant"
