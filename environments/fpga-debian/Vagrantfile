@@ -112,6 +112,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vmw.gui                = true    # open VMware console on boot
     vmw.linked_clone       = false   # full clone – better I/O for large tool sets
 
+    # ── Network — preserve PCI slot from Packer build so Debian keeps ens33
+    # Without this Vagrant reassigns the slot, the interface name changes, and
+    # the guest network stack fails to come up (SSH hangs on boot).
+    vmw.vmx["ethernet0.pcislotnumber"] = "33"
+
     # ── CPU topology (4 cores × 2 sockets = 8 logical CPUs)
     vmw.vmx["cpuid.coresPerSocket"] = "4"
 
