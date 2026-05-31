@@ -73,7 +73,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── Base box ────────────────────────────────────────────────────────────
   # Box built locally from the official Ubuntu 24.04 LTS ISO via Packer.
-  # Build steps (run from boxes/ubuntu2404/ on Windows):
+  # Build steps (run from environments/boxes/ubuntu2404/ on Windows):
   #   packer init ubuntu2404.pkr.hcl
   #   packer build ubuntu2404.pkr.hcl
   #   vagrant box add --name fpga-ubuntu2404 ubuntu2404.box

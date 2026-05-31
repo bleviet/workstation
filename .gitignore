@@ -6,8 +6,8 @@
 tests/vagrant/.vagrant/
 
 # Packer build artifacts
-boxes/*/output/
-boxes/*/*.box
+environments/boxes/*/output/
+environments/boxes/*/*.box
 
 # Deploy controller
 deploy/.env

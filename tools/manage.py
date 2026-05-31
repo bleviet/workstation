@@ -40,7 +40,7 @@ from textual.widgets import (
 
 REPO_ROOT  = Path(__file__).resolve().parent.parent
 ENV_ROOT   = REPO_ROOT / "environments"
-BOXES_ROOT = REPO_ROOT / "boxes"
+BOXES_ROOT = ENV_ROOT / "boxes"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Environment registry

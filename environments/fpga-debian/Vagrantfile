@@ -76,7 +76,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── Base box ────────────────────────────────────────────────────────────
   # Box built locally from the official Debian 13 ISO via Packer.
-  # Build steps (run from boxes/debian13/ on Windows):
+  # Build steps (run from environments/boxes/debian13/ on Windows):
   #   packer init debian13.pkr.hcl
   #   packer build debian13.pkr.hcl
   #   vagrant box add --name fpga-debian13 debian13.box
