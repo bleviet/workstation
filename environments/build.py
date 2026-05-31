@@ -195,7 +195,7 @@ sata0:1.deviceType = "cdrom-image"
 
 ethernet0.present = "TRUE"
 ethernet0.connectionType = "nat"
-ethernet0.virtualDev = "e1000e"
+ethernet0.virtualDev = "vmxnet3"
 ethernet0.wakeOnPcktRcv = "FALSE"
 ethernet0.addressType = "generated"
 
