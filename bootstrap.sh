@@ -55,4 +55,10 @@ echo "Installing Ansible collections..."
 ansible-galaxy collection install -r "$ROOT_DIR/requirements.yml"
 
 echo "Running provisioning playbook..."
-ansible-playbook "$ROOT_DIR/provisioning/site.yml" --ask-become-pass
+# --ask-become-pass causes "Duplicate become password prompt" errors under WSL
+# when Ansible pipes the password to sudo. Pass it via env var instead.
+read -rsp "Enter your sudo password (for Ansible become): " ANSIBLE_BECOME_PASS
+echo
+export ANSIBLE_BECOME_PASS
+# Limit to localhost — bootstrap provisions only the machine it runs on.
+ansible-playbook "$ROOT_DIR/provisioning/site.yml" --limit localhost
