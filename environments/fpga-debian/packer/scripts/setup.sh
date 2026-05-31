@@ -20,6 +20,9 @@ chown -R vagrant:vagrant /home/vagrant/.ssh
 # ── SSH hardening (keep password auth on for Vagrant's key rotation) ──────────
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config
 
+# ── SSH ───────────────────────────────────────────────────────────────────────
+systemctl enable ssh
+
 # ── VMware Tools ──────────────────────────────────────────────────────────────
 systemctl enable open-vm-tools 2>/dev/null || true
 
