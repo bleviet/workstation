@@ -21,6 +21,8 @@ autoinstall:
     username: vagrant
     # SHA-512 hash of "vagrant" (openssl passwd -6 -salt 'vagrant' 'vagrant')
     password: "$6$vagrant$aYdZwu4306HGdE39rROOrbSnB8G1Jser5zc9VMESSr8PouIZdgoO.OYQsFTOHXRXSYzB1oCD7571llAG6WR15."
+  refresh-installer:
+    update: false
   ssh:
     install-server: true
     allow-pw: true
