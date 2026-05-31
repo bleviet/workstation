@@ -15,6 +15,10 @@ deploy/.env
 # Python
 __pycache__/
 *.pyc
+.venv/
+
+# direnv
+.envrc
 
 # Editor
 .vscode/
