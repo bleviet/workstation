@@ -3,7 +3,7 @@
 #
 # FPGA Development VM – Vivado (Xilinx/AMD) + Quartus (Intel/Altera)
 # Host: Windows 11, 64 GB RAM
-# Guest: Debian 12 (Bookworm) + XFCE4 desktop
+# Guest: Debian 13 (Trixie) + XFCE4 desktop
 #
 # Note: debian/trixie64 and generic/debian13 have no VMware build yet.
 # Switch to Debian 13 once a VMware-compatible box is published.
@@ -47,7 +47,7 @@ VAGRANTFILE_API_VERSION = "2"
 # ---------------------------------------------------------------------------
 # Tuneable constants – adjust to taste
 # ---------------------------------------------------------------------------
-VM_NAME     = "fpga-dev-debian12"
+VM_NAME     = "fpga-dev-debian13"
 VM_RAM_MB   = 32_768   # 32 GB  (leaves 32 GB for the Windows host)
 VM_CPUS     = 8        # logical CPUs visible inside the VM
 VM_DISK_GB  = "512GB"  # virtual disk size (provisioned on first vagrant up)
