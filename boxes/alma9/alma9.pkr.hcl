@@ -98,9 +98,9 @@ build {
     execute_command = "echo 'vagrant' | sudo -S bash '{{ .Path }}'"
   }
 
-  # Package as a Vagrant box in the environment root.
+  # Package as a Vagrant box in the boxes/alma9/ directory.
   post-processor "vagrant" {
-    output              = "${path.root}/../alma9.box"
+    output              = "${path.root}/alma9.box"
     provider_override   = "vmware"
     keep_input_artifact = false
   }

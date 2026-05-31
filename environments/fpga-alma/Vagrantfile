@@ -76,10 +76,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── Base box ────────────────────────────────────────────────────────────
   # Box built locally from the official AlmaLinux 9 ISO via Packer.
-  # Build steps (run from environments/fpga-alma/packer/ on Windows):
+  # Build steps (run from boxes/alma9/ on Windows):
   #   packer init alma9.pkr.hcl
   #   packer build alma9.pkr.hcl
-  #   vagrant box add --name fpga-alma9 ../alma9.box
+  #   vagrant box add --name fpga-alma9 alma9.box
   config.vm.box      = "fpga-alma9"
   config.vm.hostname = "fpga-dev"
 

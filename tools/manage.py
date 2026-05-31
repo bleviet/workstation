@@ -38,8 +38,9 @@ from textual.widgets import (
 # Repository layout
 # ─────────────────────────────────────────────────────────────────────────────
 
-REPO_ROOT = Path(__file__).resolve().parent.parent
-ENV_ROOT = REPO_ROOT / "environments"
+REPO_ROOT  = Path(__file__).resolve().parent.parent
+ENV_ROOT   = REPO_ROOT / "environments"
+BOXES_ROOT = REPO_ROOT / "boxes"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Environment registry
@@ -53,7 +54,7 @@ ENVS: list[dict] = [
         "path": ENV_ROOT / "fpga-alma",
         "packer": True,
         "box_name": "fpga-alma9",
-        "packer_dir": "packer",
+        "packer_path": BOXES_ROOT / "alma9",
         "packer_template": "alma9.pkr.hcl",
         "box_output": "alma9.box",
     },
@@ -64,7 +65,7 @@ ENVS: list[dict] = [
         "path": ENV_ROOT / "fpga-ubuntu",
         "packer": True,
         "box_name": "fpga-ubuntu2404",
-        "packer_dir": "packer",
+        "packer_path": BOXES_ROOT / "ubuntu2404",
         "packer_template": "ubuntu2404.pkr.hcl",
         "box_output": "ubuntu2404.box",
     },
@@ -75,7 +76,7 @@ ENVS: list[dict] = [
         "path": ENV_ROOT / "fpga-debian",
         "packer": True,
         "box_name": "fpga-debian13",
-        "packer_dir": "packer",
+        "packer_path": BOXES_ROOT / "debian13",
         "packer_template": "debian13.pkr.hcl",
         "box_output": "debian13.box",
     },
@@ -612,7 +613,7 @@ ConfirmModal { align: center middle; }
 
         # ── 2. Packer build ───────────────────────────────────────────────────
         self._banner(2, 4, "Packer build (this can take ~60 minutes)")
-        packer_cwd = env["path"] / env["packer_dir"]
+        packer_cwd = env["packer_path"]
         rc = await _stream(
             ("packer", "build", env["packer_template"]),
             packer_cwd,
@@ -631,7 +632,7 @@ ConfirmModal { align: center middle; }
                 env["path"],
                 self._output,
             )
-        box_file = env["path"] / env["box_output"]
+        box_file = env["packer_path"] / env["box_output"]
         rc = await _stream(
             ("vagrant", "box", "add", "--name", env["box_name"], str(box_file)),
             env["path"],

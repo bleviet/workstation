@@ -15,14 +15,9 @@ packer {
 # Variables
 # ---------------------------------------------------------------------------
 
-variable "debian_version" {
-  default     = "13.5.0"
-  description = "Debian release to download (matches the ISO filename)."
-}
-
-variable "iso_checksum" {
-  default     = "sha256:95838884f5ea6c82421dfe6baaa5a639dbbe6756c1e380f9fe7a7cb0c1949d2a"
-  description = "SHA-256 of debian-<version>-amd64-netinst.iso."
+variable "ubuntu_version" {
+  default     = "24.04.4"
+  description = "Ubuntu 24.04 point release to download (e.g. 24.04.4)."
 }
 
 variable "disk_size_mb" {
@@ -44,12 +39,13 @@ variable "cpus" {
 # Source
 # ---------------------------------------------------------------------------
 
-source "vmware-iso" "debian13" {
-  vm_name       = "debian13-vagrant-build"
-  guest_os_type = "debian13-64"
+source "vmware-iso" "ubuntu2404" {
+  vm_name       = "ubuntu2404-vagrant-build"
+  guest_os_type = "ubuntu-64"
 
-  iso_url      = "https://cdimage.debian.org/debian-cd/${var.debian_version}/amd64/iso-cd/debian-${var.debian_version}-amd64-netinst.iso"
-  iso_checksum = var.iso_checksum
+  iso_url      = "https://releases.ubuntu.com/24.04/ubuntu-${var.ubuntu_version}-live-server-amd64.iso"
+  # SHA256SUMS is standard GNU format — Packer resolves the correct hash by filename.
+  iso_checksum = "file:https://releases.ubuntu.com/24.04/SHA256SUMS"
 
   memory    = var.memory_mb
   cpus      = var.cpus
@@ -57,15 +53,16 @@ source "vmware-iso" "debian13" {
 
   network        = "nat"
   http_directory = "${path.root}/http"
-  headless       = false   # show VMware console during build
+  headless       = false
 
-  # Wait for isolinux menu, then drop to boot prompt and inject preseed URL.
+  # Ubuntu 24.04 uses GRUB2. Press 'c' to enter the GRUB command line,
+  # then boot with the autoinstall datasource URL.
   boot_wait    = "5s"
   boot_command = [
-    "<esc><wait>",
-    "auto priority=critical ",
-    "url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
-    "net.ifnames=0 biosdevname=0<enter>"
+    "c<wait>",
+    "linux /casper/vmlinuz quiet autoinstall 'ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/'<enter><wait3>",
+    "initrd /casper/initrd<enter><wait3>",
+    "boot<enter>"
   ]
 
   ssh_username = "vagrant"
@@ -86,7 +83,7 @@ source "vmware-iso" "debian13" {
 # ---------------------------------------------------------------------------
 
 build {
-  sources = ["source.vmware-iso.debian13"]
+  sources = ["source.vmware-iso.ubuntu2404"]
 
   # Post-install: vagrant user, sudo, SSH key, open-vm-tools.
   provisioner "shell" {
@@ -100,9 +97,9 @@ build {
     execute_command = "echo 'vagrant' | sudo -S bash '{{ .Path }}'"
   }
 
-  # Package as a Vagrant box in the environment root.
+  # Package as a Vagrant box in the boxes/ubuntu2404/ directory.
   post-processor "vagrant" {
-    output              = "${path.root}/../debian13.box"
+    output              = "${path.root}/ubuntu2404.box"
     provider_override   = "vmware"
     keep_input_artifact = false
   }
