@@ -60,7 +60,7 @@ source "vmware-iso" "ubuntu2604" {
   boot_wait    = "5s"
   boot_command = [
     "c<wait>",
-    "linux /casper/vmlinuz quiet autoinstall 'ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/'<enter><wait3>",
+    "linux /casper/vmlinuz autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter><wait3>",
     "initrd /casper/initrd<enter><wait3>",
     "boot<enter>"
   ]
