@@ -13,6 +13,7 @@ Requirements:
 from __future__ import annotations
 
 import asyncio
+import json
 import shutil
 from pathlib import Path
 from typing import Sequence
@@ -46,40 +47,32 @@ BOXES_ROOT = ENV_ROOT / "boxes"
 # Environment registry
 # ─────────────────────────────────────────────────────────────────────────────
 
+def _load_env(env_id: str, label: str, box_dir: str | None = None) -> dict:
+    """Build an env entry; packer metadata is read from boxes/<box_dir>/box.json."""
+    entry: dict = {
+        "id":     env_id,
+        "label":  label,
+        "path":   ENV_ROOT / env_id,
+        "packer": box_dir is not None,
+    }
+    if box_dir:
+        packer_path = BOXES_ROOT / box_dir
+        meta = json.loads((packer_path / "box.json").read_text(encoding="utf-8"))
+        entry.update({
+            "desc":             f"{label}  ·  Packer-built local box",
+            "box_name":         meta["vagrant_box_name"],
+            "packer_path":      packer_path,
+            "packer_template":  meta["packer_template"],
+            "box_output":       meta["box_file"],
+        })
+    else:
+        entry["desc"] = label
+    return entry
+
 ENVS: list[dict] = [
-    {
-        "id": "fpga-alma",
-        "label": "AlmaLinux 9",
-        "desc": "AlmaLinux 9 + XFCE4  ·  Packer-built local box",
-        "path": ENV_ROOT / "fpga-alma",
-        "packer": True,
-        "box_name": "fpga-alma9",
-        "packer_path": BOXES_ROOT / "alma9",
-        "packer_template": "alma9.pkr.hcl",
-        "box_output": "alma9.box",
-    },
-    {
-        "id": "fpga-ubuntu",
-        "label": "Ubuntu 24.04 LTS",
-        "desc": "Ubuntu 24.04 + XFCE4  ·  Packer-built local box",
-        "path": ENV_ROOT / "fpga-ubuntu",
-        "packer": True,
-        "box_name": "fpga-ubuntu2404",
-        "packer_path": BOXES_ROOT / "ubuntu2404",
-        "packer_template": "ubuntu2404.pkr.hcl",
-        "box_output": "ubuntu2404.box",
-    },
-    {
-        "id": "fpga-debian",
-        "label": "Debian 13 (Trixie)",
-        "desc": "Debian 13 + XFCE4  ·  Packer-built local box",
-        "path": ENV_ROOT / "fpga-debian",
-        "packer": True,
-        "box_name": "fpga-debian13",
-        "packer_path": BOXES_ROOT / "debian13",
-        "packer_template": "debian13.pkr.hcl",
-        "box_output": "debian13.box",
-    },
+    _load_env("fpga-alma",   "AlmaLinux 9",        box_dir="alma9"),
+    _load_env("fpga-ubuntu", "Ubuntu 24.04 LTS",   box_dir="ubuntu2404"),
+    _load_env("fpga-debian", "Debian 13 (Trixie)", box_dir="debian13"),
 ]
 
 # Vagrant machine-readable state → (bullet, rich-color, label)
