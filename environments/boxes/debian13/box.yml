@@ -1,0 +1,4 @@
+vagrant_box_name: fpga-debian13
+packer_template: debian13.pkr.hcl
+box_file: debian13.box
+description: "Debian 13 (Trixie) netinstall — ext4/LVM, VMware"

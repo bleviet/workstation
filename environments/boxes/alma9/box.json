@@ -1,6 +1,0 @@
-{
-  "vagrant_box_name": "fpga-alma9",
-  "packer_template": "alma9.pkr.hcl",
-  "box_file": "alma9.box",
-  "description": "AlmaLinux 9 minimal — RHEL 9-compatible, XFS, VMware"
-}

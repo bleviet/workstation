@@ -13,11 +13,11 @@ Requirements:
 from __future__ import annotations
 
 import asyncio
-import json
 import shutil
 from pathlib import Path
 from typing import Sequence
 
+import yaml
 from textual import on, work
 from textual.app import App, ComposeResult
 from textual.binding import Binding
@@ -57,7 +57,7 @@ def _load_env(env_id: str, label: str, box_dir: str | None = None) -> dict:
     }
     if box_dir:
         packer_path = BOXES_ROOT / box_dir
-        meta = json.loads((packer_path / "box.json").read_text(encoding="utf-8"))
+        meta = yaml.safe_load((packer_path / "box.yml").read_text(encoding="utf-8"))
         entry.update({
             "desc":             f"{label}  ·  Packer-built local box",
             "box_name":         meta["vagrant_box_name"],

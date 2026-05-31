@@ -1,1 +1,2 @@
 textual>=0.50.0
+pyyaml>=6.0

@@ -31,13 +31,18 @@ Examples:
 from __future__ import annotations
 
 import argparse
-import json
 import shutil
 import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+
+try:
+    import yaml
+except ImportError:
+    print("PyYAML is required:  pip install pyyaml", file=sys.stderr)
+    sys.exit(1)
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Paths
@@ -109,17 +114,17 @@ def discover_boxes() -> list[Box]:
         return []
     boxes: list[Box] = []
     for d in sorted(BOXES_ROOT.iterdir()):
-        meta_file = d / "box.json"
+        meta_file = d / "box.yml"
         if not d.is_dir() or not meta_file.exists():
             continue
         try:
-            m = json.loads(meta_file.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError) as exc:
-            _err(f"Skipping {d.name}: bad box.json ({exc})")
+            m = yaml.safe_load(meta_file.read_text(encoding="utf-8"))
+        except (yaml.YAMLError, OSError) as exc:
+            _err(f"Skipping {d.name}: bad box.yml ({exc})")
             continue
         missing = [k for k in ("vagrant_box_name", "packer_template", "box_file") if k not in m]
         if missing:
-            _err(f"Skipping {d.name}: box.json missing keys: {', '.join(missing)}")
+            _err(f"Skipping {d.name}: box.yml missing keys: {', '.join(missing)}")
             continue
         boxes.append(Box(
             id=d.name,
