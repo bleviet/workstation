@@ -45,9 +45,9 @@ source "vmware-iso" "ubuntu2604" {
 
   # The Desktop ISO uses a GUI-only Flutter installer with no unattended mode.
   # We use the Server ISO (autoinstall) and install ubuntu-desktop-minimal via packages.
-  # URL uses the codename path (resolute) which is confirmed working for 26.04.
-  iso_url      = "https://releases.ubuntu.com/resolute/ubuntu-${var.ubuntu_version}-live-server-amd64.iso"
-  iso_checksum = "sha256:dec49008a71f6098d0bcfc822021f4d042d5f2db279e4d75bdd981304f1ca5d9"
+  iso_url      = "https://releases.ubuntu.com/26.04/ubuntu-${var.ubuntu_version}-live-server-amd64.iso"
+  # SHA256SUMS is standard GNU format — Packer resolves the correct hash by filename.
+  iso_checksum = "file:https://releases.ubuntu.com/26.04/SHA256SUMS"
 
   memory    = var.memory_mb
   cpus      = var.cpus
@@ -57,11 +57,18 @@ source "vmware-iso" "ubuntu2604" {
   http_directory = "${path.root}/http"
   headless       = false
 
-  # Press 'e' to edit the default GRUB entry, navigate to the end of the linux
-  # line, append autoinstall params, then boot with F10.
-  # ds=nocloud (not nocloud-net) — single quotes protect the semicolon in GRUB.
-  boot_wait    = "10s"
-  boot_command = ["e<wait><down><down><down><end> autoinstall 'ds=nocloud;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/'<F10>"]
+  # Ubuntu 26.04 uses GRUB2. Press 'c' to enter the GRUB command line, then boot
+  # with the autoinstall datasource URL. This command-line approach is independent
+  # of the menu-entry layout (unlike editing the entry with 'e'), matching the
+  # proven 24.04 box. ds=nocloud — nocloud-net is deprecated since cloud-init 24.1,
+  # and '\;' escapes the semicolon so GRUB passes it literally to the kernel.
+  boot_wait    = "5s"
+  boot_command = [
+    "c<wait>",
+    "linux /casper/vmlinuz autoinstall ds=nocloud\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter><wait3>",
+    "initrd /casper/initrd<enter><wait3>",
+    "boot<enter>"
+  ]
 
   ssh_username = "vagrant"
   ssh_password = "vagrant"

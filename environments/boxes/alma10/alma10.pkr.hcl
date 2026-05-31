@@ -45,9 +45,11 @@ source "vmware-iso" "alma10" {
   # rhel9-64 is the closest available guest OS type until VMware adds rhel10-64.
   guest_os_type = "rhel9-64"
 
-  # AlmaLinux 10 embeds the minor version in the repo path (unlike AlmaLinux 9).
+  # Pin the full point-release path (e.g. 10.2) for reproducible builds. The
+  # floating /almalinux/10/ path also serves this ISO but tracks the latest minor.
   iso_url      = "https://repo.almalinux.org/almalinux/${var.alma_version}/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso"
-  # CHECKSUM is GPG-signed but Packer scans it line-by-line and matches by filename.
+  # EL10 publishes a single combined CHECKSUM (GPG-clearsigned) instead of the
+  # per-ISO .sha256sum files used for EL9; Packer scans it and matches by filename.
   iso_checksum = "file:https://repo.almalinux.org/almalinux/${var.alma_version}/isos/x86_64/CHECKSUM"
 
   memory    = var.memory_mb
