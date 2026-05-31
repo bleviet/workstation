@@ -481,8 +481,9 @@ ConfirmModal { align: center middle; }
 
     @on(ListView.Highlighted, "#env-list")
     def on_highlighted(self, event: ListView.Highlighted) -> None:
-        if event.index is not None:
-            self.selected = event.index
+        idx = event.list_view.index
+        if idx is not None:
+            self.selected = idx
 
     def action_nav_up(self) -> None:
         self.query_one("#env-list", ListView).action_cursor_up()
