@@ -44,8 +44,8 @@ source "vmware-vmx" "ubuntu2604" {
   headless = false
 
   vmx_data = {
-    "memsize"        = tostring(var.memory_mb)
-    "numvcpus"       = tostring(var.cpus)
+    "memsize"        = "${var.memory_mb}"
+    "numvcpus"       = "${var.cpus}"
     "tools.syncTime" = "TRUE"
   }
 
