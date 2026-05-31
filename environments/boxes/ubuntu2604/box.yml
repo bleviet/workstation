@@ -4,10 +4,10 @@ box_file: ubuntu2604.box
 description: "Ubuntu 26.04 LTS desktop (GNOME) — cloud image, ext4, VMware"
 
 # Cloud image used instead of ISO installation (avoids fragile GRUB boot_command).
-# The .img file is QCOW2 format despite the extension; build.py converts it to VMDK.
+# Canonical publishes a native VMDK — no qemu-img conversion needed on the host.
 # Browse available images: https://cloud-images.ubuntu.com/releases/26.04/release/
 cloud_image:
-  url: "https://cloud-images.ubuntu.com/releases/26.04/release/ubuntu-26.04-server-cloudimg-amd64.img"
+  url: "https://cloud-images.ubuntu.com/releases/26.04/release/ubuntu-26.04-server-cloudimg-amd64.vmdk"
   checksum_url: "https://cloud-images.ubuntu.com/releases/26.04/release/SHA256SUMS"
-  format: qcow2
+  format: vmdk
   guest_os_type: ubuntu-64

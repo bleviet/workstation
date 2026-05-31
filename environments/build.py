@@ -321,10 +321,14 @@ def prepare_cloud_image(box: Box) -> Path:
         _download_file(url, cloud_path)
         _verify_checksum(cloud_path, checksum_url)
 
-    # Convert to VMDK (skip if already up to date).
+    # Produce a VMDK in build/: copy if already VMDK, convert if QCOW2.
     vmdk_path = build_dir / f"{box.id}-cloud.vmdk"
-    if vmdk_path.exists() and vmdk_path.stat().st_mtime >= cloud_path.stat().st_mtime:
+    vmdk_fresh = vmdk_path.exists() and vmdk_path.stat().st_mtime >= cloud_path.stat().st_mtime
+    if vmdk_fresh:
         _info(f"VMDK up to date: {vmdk_path.name}")
+    elif ci["format"] == "vmdk":
+        shutil.copy2(cloud_path, vmdk_path)
+        _ok(f"VMDK copied: {vmdk_path.name}")
     else:
         _convert_to_vmdk(cloud_path, vmdk_path)
 
