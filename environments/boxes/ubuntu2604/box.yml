@@ -1,0 +1,4 @@
+vagrant_box_name: fpga-ubuntu2604
+packer_template: ubuntu2604.pkr.hcl
+box_file: ubuntu2604.box
+description: "Ubuntu 26.04 LTS autoinstall — ext4, VMware"

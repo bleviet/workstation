@@ -1,0 +1,4 @@
+vagrant_box_name: fpga-alma10
+packer_template: alma10.pkr.hcl
+box_file: alma10.box
+description: "AlmaLinux 10 minimal — RHEL 10-compatible, XFS, VMware"

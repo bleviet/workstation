@@ -16,7 +16,7 @@ packer {
 # ---------------------------------------------------------------------------
 
 variable "alma_version" {
-  default     = "9.8"
+  default     = "10.0"
   description = "AlmaLinux minor release to download (matches the ISO filename)."
 }
 
@@ -40,13 +40,14 @@ variable "cpus" {
 # Source
 # ---------------------------------------------------------------------------
 
-source "vmware-iso" "alma9" {
-  vm_name       = "alma9-vagrant-build"
+source "vmware-iso" "alma10" {
+  vm_name = "alma10-vagrant-build"
+  # rhel9-64 is the closest available guest OS type until VMware adds rhel10-64.
   guest_os_type = "rhel9-64"
 
-  iso_url      = "https://repo.almalinux.org/almalinux/9/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso"
+  iso_url      = "https://repo.almalinux.org/almalinux/10/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso"
   # Per-ISO sha256sum file — Packer resolves the correct hash by filename.
-  iso_checksum = "file:https://repo.almalinux.org/almalinux/9/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso.sha256sum"
+  iso_checksum = "file:https://repo.almalinux.org/almalinux/10/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso.sha256sum"
 
   memory    = var.memory_mb
   cpus      = var.cpus
@@ -81,7 +82,7 @@ source "vmware-iso" "alma9" {
 # ---------------------------------------------------------------------------
 
 build {
-  sources = ["source.vmware-iso.alma9"]
+  sources = ["source.vmware-iso.alma10"]
 
   # Post-install: vagrant user, sudo, SSH key, open-vm-tools.
   provisioner "shell" {
@@ -95,9 +96,9 @@ build {
     execute_command = "echo 'vagrant' | sudo -S bash '{{ .Path }}'"
   }
 
-  # Package as a Vagrant box in the boxes/alma9/ directory.
+  # Package as a Vagrant box in the boxes/alma10/ directory.
   post-processor "vagrant" {
-    output              = "${path.root}/alma9.box"
+    output              = "${path.root}/alma10.box"
     provider_override   = "vmware"
     keep_input_artifact = false
   }

@@ -15,11 +15,10 @@ packer {
 # Variables
 # ---------------------------------------------------------------------------
 
-variable "alma_version" {
-  default     = "9.8"
-  description = "AlmaLinux minor release to download (matches the ISO filename)."
+variable "ubuntu_version" {
+  default     = "26.04"
+  description = "Ubuntu 26.04 point release to download (e.g. 26.04 or 26.04.1)."
 }
-
 
 variable "disk_size_mb" {
   default     = 20480
@@ -40,13 +39,13 @@ variable "cpus" {
 # Source
 # ---------------------------------------------------------------------------
 
-source "vmware-iso" "alma9" {
-  vm_name       = "alma9-vagrant-build"
-  guest_os_type = "rhel9-64"
+source "vmware-iso" "ubuntu2604" {
+  vm_name       = "ubuntu2604-vagrant-build"
+  guest_os_type = "ubuntu-64"
 
-  iso_url      = "https://repo.almalinux.org/almalinux/9/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso"
-  # Per-ISO sha256sum file — Packer resolves the correct hash by filename.
-  iso_checksum = "file:https://repo.almalinux.org/almalinux/9/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso.sha256sum"
+  iso_url      = "https://releases.ubuntu.com/26.04/ubuntu-${var.ubuntu_version}-live-server-amd64.iso"
+  # SHA256SUMS is standard GNU format — Packer resolves the correct hash by filename.
+  iso_checksum = "file:https://releases.ubuntu.com/26.04/SHA256SUMS"
 
   memory    = var.memory_mb
   cpus      = var.cpus
@@ -56,11 +55,14 @@ source "vmware-iso" "alma9" {
   http_directory = "${path.root}/http"
   headless       = false
 
-  # Wait for isolinux menu, press Tab to edit the boot command, append kickstart URL.
-  boot_wait    = "15s"
+  # Ubuntu 26.04 uses GRUB2. Press 'c' to enter the GRUB command line,
+  # then boot with the autoinstall datasource URL.
+  boot_wait    = "5s"
   boot_command = [
-    "<tab><wait>",
-    " inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg<enter>"
+    "c<wait>",
+    "linux /casper/vmlinuz quiet autoinstall 'ds=nocloud-net;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/'<enter><wait3>",
+    "initrd /casper/initrd<enter><wait3>",
+    "boot<enter>"
   ]
 
   ssh_username = "vagrant"
@@ -81,7 +83,7 @@ source "vmware-iso" "alma9" {
 # ---------------------------------------------------------------------------
 
 build {
-  sources = ["source.vmware-iso.alma9"]
+  sources = ["source.vmware-iso.ubuntu2604"]
 
   # Post-install: vagrant user, sudo, SSH key, open-vm-tools.
   provisioner "shell" {
@@ -89,15 +91,15 @@ build {
     execute_command = "echo 'vagrant' | sudo -S bash '{{ .Path }}'"
   }
 
-  # Minimize box size: clean dnf caches, zero free space.
+  # Minimize box size: clean apt caches, zero free space.
   provisioner "shell" {
     script          = "${path.root}/scripts/cleanup.sh"
     execute_command = "echo 'vagrant' | sudo -S bash '{{ .Path }}'"
   }
 
-  # Package as a Vagrant box in the boxes/alma9/ directory.
+  # Package as a Vagrant box in the boxes/ubuntu2604/ directory.
   post-processor "vagrant" {
-    output              = "${path.root}/alma9.box"
+    output              = "${path.root}/ubuntu2604.box"
     provider_override   = "vmware"
     keep_input_artifact = false
   }
