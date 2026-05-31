@@ -252,6 +252,26 @@ def _convert_to_vmdk(src: Path, vmdk: Path) -> None:
 
 
 def _make_seed_iso(user_data: Path, meta_data_text: str, dest: Path) -> None:
+    # pycdlib is pure Python and works on Windows, Linux, and macOS.
+    try:
+        import io
+        import pycdlib  # type: ignore[import-untyped]
+
+        iso = pycdlib.PyCdlib()
+        iso.new(interchange_level=1, joliet=3, rock_ridge="1.09", vol_ident="CIDATA")
+        ud = user_data.read_bytes()
+        md = meta_data_text.encode()
+        iso.add_fp(io.BytesIO(ud), len(ud),
+                   iso_path="/USER_DATA.;1", joliet_path="/user-data", rr_name="user-data")
+        iso.add_fp(io.BytesIO(md), len(md),
+                   iso_path="/META_DATA.;1", joliet_path="/meta-data", rr_name="meta-data")
+        iso.write(str(dest))
+        iso.close()
+        return
+    except ImportError:
+        pass
+
+    # Fall back to system ISO tools (Linux/macOS only).
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
         (tmp_path / "user-data").write_text(user_data.read_text())
@@ -264,8 +284,10 @@ def _make_seed_iso(user_data: Path, meta_data_text: str, dest: Path) -> None:
                      "-joliet", "-rock", "user-data", "meta-data"]
             if _run([exe] + flags, tmp_path) == 0:
                 return
+
     raise RuntimeError(
-        "Seed ISO creation failed — install genisoimage:  sudo apt install genisoimage"
+        "Seed ISO creation failed — install pycdlib:  pip install pycdlib\n"
+        "  (Linux alternative: sudo apt install genisoimage)"
     )
 
 
