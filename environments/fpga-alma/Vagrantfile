@@ -83,9 +83,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # Requires Vagrant >= 2.2.8. The vagrant-vmware-desktop plugin handles the
   # VMDK expansion before first boot; the step-0 provisioner below grows the
   # partition and XFS filesystem to fill the declared size.
-  # thin: true → sparse VMDK split into 2 GB extent files; disk space is
-  # allocated on the host only as the guest actually writes data.
-  config.vm.disk :disk, size: VM_DISK_GB, primary: true, thin: true
+  config.vm.disk :disk, size: VM_DISK_GB, primary: true
 
   # Disable the default /vagrant mount (explicit mounts are set up below).
   config.vm.synced_folder ".", "/vagrant", disabled: true
