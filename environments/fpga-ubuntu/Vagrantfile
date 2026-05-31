@@ -72,9 +72,13 @@ ADMIN_PUBKEY = _admin_pubkey_file ? File.read(_admin_pubkey_file).strip : ""
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── Base box ────────────────────────────────────────────────────────────
-  config.vm.box         = "ubuntu/noble64"
-  config.vm.box_version = ">= 20240101.0.0"
-  config.vm.hostname    = "fpga-dev"
+  # Box built locally from the official Ubuntu 24.04 LTS ISO via Packer.
+  # Build steps (run from environments/fpga-ubuntu/packer/ on Windows):
+  #   packer init ubuntu2404.pkr.hcl
+  #   packer build ubuntu2404.pkr.hcl
+  #   vagrant box add --name fpga-ubuntu2404 ../ubuntu2404.box
+  config.vm.box      = "fpga-ubuntu2404"
+  config.vm.hostname = "fpga-dev"
 
   # ── Disk size ────────────────────────────────────────────────────────────
   # Requires Vagrant >= 2.2.8. The vagrant-vmware-desktop plugin handles the

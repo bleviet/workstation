@@ -75,9 +75,13 @@ ADMIN_PUBKEY = _admin_pubkey_file ? File.read(_admin_pubkey_file).strip : ""
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # ── Base box ────────────────────────────────────────────────────────────
-  config.vm.box         = "almalinux/9"
-  config.vm.box_version = ">= 9.0.0"
-  config.vm.hostname    = "fpga-dev"
+  # Box built locally from the official AlmaLinux 9 ISO via Packer.
+  # Build steps (run from environments/fpga-alma/packer/ on Windows):
+  #   packer init alma9.pkr.hcl
+  #   packer build alma9.pkr.hcl
+  #   vagrant box add --name fpga-alma9 ../alma9.box
+  config.vm.box      = "fpga-alma9"
+  config.vm.hostname = "fpga-dev"
 
   # ── Disk size ────────────────────────────────────────────────────────────
   # Requires Vagrant >= 2.2.8. The vagrant-vmware-desktop plugin handles the
