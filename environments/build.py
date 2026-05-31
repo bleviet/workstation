@@ -31,9 +31,13 @@ Examples:
 from __future__ import annotations
 
 import argparse
+import hashlib
+import re
 import shutil
 import subprocess
 import sys
+import tempfile
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
@@ -168,6 +172,155 @@ def _box_registered(vagrant_name: str) -> bool:
     )
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Cloud image preparation (used by boxes that set cloud_image: in box.yml)
+# ─────────────────────────────────────────────────────────────────────────────
+
+_VMX_TEMPLATE = """\
+.encoding = "UTF-8"
+config.version = "8"
+virtualHW.version = "19"
+guestOS = "{guest_os_type}"
+displayName = "{display_name}"
+memsize = "2048"
+numvcpus = "4"
+
+sata0.present = "TRUE"
+sata0:0.present = "TRUE"
+sata0:0.fileName = "{vmdk_filename}"
+sata0:0.deviceType = "disk"
+
+sata0:1.present = "TRUE"
+sata0:1.fileName = "{seed_iso_filename}"
+sata0:1.deviceType = "cdrom-image"
+
+ethernet0.present = "TRUE"
+ethernet0.connectionType = "nat"
+ethernet0.virtualDev = "vmxnet3"
+ethernet0.wakeOnPcktRcv = "FALSE"
+ethernet0.addressType = "generated"
+
+usb.present = "TRUE"
+sound.absent = "TRUE"
+svga.autodetect = "TRUE"
+tools.syncTime = "TRUE"
+"""
+
+
+def _download_file(url: str, dest: Path) -> None:
+    _info(f"Downloading {Path(url).name}")
+
+    def _progress(count: int, block_size: int, total: int) -> None:
+        if total > 0:
+            done = min(count * block_size, total)
+            pct = done * 100 // total
+            mb = done >> 20
+            total_mb = total >> 20
+            print(f"\r  {pct:3d}%  {mb} / {total_mb} MB", end="", flush=True)
+
+    urllib.request.urlretrieve(url, dest, reporthook=_progress)
+    print()
+
+
+def _verify_checksum(filepath: Path, checksum_url: str) -> None:
+    _info("Verifying checksum")
+    sha256 = hashlib.sha256()
+    with filepath.open("rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            sha256.update(chunk)
+    actual = sha256.hexdigest()
+
+    with urllib.request.urlopen(checksum_url) as resp:
+        checksum_text = resp.read().decode()
+
+    # Accept either "SHA256 (filename) = hash" (AlmaLinux) or "hash  *filename" (Ubuntu).
+    if not any(re.search(rf'(?:^|\s){re.escape(actual)}(?:\s|$)', line)
+               for line in checksum_text.splitlines()):
+        raise RuntimeError(f"Checksum {actual} not found in {checksum_url}")
+    _ok("Checksum OK")
+
+
+def _convert_to_vmdk(src: Path, vmdk: Path) -> None:
+    qemu_img = _require("qemu-img")
+    _info(f"Converting {src.name} → {vmdk.name}")
+    rc = _run(
+        [qemu_img, "convert", "-p", "-f", "qcow2", "-O", "vmdk",
+         "-o", "subformat=monolithicSparse", str(src), str(vmdk)],
+        src.parent,
+    )
+    if rc != 0:
+        raise RuntimeError("qemu-img convert failed")
+
+
+def _make_seed_iso(user_data: Path, meta_data_text: str, dest: Path) -> None:
+    with tempfile.TemporaryDirectory() as tmp:
+        tmp_path = Path(tmp)
+        (tmp_path / "user-data").write_text(user_data.read_text())
+        (tmp_path / "meta-data").write_text(meta_data_text)
+        for tool in ("genisoimage", "mkisofs", "xorrisofs"):
+            exe = shutil.which(tool)
+            if not exe:
+                continue
+            flags = ["-output", str(dest), "-volid", "cidata",
+                     "-joliet", "-rock", "user-data", "meta-data"]
+            if _run([exe] + flags, tmp_path) == 0:
+                return
+    raise RuntimeError(
+        "Seed ISO creation failed — install genisoimage:  sudo apt install genisoimage"
+    )
+
+
+def _write_vmx(vmx: Path, vmdk: Path, seed_iso: Path,
+               guest_os_type: str, box_id: str) -> None:
+    vmx.write_text(_VMX_TEMPLATE.format(
+        guest_os_type=guest_os_type,
+        display_name=f"{box_id}-cloud-build",
+        vmdk_filename=vmdk.name,
+        seed_iso_filename=seed_iso.name,
+    ))
+
+
+def prepare_cloud_image(box: Box) -> Path:
+    """Download + convert cloud image, write seed ISO and VMX. Returns VMX path."""
+    ci = yaml.safe_load((box.path / "box.yml").read_text())["cloud_image"]
+    url: str          = ci["url"]
+    checksum_url: str = ci["checksum_url"]
+    guest_os_type: str = ci["guest_os_type"]
+
+    cache_dir = box.path / "cache"
+    build_dir = box.path / "build"
+    cache_dir.mkdir(exist_ok=True)
+    build_dir.mkdir(exist_ok=True)
+
+    # Download cloud image (kept in cache/ so re-builds skip the download).
+    cloud_path = cache_dir / Path(url).name
+    if cloud_path.exists():
+        _info(f"Using cached cloud image: {cloud_path.name}")
+    else:
+        _download_file(url, cloud_path)
+        _verify_checksum(cloud_path, checksum_url)
+
+    # Convert to VMDK (skip if already up to date).
+    vmdk_path = build_dir / f"{box.id}-cloud.vmdk"
+    if vmdk_path.exists() and vmdk_path.stat().st_mtime >= cloud_path.stat().st_mtime:
+        _info(f"VMDK up to date: {vmdk_path.name}")
+    else:
+        _convert_to_vmdk(cloud_path, vmdk_path)
+
+    # Seed ISO with cloud-init config (always regenerated — takes < 1 s).
+    seed_iso_path = build_dir / "seed.iso"
+    meta_data = f"instance-id: {box.id}-build\nlocal-hostname: {box.id}-vagrant\n"
+    _make_seed_iso(box.path / "cloud-init" / "user-data", meta_data, seed_iso_path)
+    _ok("Seed ISO ready")
+
+    # VMX wrapper pointing at the VMDK and seed ISO.
+    vmx_path = build_dir / f"{box.id}-cloud.vmx"
+    _write_vmx(vmx_path, vmdk_path, seed_iso_path, guest_os_type, box.id)
+    _ok("VMX ready")
+
+    return vmx_path
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Steps
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -175,12 +328,23 @@ def packer_build(box: Box) -> bool:
     """packer init + packer build → produces box_file."""
     packer = _require("packer")
     _banner(f"BUILD  {box.id}  ({box.template})")
+
+    extra_args: list[str] = []
+    meta = yaml.safe_load((box.path / "box.yml").read_text())
+    if "cloud_image" in meta:
+        try:
+            vmx_path = prepare_cloud_image(box)
+        except Exception as exc:
+            _err(f"Cloud image preparation failed: {exc}")
+            return False
+        extra_args = ["-var", f"vmx_path={vmx_path}"]
+
     _info("packer init")
     if _run([packer, "init", box.template], box.path) != 0:
         _err("packer init failed")
         return False
     _info("packer build  (this can take ~60 minutes)")
-    if _run([packer, "build", box.template], box.path) != 0:
+    if _run([packer, "build", "-force"] + extra_args + [box.template], box.path) != 0:
         _err("packer build failed")
         return False
     if not box.box_file.exists():

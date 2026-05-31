@@ -15,15 +15,9 @@ packer {
 # Variables
 # ---------------------------------------------------------------------------
 
-variable "alma_version" {
-  default     = "10.2"
-  description = "AlmaLinux release to download — used in both the repo path and ISO filename (e.g. 10.2)."
-}
-
-
-variable "disk_size_mb" {
-  default     = 20480
-  description = "Base disk size in MB. Vagrant expands to 512 GB on first boot."
+variable "vmx_path" {
+  default     = ""
+  description = "Absolute path to the prepared VMX file. Set by build.py via -var before calling packer build."
 }
 
 variable "memory_mb" {
@@ -40,52 +34,26 @@ variable "cpus" {
 # Source
 # ---------------------------------------------------------------------------
 
-source "vmware-iso" "alma10" {
-  vm_name = "alma10-vagrant-build"
-  # rhel9-64 is the closest available guest OS type until VMware adds rhel10-64.
-  guest_os_type = "rhel9-64"
+# No boot_command: the cloud image boots directly into a running OS.
+# cloud-init reads the seed ISO (label=cidata) on first boot to create the
+# vagrant user and enable SSH password auth, then Packer SSHes in.
+source "vmware-vmx" "alma10" {
+  source_path = var.vmx_path
+  vm_name     = "alma10-vagrant-build"
 
-  # Pin the full point-release path (e.g. 10.2) for reproducible builds. The
-  # floating /almalinux/10/ path also serves this ISO but tracks the latest minor.
-  iso_url      = "https://repo.almalinux.org/almalinux/${var.alma_version}/isos/x86_64/AlmaLinux-${var.alma_version}-x86_64-minimal.iso"
-  # EL10 publishes a single combined CHECKSUM (GPG-clearsigned) instead of the
-  # per-ISO .sha256sum files used for EL9; Packer scans it and matches by filename.
-  iso_checksum = "file:https://repo.almalinux.org/almalinux/${var.alma_version}/isos/x86_64/CHECKSUM"
+  headless = false
 
-  memory    = var.memory_mb
-  cpus      = var.cpus
-  disk_size = var.disk_size_mb
-
-  network        = "nat"
-  http_directory = "${path.root}/http"
-  headless       = false
-
-  # AlmaLinux 10 dropped isolinux: the ISO boots GRUB2 in both BIOS and UEFI mode,
-  # so the EL9-style <tab> (an isolinux key) does nothing and the menu times out
-  # into an interactive install. Drive GRUB instead — 'e' edits the default entry,
-  # two <down> reach the kernel line, Ctrl+E jumps to its end, we append the
-  # kickstart URL, and Ctrl+X boots. Editing keeps the entry's existing inst.stage2=
-  # line intact, so we don't need to know the ISO volume label.
-  # boot_keygroup_interval slows VNC typing so VMware doesn't drop characters.
-  boot_wait              = "15s"
-  boot_keygroup_interval = "250ms"
-  boot_command = [
-    "e<wait>",
-    "<down><down><wait>",
-    "<leftCtrlOn>e<leftCtrlOff>",
-    " inst.text inst.ks=http://{{ .HTTPIP }}:{{ .HTTPPort }}/ks.cfg",
-    "<wait><leftCtrlOn>x<leftCtrlOff>"
-  ]
+  vmx_data = {
+    "memsize"        = tostring(var.memory_mb)
+    "numvcpus"       = tostring(var.cpus)
+    "tools.syncTime" = "TRUE"
+  }
 
   ssh_username = "vagrant"
   ssh_password = "vagrant"
-  ssh_timeout  = "60m"
+  ssh_timeout  = "15m"
 
   shutdown_command = "echo 'vagrant' | sudo -S shutdown -P now"
-
-  vmx_data = {
-    "tools.syncTime" = "TRUE"
-  }
 
   output_directory = "${path.root}/output"
 }
@@ -95,9 +63,15 @@ source "vmware-iso" "alma10" {
 # ---------------------------------------------------------------------------
 
 build {
-  sources = ["source.vmware-iso.alma10"]
+  sources = ["source.vmware-vmx.alma10"]
 
-  # Post-install: vagrant user, sudo, SSH key, open-vm-tools.
+  # Install packages absent from the GenericCloud base image.
+  provisioner "shell" {
+    execute_command = "echo 'vagrant' | sudo -S bash -c '{{ .Vars }} bash {{ .Path }}'"
+    inline          = ["dnf install -y open-vm-tools curl"]
+  }
+
+  # vagrant user, passwordless sudo, insecure SSH key, VMware tools.
   provisioner "shell" {
     script          = "${path.root}/scripts/setup.sh"
     execute_command = "echo 'vagrant' | sudo -S bash '{{ .Path }}'"
@@ -109,7 +83,6 @@ build {
     execute_command = "echo 'vagrant' | sudo -S bash '{{ .Path }}'"
   }
 
-  # Package as a Vagrant box in the boxes/alma10/ directory.
   post-processor "vagrant" {
     output              = "${path.root}/alma10.box"
     provider_override   = "vmware"

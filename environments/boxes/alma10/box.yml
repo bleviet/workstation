@@ -2,3 +2,13 @@ vagrant_box_name: fpga-alma10
 packer_template: alma10.pkr.hcl
 box_file: alma10.box
 description: "AlmaLinux 10 minimal — RHEL 10-compatible, XFS, VMware"
+
+# Cloud image used instead of ISO installation (avoids fragile GRUB boot_command).
+# Update the url to a newer build when one is released; the CHECKSUM file at
+# checksum_url is fetched at build time and verified regardless of filename.
+# Browse available images: https://repo.almalinux.org/almalinux/10.2/cloud/x86_64/images/
+cloud_image:
+  url: "https://repo.almalinux.org/almalinux/10.2/cloud/x86_64/images/AlmaLinux-10-GenericCloud-10.2-20250421.x86_64.qcow2"
+  checksum_url: "https://repo.almalinux.org/almalinux/10.2/cloud/x86_64/images/CHECKSUM"
+  format: qcow2
+  guest_os_type: rhel9-64
