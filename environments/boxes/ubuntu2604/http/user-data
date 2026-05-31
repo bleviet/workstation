@@ -29,6 +29,7 @@ autoinstall:
   packages:
     - open-vm-tools
     - curl
+    - ubuntu-desktop-minimal
   late-commands:
     # Enable password auth so Packer can SSH in as vagrant.
     - sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /target/etc/ssh/sshd_config

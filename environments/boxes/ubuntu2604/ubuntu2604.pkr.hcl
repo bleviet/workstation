@@ -55,14 +55,16 @@ source "vmware-iso" "ubuntu2604" {
   http_directory = "${path.root}/http"
   headless       = false
 
-  # Ubuntu 26.04 uses GRUB2. Press 'c' to enter the GRUB command line,
-  # then boot with the autoinstall datasource URL.
-  boot_wait    = "5s"
+  # Wait for GRUB menu, press 'e' to edit the default entry, navigate to the
+  # end of the linux line, append autoinstall params, then boot with Ctrl+x.
+  # Using the edit approach rather than the 'c' command line is more reliable
+  # across GRUB versions — the command line resets casper state on some ISOs.
+  boot_wait    = "12s"
   boot_command = [
-    "c<wait>",
-    "linux /casper/vmlinuz autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<enter><wait3>",
-    "initrd /casper/initrd<enter><wait3>",
-    "boot<enter>"
+    "e<wait>",
+    "<down><down><down><end>",
+    " autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/",
+    "<wait><leftCtrlOn>x<leftCtrlOff>"
   ]
 
   ssh_username = "vagrant"
