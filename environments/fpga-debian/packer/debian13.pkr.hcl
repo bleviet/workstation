@@ -46,7 +46,7 @@ variable "cpus" {
 
 source "vmware-iso" "debian13" {
   vm_name       = "debian13-vagrant-build"
-  guest_os_type = "debian12-64"   # VMware does not have a Debian 13 type yet
+  guest_os_type = "debian13-64"
 
   iso_url      = "https://cdimage.debian.org/debian-cd/${var.debian_version}/amd64/iso-cd/debian-${var.debian_version}-amd64-netinst.iso"
   iso_checksum = var.iso_checksum
