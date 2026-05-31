@@ -43,8 +43,9 @@ source "vmware-iso" "ubuntu2604" {
   vm_name       = "ubuntu2604-vagrant-build"
   guest_os_type = "ubuntu-64"
 
+  # The Desktop ISO uses a GUI-only Flutter installer with no unattended mode.
+  # We use the Server ISO (autoinstall) and install ubuntu-desktop-minimal via packages.
   iso_url      = "https://releases.ubuntu.com/26.04/ubuntu-${var.ubuntu_version}-live-server-amd64.iso"
-  # SHA256SUMS is standard GNU format — Packer resolves the correct hash by filename.
   iso_checksum = "file:https://releases.ubuntu.com/26.04/SHA256SUMS"
 
   memory    = var.memory_mb
