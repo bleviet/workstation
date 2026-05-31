@@ -258,13 +258,15 @@ def _make_seed_iso(user_data: Path, meta_data_text: str, dest: Path) -> None:
         import pycdlib  # type: ignore[import-untyped]
 
         iso = pycdlib.PyCdlib()
-        iso.new(interchange_level=1, joliet=3, rock_ridge="1.09", vol_ident="CIDATA")
+        # interchange_level=4 (ISO 9660:1999) lifts the 8.3 filename limit,
+        # allowing "user-data" and "meta-data" as literal ISO paths.
+        iso.new(interchange_level=4, joliet=3, rock_ridge="1.09", vol_ident="CIDATA")
         ud = user_data.read_bytes()
         md = meta_data_text.encode()
         iso.add_fp(io.BytesIO(ud), len(ud),
-                   iso_path="/USER_DATA.;1", joliet_path="/user-data", rr_name="user-data")
+                   iso_path="/user-data", joliet_path="/user-data", rr_name="user-data")
         iso.add_fp(io.BytesIO(md), len(md),
-                   iso_path="/META_DATA.;1", joliet_path="/meta-data", rr_name="meta-data")
+                   iso_path="/meta-data", joliet_path="/meta-data", rr_name="meta-data")
         iso.write(str(dest))
         iso.close()
         return
