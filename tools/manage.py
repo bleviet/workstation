@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import asyncio
 import shutil
-import sys
 from pathlib import Path
 from typing import Sequence
 
@@ -437,7 +436,7 @@ ConfirmModal { align: center middle; }
         return self.states.get(self._env["id"], "unknown")
 
     @property
-    def _log(self) -> RichLog:
+    def _output(self) -> RichLog:
         return self.query_one("#log", RichLog)
 
     def _refresh_ui(self) -> None:
@@ -466,12 +465,12 @@ ConfirmModal { align: center middle; }
         self.query_one("#btn-rebuild",   Button).disabled = not is_packer
 
     def _banner(self, n: int, total: int, title: str) -> None:
-        self._log.write(
+        self._output.write(
             f"\n[bold white on dark_blue]  Step {n}/{total} — {title}  [/bold white on dark_blue]"
         )
 
     async def _vagrant(self, *args: str) -> int:
-        return await _stream(("vagrant", *args), self._env["path"], self._log)
+        return await _stream(("vagrant", *args), self._env["path"], self._output)
 
     async def _sync_one(self, env_id: str) -> None:
         env   = next(e for e in ENVS if e["id"] == env_id)
@@ -498,12 +497,12 @@ ConfirmModal { align: center middle; }
 
     @work(exclusive=True, group="status")
     async def poll_status(self) -> None:
-        self._log.write("[dim]Refreshing status for all environments…[/dim]")
+        self._output.write("[dim]Refreshing status for all environments…[/dim]")
         new: dict[str, str] = {}
         for env in ENVS:
             new[env["id"]] = await _vagrant_state(env["path"])
         self.states = new
-        self._log.write("[dim]Done.[/dim]")
+        self._output.write("[dim]Done.[/dim]")
 
     # ── Simple VM actions ─────────────────────────────────────────────────────
 
@@ -527,7 +526,7 @@ ConfirmModal { align: center middle; }
     async def _run_vagrant(self, subcmd: str) -> None:
         env = self._env
         self.busy = True
-        await _stream(("vagrant", subcmd), env["path"], self._log)
+        await _stream(("vagrant", subcmd), env["path"], self._output)
         self.busy = False
         await self._sync_one(env["id"])
 
@@ -536,7 +535,7 @@ ConfirmModal { align: center middle; }
     @on(Button.Pressed, "#btn-ssh")
     def on_ssh(self) -> None:
         env = self._env
-        self._log.write(
+        self._output.write(
             f"\n[yellow]Open a terminal and run:[/yellow]\n"
             f"  [bold]cd {env['path']}[/bold]\n"
             f"  [bold]vagrant ssh[/bold]\n"
@@ -563,7 +562,7 @@ ConfirmModal { align: center middle; }
     async def _do_destroy(self) -> None:
         env = self._env
         self.busy = True
-        await _stream(("vagrant", "destroy", "-f"), env["path"], self._log)
+        await _stream(("vagrant", "destroy", "-f"), env["path"], self._output)
         self.busy = False
         await self._sync_one(env["id"])
 
@@ -596,9 +595,9 @@ ConfirmModal { align: center middle; }
         self._banner(1, 4, "Destroy existing VM")
         state = await _vagrant_state(env["path"])
         if state not in ("not_created", "unknown", "error"):
-            rc = await _stream(("vagrant", "destroy", "-f"), env["path"], self._log)
+            rc = await _stream(("vagrant", "destroy", "-f"), env["path"], self._output)
             if rc != 0:
-                self._log.write("[red]Destroy failed — aborting.[/red]")
+                self._output.write("[red]Destroy failed — aborting.[/red]")
                 self.busy = False
                 return
 
@@ -608,10 +607,10 @@ ConfirmModal { align: center middle; }
         rc = await _stream(
             ("packer", "build", env["packer_template"]),
             packer_cwd,
-            self._log,
+            self._output,
         )
         if rc != 0:
-            self._log.write("[red]Packer build failed — aborting.[/red]")
+            self._output.write("[red]Packer build failed — aborting.[/red]")
             self.busy = False
             return
 
@@ -621,26 +620,26 @@ ConfirmModal { align: center middle; }
             await _stream(
                 ("vagrant", "box", "remove", env["box_name"], "--force"),
                 env["path"],
-                self._log,
+                self._output,
             )
         box_file = env["path"] / env["box_output"]
         rc = await _stream(
             ("vagrant", "box", "add", "--name", env["box_name"], str(box_file)),
             env["path"],
-            self._log,
+            self._output,
         )
         if rc != 0:
-            self._log.write("[red]Box registration failed — aborting.[/red]")
+            self._output.write("[red]Box registration failed — aborting.[/red]")
             self.busy = False
             return
 
         # ── 4. Start VM ───────────────────────────────────────────────────────
         self._banner(4, 4, "Start VM")
-        await _stream(("vagrant", "up"), env["path"], self._log)
+        await _stream(("vagrant", "up"), env["path"], self._output)
 
         self.busy = False
         await self._sync_one(env["id"])
-        self._log.write("\n[bold green]✓  Rebuild complete![/bold green]")
+        self._output.write("\n[bold green]✓  Rebuild complete![/bold green]")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -648,9 +647,4 @@ ConfirmModal { align: center middle; }
 # ─────────────────────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    # On Windows, asyncio subprocess requires the ProactorEventLoop.
-    # Python 3.8+ sets this by default, but be explicit just in case.
-    if sys.platform == "win32":
-        asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-
     FpgaManager().run()
