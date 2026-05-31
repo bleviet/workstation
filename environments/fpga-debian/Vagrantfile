@@ -18,10 +18,12 @@
 #      (requires a paid HashiCorp license)
 #
 # Disk space:
-#   The virtual disk is provisioned at 512 GB (config.vm.disk below).
+#   The virtual disk is declared at 512 GB but thin-provisioned: VMware splits
+#   it into multiple sparse extent files that only consume space as data is
+#   written, so the host drive does not need 512 GB free up front.
 #   Vivado (full) ~100 GB + Quartus ~40 GB + projects leaves plenty of room.
 #   The first-boot provisioner automatically grows the root partition and
-#   ext4 filesystem to fill the expanded disk — no manual steps needed.
+#   ext4 filesystem to fill the declared disk size — no manual steps needed.
 #
 # Tool installers:
 #   Drop Vivado / Quartus installer archives into the local "installers/" folder
@@ -50,7 +52,7 @@ VAGRANTFILE_API_VERSION = "2"
 VM_NAME     = "fpga-dev-debian13"
 VM_RAM_MB   = 32_768   # 32 GB  (leaves 32 GB for the Windows host)
 VM_CPUS     = 8        # logical CPUs visible inside the VM
-VM_DISK_GB  = "512GB"  # virtual disk size (provisioned on first vagrant up)
+VM_DISK_GB  = "512GB"  # virtual disk size (thin-provisioned — grows on demand)
 VM_VRAM_MB  = 256      # video RAM for the XFCE session
 VM_3D_ACCEL = "TRUE"   # set to "FALSE" if the host GPU causes glitches
 
@@ -84,8 +86,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # ── Disk size ────────────────────────────────────────────────────────────
   # Requires Vagrant >= 2.2.8. The vagrant-vmware-desktop plugin handles the
   # VMDK expansion before first boot; the step-0 provisioner below grows the
-  # partition and ext4 filesystem to use the full allocated space.
-  config.vm.disk :disk, size: VM_DISK_GB, primary: true
+  # partition and ext4 filesystem to fill the declared size.
+  # thin: true → sparse VMDK split into 2 GB extent files; disk space is
+  # allocated on the host only as the guest actually writes data.
+  config.vm.disk :disk, size: VM_DISK_GB, primary: true, thin: true
 
   # Disable the default /vagrant mount (explicit mounts are set up below).
   config.vm.synced_folder ".", "/vagrant", disabled: true
