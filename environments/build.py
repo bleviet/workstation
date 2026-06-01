@@ -241,21 +241,27 @@ def _vm_state(name: str) -> str:
     return "unknown"
 
 
-def _wait_for_ssh(host: str, port: int = 22, timeout: int = 300) -> None:
+def _wait_for_ssh(host: str, port: int = 22, timeout: int = 600) -> None:
     """Wait until sshd is ready: TCP connect succeeds AND SSH banner is received."""
     _info(f"Waiting for SSH on {host}:{port} (up to {timeout}s)…")
     deadline = time.time() + timeout
+    last_dot = time.time()
     while time.time() < deadline:
         try:
             with socket.create_connection((host, port), timeout=5) as sock:
                 sock.settimeout(5)
                 banner = sock.recv(256)
                 if banner.startswith(b"SSH-"):
+                    print()  # newline after dots
                     _ok("SSH is up")
                     return
         except OSError:
             pass
+        if time.time() - last_dot >= 10:
+            print(".", end="", flush=True)
+            last_dot = time.time()
         time.sleep(3)
+    print()
     raise TimeoutError(f"SSH on {host}:{port} did not become available within {timeout}s")
 
 
@@ -571,9 +577,10 @@ def cmd_create(vm: VMConfig) -> None:
     _vbm("startvm", vm.name, "--type", vm_type)
 
     # 9. Wait for SSH (cloud-init runs; vagrant user becomes available)
-    _wait_for_ssh("127.0.0.1", port=2222, timeout=300)
-    # Extra grace time for cloud-init to complete
-    time.sleep(15)
+    _wait_for_ssh("127.0.0.1", port=2222, timeout=600)
+    # Extra grace time for cloud-init to finish applying users/ssh_pwauth
+    _info("Giving cloud-init 30s to finish…")
+    time.sleep(30)
 
     # 10. Run setup.sh
     _VAGRANT_PASS = "vagrant"
