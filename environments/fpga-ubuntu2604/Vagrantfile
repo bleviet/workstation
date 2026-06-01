@@ -129,6 +129,10 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vmw.vmx["mem.hotadd"]           = "FALSE"
     vmw.vmx["mainMem.useNamedFile"] = "FALSE"
 
+    # ── Network — pin Ethernet0 to a specific PCIe slot so VMware does not
+    # fail with "No PCIe slot available" when PVSCSI + USB controllers are present.
+    vmw.vmx["ethernet0.pciSlotNumber"] = "192"
+
     # ── Storage controller — paravirtual SCSI for better sequential I/O
     vmw.vmx["scsi0.virtualDev"] = "pvscsi"
 
