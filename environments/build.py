@@ -290,6 +290,44 @@ def _scp(src: Path, host: str, dest: str, user: str, key: Optional[Path] = None)
     subprocess.run(scp_args, check=True)
 
 
+def _paramiko_put(host: str, port: int, user: str, password: str,
+                  local: Path, remote: str) -> None:
+    """Upload a file via SFTP using password auth (no SSH agent required)."""
+    import paramiko  # type: ignore
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(host, port=port, username=user, password=password,
+                   allow_agent=False, look_for_keys=False, timeout=30)
+    try:
+        sftp = client.open_sftp()
+        sftp.put(str(local), remote)
+        sftp.close()
+    finally:
+        client.close()
+
+
+def _paramiko_exec(host: str, port: int, user: str, password: str, cmd: str) -> None:
+    """Run a shell command via SSH using password auth (no SSH agent required)."""
+    import paramiko  # type: ignore
+    client = paramiko.SSHClient()
+    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.connect(host, port=port, username=user, password=password,
+                   allow_agent=False, look_for_keys=False, timeout=30)
+    try:
+        _, stdout, stderr = client.exec_command(cmd, get_pty=True)
+        out = stdout.read().decode(errors="replace")
+        rc  = stdout.channel.recv_exit_status()
+        if out.strip():
+            print(out.rstrip())
+        if rc != 0:
+            err = stderr.read().decode(errors="replace")
+            raise RuntimeError(
+                f"Remote command failed (exit {rc}):\n  cmd: {cmd}\n  stderr: {err.strip()}"
+            )
+    finally:
+        client.close()
+
+
 # ── Cloud image helpers ───────────────────────────────────────────────────────
 
 def _fetch_checksum(url: str, filename: str) -> Optional[str]:
@@ -514,15 +552,15 @@ def cmd_create(vm: VMConfig) -> None:
     time.sleep(15)
 
     # 10. Run setup.sh
+    _VAGRANT_PASS = "vagrant"
     setup_sh = os_cfg.os_dir / os_cfg.setup_script
     if not setup_sh.exists():
         _warn(f"setup.sh not found at {setup_sh}; skipping")
     else:
         _info("Uploading and running setup.sh…")
-        _scp(setup_sh, "127.0.0.1", "/tmp/setup.sh", "vagrant")
-        _ssh("127.0.0.1", "vagrant",
-             "chmod +x /tmp/setup.sh && sudo /tmp/setup.sh",
-             key=None)  # password auth still on at this point (sshpass not used; agent key)
+        _paramiko_put("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS, setup_sh, "/tmp/setup.sh")
+        _paramiko_exec("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS,
+                       "chmod +x /tmp/setup.sh && sudo /tmp/setup.sh")
         _ok("setup.sh completed")
 
     # 11. Inject admin public key
@@ -530,8 +568,9 @@ def cmd_create(vm: VMConfig) -> None:
     if admin_key:
         _info(f"Injecting admin key from {admin_key}…")
         pub = admin_key.read_text().strip()
-        _ssh("127.0.0.1", "vagrant",
-             f"mkdir -p ~/.ssh && echo '{pub}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
+        _paramiko_exec("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS,
+                       f"mkdir -p ~/.ssh && echo '{pub}' >> ~/.ssh/authorized_keys"
+                       " && chmod 600 ~/.ssh/authorized_keys")
         _ok("Admin key injected")
     else:
         _warn("No admin public key found; add ~/.ssh/id_ed25519.pub or admin.pub at repo root")
@@ -540,9 +579,9 @@ def cmd_create(vm: VMConfig) -> None:
     cleanup_sh = os_cfg.os_dir / os_cfg.cleanup_script
     if cleanup_sh.exists():
         _info("Running cleanup.sh…")
-        _scp(cleanup_sh, "127.0.0.1", "/tmp/cleanup.sh", "vagrant")
-        _ssh("127.0.0.1", "vagrant",
-             "chmod +x /tmp/cleanup.sh && sudo /tmp/cleanup.sh")
+        _paramiko_put("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS, cleanup_sh, "/tmp/cleanup.sh")
+        _paramiko_exec("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS,
+                       "chmod +x /tmp/cleanup.sh && sudo /tmp/cleanup.sh")
         _ok("cleanup.sh completed")
 
     # 13. Detach seed ISO
