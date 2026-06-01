@@ -1,0 +1,98 @@
+# Multi-machine test environment for workstation provisioning.
+# Replaces tests/vm/Vagrantfile.
+#
+# Usage (once build.py supports test VMs):
+#   build.py create debian                # headless
+#   build.py create debian-i3wm           # desktop profile — GUI window opens
+#
+# All machines use our own cloud images (environments/os/) — no Vagrant boxes.
+# Ansible provisioning runs separately after VM is up; see provisioning/README.md.
+
+machines:
+  # ── Headless / CI ──────────────────────────────────────────────────────────
+  - name:    workstation-test-debian
+    os:      debian13
+    profile: headless
+    ram_mb:  2048
+    cpus:    2
+    gui:     false
+
+  - name:    workstation-test-ubuntu
+    os:      ubuntu2404
+    profile: headless
+    ram_mb:  2048
+    cpus:    2
+    gui:     false
+
+  - name:    workstation-test-almalinux
+    os:      alma9
+    profile: headless
+    ram_mb:  2048
+    cpus:    2
+    gui:     false
+
+  # ── Desktop — i3wm ────────────────────────────────────────────────────────
+  - name:    workstation-test-debian-i3wm
+    os:      debian13
+    profile: desktop-i3wm
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-ubuntu-i3wm
+    os:      ubuntu2404
+    profile: desktop-i3wm
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-almalinux-i3wm
+    os:      alma9
+    profile: desktop-i3wm
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  # ── Desktop — xfce ────────────────────────────────────────────────────────
+  - name:    workstation-test-debian-xfce
+    os:      debian13
+    profile: desktop-xfce
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-ubuntu-xfce
+    os:      ubuntu2404
+    profile: desktop-xfce
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-almalinux-xfce
+    os:      alma9
+    profile: desktop-xfce
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  # ── Desktop — gnome ───────────────────────────────────────────────────────
+  - name:    workstation-test-debian-gnome
+    os:      debian13
+    profile: desktop-gnome
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-ubuntu-gnome
+    os:      ubuntu2404
+    profile: desktop-gnome
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-almalinux-gnome
+    os:      alma9
+    profile: desktop-gnome
+    ram_mb:  4096
+    cpus:    2
+    gui:     true

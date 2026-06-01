@@ -1,641 +1,749 @@
 #!/usr/bin/env python3
 """
-environments/build.py — build Packer boxes and start Vagrant VMs.
+build.py — VBoxManage-based VM lifecycle manager for FPGA dev environments.
 
-Three independent steps, each runnable on its own:
+Commands:
+  create  <vm>    Full pipeline: download cloud image → create VM → run setup
+  start   <vm>    VBoxManage startvm (GUI for FPGA VMs, headless for test VMs)
+  stop    <vm>    Graceful ACPI shutdown
+  destroy <vm>    VBoxManage unregistervm --delete
+  list            Show all discovered VMs and their current VBoxManage state
+  pick            Interactive picker (default when no args given)
 
-  build     packer init + packer build  →  produces <name>.box
-  register  vagrant box add             →  registers .box with Vagrant
-  up        vagrant up                  →  starts the VM
+VM definitions are discovered automatically from vm.yml files under
+environments/fpga-* and tests/vm/machines.yml.
 
-Auto-discovers targets:
-  • Boxes: environments/boxes/<name>/  with a box.json
-  • VMs:   environments/<name>/        with a Vagrantfile
-
-Usage:
-  python environments/build.py                      interactive (all steps)
-  python environments/build.py --list               list all discovered targets
-
-  python environments/build.py build   [ids] [--all]
-  python environments/build.py register [ids] [--all]
-  python environments/build.py up       [ids] [--all]
-
-Examples:
-  python environments/build.py build   alma9             packer build alma9
-  python environments/build.py build   --all             build every box
-  python environments/build.py register alma9            register alma9 with Vagrant
-  python environments/build.py up      fpga-alma         vagrant up fpga-alma
-  python environments/build.py up      --all             start all VMs
+OS definitions live in environments/os/<name>/os.yml.
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
-import re
+import os
+import platform
 import shutil
+import socket
 import subprocess
 import sys
 import tempfile
-import urllib.request
-from dataclasses import dataclass
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable
+from typing import Optional
 
-try:
-    import yaml
-except ImportError:
-    print("PyYAML is required:  pip install pyyaml", file=sys.stderr)
-    sys.exit(1)
+import yaml
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Paths
-# ─────────────────────────────────────────────────────────────────────────────
+# ── Paths ─────────────────────────────────────────────────────────────────────
+SCRIPT_DIR  = Path(__file__).parent.resolve()
+OS_DIR      = SCRIPT_DIR / "os"
+CACHE_DIR   = SCRIPT_DIR / ".cache" / "images"
 
-ENV_ROOT   = Path(__file__).resolve().parent
-BOXES_ROOT = ENV_ROOT / "boxes"
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Terminal output
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _init_color() -> bool:
-    if not sys.stdout.isatty():
-        return False
-    if sys.platform == "win32":
-        try:
-            import ctypes
-            ctypes.windll.kernel32.SetConsoleMode(
-                ctypes.windll.kernel32.GetStdHandle(-11), 7
-            )
-        except Exception:
-            return False
-    return True
-
-_COLOR = _init_color()
+# ── Colour helpers ────────────────────────────────────────────────────────────
+_USE_COLOR = sys.stdout.isatty() and platform.system() != "Windows"
 
 def _c(code: str, text: str) -> str:
-    return f"\033[{code}m{text}\033[0m" if _COLOR else text
+    return f"\033[{code}m{text}\033[0m" if _USE_COLOR else text
 
-def _ok(msg: str)     -> None: print(_c("32", f"  +  {msg}"))
-def _err(msg: str)    -> None: print(_c("31", f"  !  {msg}"), file=sys.stderr)
-def _info(msg: str)   -> None: print(_c("36", f"  >  {msg}"))
-def _banner(msg: str) -> None:
-    line = f"  {msg}  "
-    print()
-    print(_c("1;34", line + "─" * max(0, 64 - len(line))))
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Data models
-# ─────────────────────────────────────────────────────────────────────────────
-
-@dataclass(frozen=True)
-class Box:
-    id:           str   # directory name,   e.g. "alma9"
-    vagrant_name: str   # Vagrant box name, e.g. "fpga-alma9"
-    template:     str   # Packer template,  e.g. "alma9.pkr.hcl"
-    box_file:     Path  # output .box path
-    path:         Path  # box directory
-    description:  str
-
-@dataclass(frozen=True)
-class VM:
-    id:   str   # directory name, e.g. "fpga-alma"
-    path: Path
-
-# An operation is one discrete step (build/register/up) on one target.
-@dataclass(frozen=True)
-class Op:
-    label:  str                    # display string for the picker
-    action: Callable[[], bool]     # callable that performs the step
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Discovery
-# ─────────────────────────────────────────────────────────────────────────────
-
-def discover_boxes() -> list[Box]:
-    if not BOXES_ROOT.is_dir():
-        return []
-    boxes: list[Box] = []
-    for d in sorted(BOXES_ROOT.iterdir()):
-        meta_file = d / "box.yml"
-        if not d.is_dir() or not meta_file.exists():
-            continue
-        try:
-            m = yaml.safe_load(meta_file.read_text(encoding="utf-8"))
-        except (yaml.YAMLError, OSError) as exc:
-            _err(f"Skipping {d.name}: bad box.yml ({exc})")
-            continue
-        missing = [k for k in ("vagrant_box_name", "packer_template", "box_file") if k not in m]
-        if missing:
-            _err(f"Skipping {d.name}: box.yml missing keys: {', '.join(missing)}")
-            continue
-        boxes.append(Box(
-            id=d.name,
-            vagrant_name=m["vagrant_box_name"],
-            template=m["packer_template"],
-            box_file=d / m["box_file"],
-            path=d,
-            description=m.get("description", ""),
-        ))
-    return boxes
+def _ok(msg: str)   -> None: print(_c("32", f"  ✓ {msg}"))
+def _err(msg: str)  -> None: print(_c("31", f"  ✗ {msg}"), file=sys.stderr)
+def _info(msg: str) -> None: print(_c("34", f"  → {msg}"))
+def _warn(msg: str) -> None: print(_c("33", f"  ! {msg}"))
 
 
-def discover_vms() -> list[VM]:
-    vms: list[VM] = []
-    for d in sorted(ENV_ROOT.iterdir()):
-        if d.is_dir() and d.name != "boxes" and (d / "Vagrantfile").exists():
-            vms.append(VM(id=d.name, path=d))
+# ── Data classes ──────────────────────────────────────────────────────────────
+@dataclass
+class CloudImage:
+    url:          str
+    checksum_url: str
+    format:       str   # "qcow2" or "vmdk"
+
+@dataclass
+class OSConfig:
+    name:          str
+    description:   str
+    vbox_ostype:   str
+    cloud_image:   CloudImage
+    cloud_init_dir: str
+    setup_script:  str
+    cleanup_script: str
+    grow_fs:       str
+    os_dir:        Path
+
+@dataclass
+class SharedFolder:
+    host:   str
+    guest:  str
+    create: bool = False
+
+@dataclass
+class USBConfig:
+    ehci: bool = False  # USB 2.0
+    xhci: bool = False  # USB 3.0
+
+@dataclass
+class VMConfig:
+    name:           str
+    os_name:        str
+    hostname:       str
+    ram_mb:         int
+    cpus:           int
+    vram_mb:        int
+    disk_gb:        int
+    accel3d:        bool
+    usb:            USBConfig
+    shared_folders: list[SharedFolder]
+    gui:            bool           # True = GUI window, False = headless
+    vm_dir:         Path
+    # resolved after load:
+    os:             Optional[OSConfig] = field(default=None, repr=False)
+
+
+# ── Loaders ───────────────────────────────────────────────────────────────────
+
+def _load_os(name: str) -> OSConfig:
+    path = OS_DIR / name / "os.yml"
+    if not path.exists():
+        raise FileNotFoundError(f"os.yml not found: {path}")
+    raw = yaml.safe_load(path.read_text())
+    ci  = raw["cloud_image"]
+    scripts = raw.get("scripts", {})
+    os_dir  = OS_DIR / name
+    return OSConfig(
+        name           = name,
+        description    = raw.get("description", name),
+        vbox_ostype    = raw["vbox_ostype"],
+        cloud_image    = CloudImage(
+            url          = ci["url"],
+            checksum_url = ci["checksum_url"],
+            format       = ci["format"],
+        ),
+        cloud_init_dir = raw.get("cloud_init_dir", "cloud-init"),
+        setup_script   = scripts.get("setup",   "scripts/setup.sh"),
+        cleanup_script = scripts.get("cleanup", "scripts/cleanup.sh"),
+        grow_fs        = raw.get("grow_fs", "ext4"),
+        os_dir         = os_dir,
+    )
+
+
+def _load_vm(vm_yml: Path, gui: Optional[bool] = None) -> VMConfig:
+    raw = yaml.safe_load(vm_yml.read_text())
+    usb_raw = raw.get("usb", {})
+    folders = [
+        SharedFolder(
+            host   = sf["host"],
+            guest  = sf["guest"],
+            create = sf.get("create", False),
+        )
+        for sf in raw.get("shared_folders", [])
+    ]
+    return VMConfig(
+        name           = raw["name"],
+        os_name        = raw["os"],
+        hostname       = raw.get("hostname", raw["name"]),
+        ram_mb         = int(raw.get("ram_mb", 2048)),
+        cpus           = int(raw.get("cpus", 2)),
+        vram_mb        = int(raw.get("vram_mb", 16)),
+        disk_gb        = int(raw.get("disk_gb", 40)),
+        accel3d        = bool(raw.get("accel3d", False)),
+        usb            = USBConfig(
+            ehci = bool(usb_raw.get("ehci", False)),
+            xhci = bool(usb_raw.get("xhci", False)),
+        ),
+        shared_folders = folders,
+        gui            = gui if gui is not None else bool(raw.get("gui", False)),
+        vm_dir         = vm_yml.parent,
+    )
+
+
+def _discover_vms() -> dict[str, Path]:
+    """Return {logical_name: vm.yml path} for all discovered VMs."""
+    vms: dict[str, Path] = {}
+
+    # FPGA environments: environments/fpga-*/vm.yml
+    for vm_yml in sorted(SCRIPT_DIR.glob("fpga-*/vm.yml")):
+        raw = yaml.safe_load(vm_yml.read_text())
+        vms[raw["name"]] = vm_yml
+
+    # Test VMs: tests/vm/machines.yml
+    machines_yml = SCRIPT_DIR.parent / "tests" / "vm" / "machines.yml"
+    if machines_yml.exists():
+        data = yaml.safe_load(machines_yml.read_text())
+        for m in data.get("machines", []):
+            # Synthesize a temporary vm.yml content as a dict; store path as machines_yml
+            # We'll handle loading inline separately in _load_machine_entry.
+            vms[m["name"]] = machines_yml
+
     return vms
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Helpers
-# ─────────────────────────────────────────────────────────────────────────────
 
-def _require(tool: str) -> str:
-    exe = shutil.which(tool)
-    if not exe:
-        _err(f"'{tool}' not found in PATH — install it before running this script.")
-        sys.exit(1)
-    return exe
-
-
-def _run(cmd: list[str], cwd: Path) -> int:
-    return subprocess.run(cmd, cwd=cwd).returncode
-
-
-def _box_registered(vagrant_name: str) -> bool:
-    r = subprocess.run(["vagrant", "box", "list"], capture_output=True, text=True)
-    return any(
-        line.split()[0] == vagrant_name
-        for line in r.stdout.splitlines() if line.strip()
-    )
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Cloud image preparation (used by boxes that set cloud_image: in box.yml)
-# ─────────────────────────────────────────────────────────────────────────────
-
-_VMX_TEMPLATE = """\
-.encoding = "UTF-8"
-config.version = "8"
-virtualHW.version = "19"
-guestOS = "{guest_os_type}"
-displayName = "{display_name}"
-memsize = "2048"
-numvcpus = "4"
-
-sata0.present = "TRUE"
-sata0:0.present = "TRUE"
-sata0:0.fileName = "{vmdk_filename}"
-sata0:0.deviceType = "disk"
-
-sata0:1.present = "TRUE"
-sata0:1.fileName = "{seed_iso_filename}"
-sata0:1.deviceType = "cdrom-image"
-
-ethernet0.present = "TRUE"
-ethernet0.connectionType = "nat"
-ethernet0.virtualDev = "vmxnet3"
-ethernet0.wakeOnPcktRcv = "FALSE"
-ethernet0.addressType = "generated"
-
-usb.present = "TRUE"
-sound.absent = "TRUE"
-svga.autodetect = "TRUE"
-tools.syncTime = "TRUE"
-"""
+def _load_machine_entry(machines_yml: Path, name: str) -> VMConfig:
+    """Load a single entry from machines.yml by name."""
+    data = yaml.safe_load(machines_yml.read_text())
+    for m in data.get("machines", []):
+        if m["name"] == name:
+            return VMConfig(
+                name           = m["name"],
+                os_name        = m["os"],
+                hostname       = m["name"],
+                ram_mb         = int(m.get("ram_mb", 2048)),
+                cpus           = int(m.get("cpus", 2)),
+                vram_mb        = int(m.get("vram_mb", 16)),
+                disk_gb        = int(m.get("disk_gb", 40)),
+                accel3d        = False,
+                usb            = USBConfig(),
+                shared_folders = [
+                    SharedFolder(
+                        host  = str(SCRIPT_DIR.parent),
+                        guest = "/home/vagrant/workspace/workstation",
+                    )
+                ],
+                gui    = bool(m.get("gui", False)),
+                vm_dir = machines_yml.parent,
+            )
+    raise KeyError(f"Machine '{name}' not found in {machines_yml}")
 
 
-def _download_file(url: str, dest: Path) -> None:
-    _info(f"Downloading {Path(url).name}")
-
-    def _progress(count: int, block_size: int, total: int) -> None:
-        if total > 0:
-            done = min(count * block_size, total)
-            pct = done * 100 // total
-            mb = done >> 20
-            total_mb = total >> 20
-            print(f"\r  {pct:3d}%  {mb} / {total_mb} MB", end="", flush=True)
-
-    urllib.request.urlretrieve(url, dest, reporthook=_progress)
-    print()
-
-
-def _verify_checksum(filepath: Path, checksum_url: str) -> None:
-    _info("Verifying checksum")
-    sha256 = hashlib.sha256()
-    with filepath.open("rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            sha256.update(chunk)
-    actual = sha256.hexdigest()
-
-    with urllib.request.urlopen(checksum_url) as resp:
-        checksum_text = resp.read().decode()
-
-    # Accept either "SHA256 (filename) = hash" (AlmaLinux) or "hash  *filename" (Ubuntu).
-    if not any(re.search(rf'(?:^|\s){re.escape(actual)}(?:\s|$)', line)
-               for line in checksum_text.splitlines()):
-        raise RuntimeError(f"Checksum {actual} not found in {checksum_url}")
-    _ok("Checksum OK")
+def _resolve_vm(name: str) -> VMConfig:
+    vms = _discover_vms()
+    if name not in vms:
+        raise KeyError(f"VM '{name}' not found. Run 'list' to see available VMs.")
+    yml_path = vms[name]
+    machines_yml = SCRIPT_DIR.parent / "tests" / "vm" / "machines.yml"
+    if yml_path == machines_yml:
+        vm = _load_machine_entry(yml_path, name)
+    else:
+        vm = _load_vm(yml_path)
+    vm.os = _load_os(vm.os_name)
+    return vm
 
 
-def _convert_to_vmdk(src: Path, vmdk: Path) -> None:
-    qemu_img = _require("qemu-img")
-    _info(f"Converting {src.name} → {vmdk.name}")
-    rc = _run(
-        [qemu_img, "convert", "-p", "-f", "qcow2", "-O", "vmdk",
-         "-o", "subformat=monolithicSparse", str(src), str(vmdk)],
-        src.parent,
-    )
-    if rc != 0:
-        raise RuntimeError("qemu-img convert failed")
+# ── VBoxManage helpers ────────────────────────────────────────────────────────
+
+def _vbm(*args: str, check: bool = True) -> subprocess.CompletedProcess:
+    """Run VBoxManage with the given arguments."""
+    cmd = ["VBoxManage"] + list(args)
+    return subprocess.run(cmd, capture_output=True, text=True, check=check)
 
 
-def _make_seed_iso(user_data: Path, meta_data_text: str, dest: Path) -> None:
-    # pycdlib is pure Python and works on Windows, Linux, and macOS.
+def _vm_exists(name: str) -> bool:
+    r = _vbm("showvminfo", name, check=False)
+    return r.returncode == 0
+
+
+def _vm_state(name: str) -> str:
+    r = _vbm("showvminfo", name, "--machinereadable", check=False)
+    if r.returncode != 0:
+        return "notfound"
+    for line in r.stdout.splitlines():
+        if line.startswith("VMState="):
+            return line.split("=", 1)[1].strip('"')
+    return "unknown"
+
+
+def _wait_for_ssh(host: str, port: int = 22, timeout: int = 300) -> None:
+    _info(f"Waiting for SSH on {host}:{port} (up to {timeout}s)…")
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            with socket.create_connection((host, port), timeout=3):
+                _ok("SSH is up")
+                return
+        except OSError:
+            time.sleep(3)
+    raise TimeoutError(f"SSH on {host}:{port} did not become available within {timeout}s")
+
+
+def _vm_ip(name: str) -> Optional[str]:
+    """Return guest IP from VBoxManage guestproperty (requires Guest Additions)."""
+    r = _vbm("guestproperty", "get", name, "/VirtualBox/GuestInfo/Net/0/V4/IP", check=False)
+    if r.returncode == 0 and "Value:" in r.stdout:
+        return r.stdout.split("Value:", 1)[1].strip()
+    return None
+
+
+def _ssh(host: str, user: str, *cmd: str, key: Optional[Path] = None) -> None:
+    """Run a command on the guest via SSH."""
+    ssh_args = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "UserKnownHostsFile=/dev/null",
+        "-o", "ConnectTimeout=10",
+        "-o", "BatchMode=yes",
+    ]
+    if key:
+        ssh_args += ["-i", str(key)]
+    ssh_args += [f"{user}@{host}"] + list(cmd)
+    subprocess.run(ssh_args, check=True)
+
+
+def _scp(src: Path, host: str, dest: str, user: str, key: Optional[Path] = None) -> None:
+    scp_args = [
+        "scp",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "UserKnownHostsFile=/dev/null",
+        "-o", "ConnectTimeout=10",
+    ]
+    if key:
+        scp_args += ["-i", str(key)]
+    scp_args += [str(src), f"{user}@{host}:{dest}"]
+    subprocess.run(scp_args, check=True)
+
+
+# ── Cloud image helpers ───────────────────────────────────────────────────────
+
+def _fetch_checksum(url: str, filename: str) -> Optional[str]:
+    """Fetch a SHA256SUMS/CHECKSUM file and extract the hash for filename."""
+    import urllib.request
     try:
-        import io
-        import pycdlib  # type: ignore[import-untyped]
+        with urllib.request.urlopen(url) as resp:
+            content = resp.read().decode()
+        for line in content.splitlines():
+            parts = line.split()
+            if len(parts) >= 2 and parts[1].lstrip("*") == filename:
+                return parts[0]
+    except Exception as exc:
+        _warn(f"Could not fetch checksum: {exc}")
+    return None
 
-        iso = pycdlib.PyCdlib()
-        # interchange_level=4 (ISO 9660:1999) lifts the 8.3 filename limit,
-        # allowing "user-data" and "meta-data" as literal ISO paths.
-        iso.new(interchange_level=4, joliet=3, rock_ridge="1.09", vol_ident="CIDATA")
-        ud = user_data.read_bytes()
-        md = meta_data_text.encode()
-        iso.add_fp(io.BytesIO(ud), len(ud),
-                   iso_path="/user-data", joliet_path="/user-data", rr_name="user-data")
-        iso.add_fp(io.BytesIO(md), len(md),
-                   iso_path="/meta-data", joliet_path="/meta-data", rr_name="meta-data")
-        iso.write(str(dest))
-        iso.close()
-        return
-    except ImportError:
-        pass
 
-    # Fall back to system ISO tools (Linux/macOS only).
+def _sha256(path: Path, chunk: int = 1 << 20) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as f:
+        while True:
+            buf = f.read(chunk)
+            if not buf:
+                break
+            h.update(buf)
+    return h.hexdigest()
+
+
+def _download(url: str, dest: Path) -> None:
+    import urllib.request
+    _info(f"Downloading {url}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    urllib.request.urlretrieve(url, dest)
+    _ok(f"Saved to {dest}")
+
+
+def _ensure_cloud_image(os_cfg: OSConfig) -> Path:
+    """Return path to a VDI disk image, downloading/converting if needed."""
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    src_name = os_cfg.cloud_image.url.split("/")[-1]
+    src_path = CACHE_DIR / src_name
+    vdi_name = src_name.replace(".qcow2", ".vdi").replace(".img", ".vdi").replace(".vmdk", ".vdi")
+    vdi_path = CACHE_DIR / vdi_name
+
+    if vdi_path.exists():
+        _ok(f"VDI cache hit: {vdi_path.name}")
+        return vdi_path
+
+    # Download if source not cached
+    if not src_path.exists():
+        _download(os_cfg.cloud_image.url, src_path)
+
+        # Verify checksum
+        expected = _fetch_checksum(os_cfg.cloud_image.checksum_url, src_name)
+        if expected:
+            actual = _sha256(src_path)
+            if actual != expected:
+                src_path.unlink()
+                raise ValueError(f"Checksum mismatch for {src_name}: expected {expected}, got {actual}")
+            _ok("Checksum verified")
+        else:
+            _warn("Checksum not verified (could not fetch checksum file)")
+
+    # Convert to VDI
+    _info(f"Converting {src_path.name} → {vdi_path.name}")
+    subprocess.run(
+        ["qemu-img", "convert", "-O", "vdi", str(src_path), str(vdi_path)],
+        check=True,
+    )
+    _ok(f"Converted to VDI: {vdi_path.name}")
+    return vdi_path
+
+
+def _make_seed_iso(cloud_init_dir: Path, dest: Path) -> None:
+    """Create a cloud-init seed ISO from user-data (and optional meta-data/network-config)."""
+    user_data    = cloud_init_dir / "user-data"
+    meta_data    = cloud_init_dir / "meta-data"
+    network_cfg  = cloud_init_dir / "network-config"
+
+    if not user_data.exists():
+        raise FileNotFoundError(f"user-data not found: {user_data}")
+
+    # Create a minimal meta-data if missing
     with tempfile.TemporaryDirectory() as tmp:
         tmp_path = Path(tmp)
-        (tmp_path / "user-data").write_text(user_data.read_text())
-        (tmp_path / "meta-data").write_text(meta_data_text)
-        for tool in ("genisoimage", "mkisofs", "xorrisofs"):
-            exe = shutil.which(tool)
-            if not exe:
-                continue
-            flags = ["-output", str(dest), "-volid", "cidata",
-                     "-joliet", "-rock", "user-data", "meta-data"]
-            if _run([exe] + flags, tmp_path) == 0:
-                return
-
-    raise RuntimeError(
-        "Seed ISO creation failed — install pycdlib:  pip install pycdlib\n"
-        "  (Linux alternative: sudo apt install genisoimage)"
-    )
-
-
-def _write_vmx(vmx: Path, vmdk: Path, seed_iso: Path,
-               guest_os_type: str, box_id: str) -> None:
-    vmx.write_text(_VMX_TEMPLATE.format(
-        guest_os_type=guest_os_type,
-        display_name=f"{box_id}-cloud-build",
-        vmdk_filename=vmdk.name,
-        seed_iso_filename=seed_iso.name,
-    ))
-
-
-def prepare_cloud_image(box: Box) -> Path:
-    """Download + convert cloud image, write seed ISO and VMX. Returns VMX path."""
-    ci = yaml.safe_load((box.path / "box.yml").read_text())["cloud_image"]
-    url: str          = ci["url"]
-    checksum_url: str = ci["checksum_url"]
-    guest_os_type: str = ci["guest_os_type"]
-
-    cache_dir = box.path / "cache"
-    build_dir = box.path / "build"
-    cache_dir.mkdir(exist_ok=True)
-    build_dir.mkdir(exist_ok=True)
-
-    # Download cloud image (kept in cache/ so re-builds skip the download).
-    cloud_path = cache_dir / Path(url).name
-    if cloud_path.exists():
-        _info(f"Using cached cloud image: {cloud_path.name}")
-    else:
-        _download_file(url, cloud_path)
-        _verify_checksum(cloud_path, checksum_url)
-
-    # Produce a VMDK in build/: copy if already VMDK, convert if QCOW2.
-    vmdk_path = build_dir / f"{box.id}-cloud.vmdk"
-    vmdk_fresh = vmdk_path.exists() and vmdk_path.stat().st_mtime >= cloud_path.stat().st_mtime
-    if vmdk_fresh:
-        _info(f"VMDK up to date: {vmdk_path.name}")
-    elif ci["format"] == "vmdk":
-        shutil.copy2(cloud_path, vmdk_path)
-        _ok(f"VMDK copied: {vmdk_path.name}")
-    else:
-        _convert_to_vmdk(cloud_path, vmdk_path)
-
-    # Seed ISO with cloud-init config (always regenerated — takes < 1 s).
-    seed_iso_path = build_dir / "seed.iso"
-    meta_data = f"instance-id: {box.id}-build\nlocal-hostname: {box.id}-vagrant\n"
-    _make_seed_iso(box.path / "cloud-init" / "user-data", meta_data, seed_iso_path)
-    _ok("Seed ISO ready")
-
-    # VMX wrapper pointing at the VMDK and seed ISO.
-    vmx_path = build_dir / f"{box.id}-cloud.vmx"
-    _write_vmx(vmx_path, vmdk_path, seed_iso_path, guest_os_type, box.id)
-    _ok("VMX ready")
-
-    return vmx_path
-
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Steps
-# ─────────────────────────────────────────────────────────────────────────────
-
-def packer_build(box: Box) -> bool:
-    """packer init + packer build → produces box_file."""
-    packer = _require("packer")
-    _banner(f"BUILD  {box.id}  ({box.template})")
-
-    extra_args: list[str] = []
-    meta = yaml.safe_load((box.path / "box.yml").read_text())
-    if "cloud_image" in meta:
-        try:
-            vmx_path = prepare_cloud_image(box)
-        except Exception as exc:
-            _err(f"Cloud image preparation failed: {exc}")
-            return False
-        extra_args = ["-var", f"vmx_path={vmx_path}"]
-
-    _info("packer init")
-    if _run([packer, "init", box.template], box.path) != 0:
-        _err("packer init failed")
-        return False
-    _info("packer build  (this can take ~60 minutes)")
-    if _run([packer, "build", "-force"] + extra_args + [box.template], box.path) != 0:
-        _err("packer build failed")
-        return False
-    if not box.box_file.exists():
-        _err(f"Box file not produced: {box.box_file}")
-        return False
-    _ok(f"{box.box_file.name} ready")
-    return True
-
-
-def register_box(box: Box) -> bool:
-    """vagrant box add — register a built .box file with Vagrant."""
-    vagrant = _require("vagrant")
-    _banner(f"REGISTER  {box.id}  →  {box.vagrant_name}")
-    if not box.box_file.exists():
-        _err(f"Box file not found: {box.box_file}")
-        _err(f"Run  'build.py build {box.id}'  first.")
-        return False
-    if _box_registered(box.vagrant_name):
-        _info(f"Removing existing registration: {box.vagrant_name}")
-        if _run(["vagrant", "box", "remove", box.vagrant_name, "--force"], box.path) != 0:
-            _err("vagrant box remove failed")
-            return False
-    _info(f"vagrant box add --name {box.vagrant_name} {box.box_file.name}")
-    if _run(["vagrant", "box", "add", "--name", box.vagrant_name, str(box.box_file)], box.path) != 0:
-        _err("vagrant box add failed")
-        return False
-    _ok(f"{box.vagrant_name} registered")
-    return True
-
-
-def vagrant_up(vm: VM) -> bool:
-    """vagrant up — start the VM."""
-    _require("vagrant")
-    _banner(f"UP  {vm.id}")
-    _info("vagrant up")
-    if _run(["vagrant", "up"], vm.path) != 0:
-        _err("vagrant up failed")
-        return False
-    _ok(f"{vm.id} is running")
-    return True
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Interactive picker
-# ─────────────────────────────────────────────────────────────────────────────
-
-def _build_ops(boxes: list[Box], vms: list[VM]) -> list[Op]:
-    """Build the flat numbered operation list shown in the interactive picker."""
-    ops: list[Op] = []
-
-    if boxes:
-        for b in boxes:
-            ops.append(Op(
-                label=f"build     {b.id:<16}  packer build {b.template}",
-                action=lambda box=b: packer_build(box),
-            ))
-
-    if boxes:
-        for b in boxes:
-            ops.append(Op(
-                label=f"register  {b.id:<16}  vagrant box add --name {b.vagrant_name}",
-                action=lambda box=b: register_box(box),
-            ))
-
-    if vms:
-        for v in vms:
-            ops.append(Op(
-                label=f"up        {v.id}",
-                action=lambda vm=v: vagrant_up(vm),
-            ))
-
-    return ops
-
-
-def _print_ops(ops: list[Op], *, numbered: bool = False) -> None:
-    sections = [
-        ("Packer build",           [o for o in ops if o.label.startswith("build")]),
-        ("Register (vagrant box add)", [o for o in ops if o.label.startswith("register")]),
-        ("Start VM (vagrant up)",  [o for o in ops if o.label.startswith("up")]),
-    ]
-    idx = 1
-    print()
-    for title, items in sections:
-        if not items:
-            continue
-        print(_c("1", f"  {title}"))
-        for op in items:
-            num = f"[{idx:2d}]  " if numbered else "  •  "
-            print(f"    {num}{op.label}")
-            idx += 1
-        print()
-
-
-def _parse_selection(raw: str, total: int) -> set[int] | None:
-    selected: set[int] = set()
-    for token in raw.replace(",", " ").split():
-        if "-" in token:
-            parts = token.split("-", 1)
-            try:
-                lo, hi = int(parts[0]), int(parts[1])
-                selected.update(range(lo, hi + 1))
-            except ValueError:
-                return None
+        shutil.copy(user_data, tmp_path / "user-data")
+        if meta_data.exists():
+            shutil.copy(meta_data, tmp_path / "meta-data")
         else:
-            try:
-                selected.add(int(token))
-            except ValueError:
-                return None
-    if not selected or any(n < 1 or n > total for n in selected):
-        return None
-    return selected
+            (tmp_path / "meta-data").write_text("instance-id: iid-local01\nlocal-hostname: fpga-dev\n")
+        if network_cfg.exists():
+            shutil.copy(network_cfg, tmp_path / "network-config")
 
-
-def interactive_pick(ops: list[Op]) -> list[Op]:
-    _print_ops(ops, numbered=True)
-    prompt = _c("33", "  Select (numbers/ranges e.g. '1 3' or '1-3', 'a'=all, 'q'=quit): ")
-    while True:
+        # Try pycdlib first, fall back to genisoimage/mkisofs
         try:
-            raw = input(prompt).strip()
-        except (EOFError, KeyboardInterrupt):
-            print()
-            sys.exit(0)
-        if raw.lower() in ("q", "quit"):
-            sys.exit(0)
-        if raw.lower() in ("a", "all"):
-            return ops[:]
-        selected = _parse_selection(raw, len(ops))
-        if selected is None:
-            print(_c("31", f"  Invalid — enter numbers 1–{len(ops)}, ranges, 'a', or 'q'."))
-            continue
-        return [ops[n - 1] for n in sorted(selected)]
+            import pycdlib  # type: ignore
+            iso = pycdlib.PyCdlib()
+            iso.new(interchange_level=4, vol_ident="cidata", joliet=3)
+            for fname in ["user-data", "meta-data", "network-config"]:
+                src = tmp_path / fname
+                if src.exists():
+                    iso.add_fp(
+                        src.open("rb"), src.stat().st_size,
+                        f"/{fname.upper()};1", joliet_path=f"/{fname}"
+                    )
+            iso.write(str(dest))
+            iso.close()
+        except ImportError:
+            tool = shutil.which("genisoimage") or shutil.which("mkisofs")
+            if not tool:
+                raise RuntimeError("Neither pycdlib nor genisoimage/mkisofs found. Install one.")
+            files = [str(tmp_path / "user-data"), str(tmp_path / "meta-data")]
+            if (tmp_path / "network-config").exists():
+                files.append(str(tmp_path / "network-config"))
+            subprocess.run(
+                [tool, "-output", str(dest), "-volid", "cidata",
+                 "-joliet", "-rock"] + files,
+                check=True, capture_output=True,
+            )
+    _ok(f"Seed ISO created: {dest.name}")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Subcommand handlers
-# ─────────────────────────────────────────────────────────────────────────────
 
-def _run_ops(ops: list[Op]) -> None:
-    failures: list[str] = []
-    for op in ops:
-        if not op.action():
-            failures.append(op.label.split()[1])  # target id
+# ── VM lifecycle ──────────────────────────────────────────────────────────────
+
+def _find_admin_key() -> Optional[Path]:
+    """Return path to an admin public key to inject into the VM."""
+    candidates = [
+        Path(__file__).parent.parent / "admin.pub",
+        Path.home() / ".ssh" / "id_ed25519.pub",
+        Path.home() / ".ssh" / "id_rsa.pub",
+        Path.home() / ".ssh" / "id_ecdsa.pub",
+    ]
+    for p in candidates:
+        if p.exists():
+            return p
+    return None
+
+
+def cmd_create(vm: VMConfig) -> None:
+    os_cfg = vm.os
+    assert os_cfg is not None
+
+    if _vm_exists(vm.name):
+        _warn(f"VM '{vm.name}' already exists. Destroy it first with: build.py destroy {vm.name}")
+        return
+
+    print(f"\n{_c('1', f'Creating {vm.name}')}\n")
+
+    # 1. Cloud image → VDI
+    _info("Preparing cloud image…")
+    vdi_src = _ensure_cloud_image(os_cfg)
+
+    # 2. Copy VDI to VM-local location (VirtualBox needs a writable copy)
+    vm_vdi_dir = CACHE_DIR / "vms" / vm.name
+    vm_vdi_dir.mkdir(parents=True, exist_ok=True)
+    vm_vdi = vm_vdi_dir / f"{vm.name}.vdi"
+    _info(f"Copying base VDI → {vm_vdi}…")
+    shutil.copy2(vdi_src, vm_vdi)
+
+    # 3. Resize VDI to requested disk_gb
+    _info(f"Resizing disk to {vm.disk_gb} GB…")
+    _vbm("modifyhd", str(vm_vdi), "--resize", str(vm.disk_gb * 1024))
+    _ok("Disk resized")
+
+    # 4. Seed ISO
+    ci_dir  = os_cfg.os_dir / os_cfg.cloud_init_dir
+    seed_iso = vm_vdi_dir / "seed.iso"
+    _info("Building cloud-init seed ISO…")
+    _make_seed_iso(ci_dir, seed_iso)
+
+    # 5. Create VM
+    _info("Creating VirtualBox VM…")
+    _vbm("createvm", "--name", vm.name, "--ostype", os_cfg.vbox_ostype, "--register")
+
+    # 6. Configure hardware
+    modify_args = [
+        "modifyvm", vm.name,
+        "--memory",   str(vm.ram_mb),
+        "--cpus",     str(vm.cpus),
+        "--vram",     str(vm.vram_mb),
+        "--graphicscontroller", "vmsvga",
+        "--audio-driver", "none",
+        "--rtcuseutc",  "on",
+        "--boot1",      "disk",
+        "--boot2",      "dvd",
+        "--nic1",       "nat",
+        "--natpf1",     "ssh,tcp,,2222,,22",
+    ]
+    if vm.accel3d:
+        modify_args += ["--accelerate3d", "on"]
+    if vm.usb.ehci:
+        modify_args += ["--usbehci", "on"]
+    if vm.usb.xhci:
+        modify_args += ["--usbxhci", "on"]
+    _vbm(*modify_args)
+    _ok("Hardware configured")
+
+    # 7. Storage controllers + attach disks
+    _vbm("storagectl", vm.name, "--name", "SATA", "--add", "sata",
+         "--controller", "IntelAhci", "--portcount", "2")
+    _vbm("storageattach", vm.name, "--storagectl", "SATA",
+         "--port", "0", "--device", "0", "--type", "hdd", "--medium", str(vm_vdi))
+    _vbm("storageattach", vm.name, "--storagectl", "SATA",
+         "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", str(seed_iso))
+    _ok("Disks attached")
+
+    # 8. Start VM
+    vm_type = "gui" if vm.gui else "headless"
+    _info(f"Starting VM ({vm_type})…")
+    _vbm("startvm", vm.name, "--type", vm_type)
+
+    # 9. Wait for SSH (cloud-init runs; vagrant user becomes available)
+    _wait_for_ssh("127.0.0.1", port=2222, timeout=300)
+    # Extra grace time for cloud-init to complete
+    time.sleep(15)
+
+    # 10. Run setup.sh
+    setup_sh = os_cfg.os_dir / os_cfg.setup_script
+    if not setup_sh.exists():
+        _warn(f"setup.sh not found at {setup_sh}; skipping")
+    else:
+        _info("Uploading and running setup.sh…")
+        _scp(setup_sh, "127.0.0.1", "/tmp/setup.sh", "vagrant")
+        _ssh("127.0.0.1", "vagrant",
+             "chmod +x /tmp/setup.sh && sudo /tmp/setup.sh",
+             key=None)  # password auth still on at this point (sshpass not used; agent key)
+        _ok("setup.sh completed")
+
+    # 11. Inject admin public key
+    admin_key = _find_admin_key()
+    if admin_key:
+        _info(f"Injecting admin key from {admin_key}…")
+        pub = admin_key.read_text().strip()
+        _ssh("127.0.0.1", "vagrant",
+             f"mkdir -p ~/.ssh && echo '{pub}' >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys")
+        _ok("Admin key injected")
+    else:
+        _warn("No admin public key found; add ~/.ssh/id_ed25519.pub or admin.pub at repo root")
+
+    # 12. Run cleanup.sh
+    cleanup_sh = os_cfg.os_dir / os_cfg.cleanup_script
+    if cleanup_sh.exists():
+        _info("Running cleanup.sh…")
+        _scp(cleanup_sh, "127.0.0.1", "/tmp/cleanup.sh", "vagrant")
+        _ssh("127.0.0.1", "vagrant",
+             "chmod +x /tmp/cleanup.sh && sudo /tmp/cleanup.sh")
+        _ok("cleanup.sh completed")
+
+    # 13. Detach seed ISO
+    _info("Detaching seed ISO…")
+    _vbm("storageattach", vm.name, "--storagectl", "SATA",
+         "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "emptydrive")
+    _ok("Seed ISO detached")
+
+    # 14. Add shared folders
+    if vm.shared_folders:
+        _info("Adding shared folders…")
+        for sf in vm.shared_folders:
+            host_path = (vm.vm_dir / sf.host).resolve()
+            if sf.create:
+                host_path.mkdir(parents=True, exist_ok=True)
+            folder_name = sf.guest.rstrip("/").split("/")[-1]
+            _vbm("sharedfolder", "add", vm.name,
+                 "--name", folder_name,
+                 "--hostpath", str(host_path),
+                 "--automount", "--auto-mount-point", sf.guest)
+        _ok("Shared folders added")
+
+    # 15. Snapshot
+    _info("Taking 'clean-base' snapshot…")
+    _vbm("snapshot", vm.name, "take", "clean-base",
+         "--description", "Minimal base before Ansible provisioning")
+    _ok("Snapshot taken")
+
+    print(f"\n{_c('32;1', '✓ VM ready')} — SSH: ssh vagrant@127.0.0.1 -p 2222\n")
+    print("  Next: add the VM's IP to provisioning/inventory/hosts.yml and run Ansible.\n")
+
+
+def cmd_start(vm: VMConfig) -> None:
+    state = _vm_state(vm.name)
+    if state == "running":
+        _warn(f"VM '{vm.name}' is already running")
+        return
+    vm_type = "gui" if vm.gui else "headless"
+    _info(f"Starting {vm.name} ({vm_type})…")
+    _vbm("startvm", vm.name, "--type", vm_type)
+    _ok(f"Started {vm.name}")
+
+
+def cmd_stop(vm: VMConfig) -> None:
+    state = _vm_state(vm.name)
+    if state not in ("running", "paused"):
+        _warn(f"VM '{vm.name}' is not running (state: {state})")
+        return
+    _info(f"Sending ACPI shutdown to {vm.name}…")
+    _vbm("controlvm", vm.name, "acpipowerbutton")
+    _ok(f"Shutdown signal sent to {vm.name}")
+
+
+def cmd_destroy(vm: VMConfig) -> None:
+    state = _vm_state(vm.name)
+    if state == "notfound":
+        _warn(f"VM '{vm.name}' does not exist")
+        return
+    if state == "running":
+        _info("Powering off before destroy…")
+        _vbm("controlvm", vm.name, "poweroff")
+        time.sleep(2)
+    _info(f"Unregistering and deleting {vm.name}…")
+    _vbm("unregistervm", vm.name, "--delete")
+    _ok(f"Destroyed {vm.name}")
+
+    # Also clean up cached VDI copy
+    vm_vdi_dir = CACHE_DIR / "vms" / vm.name
+    if vm_vdi_dir.exists():
+        shutil.rmtree(vm_vdi_dir)
+        _ok(f"Removed cached VDI for {vm.name}")
+
+
+def cmd_list() -> None:
+    vms = _discover_vms()
+    if not vms:
+        print("No VMs discovered.")
+        return
+
+    print(f"\n  {'NAME':<35} {'OS':<15} {'STATE':<12}")
+    print(f"  {'-'*35} {'-'*15} {'-'*12}")
+    for name, yml in sorted(vms.items()):
+        machines_yml = SCRIPT_DIR.parent / "tests" / "vm" / "machines.yml"
+        if yml == machines_yml:
+            try:
+                vm = _load_machine_entry(yml, name)
+            except KeyError:
+                continue
+        else:
+            vm = _load_vm(yml)
+        state = _vm_state(name)
+        state_colored = _c("32", state) if state == "running" else _c("33", state) if state == "notfound" else state
+        print(f"  {name:<35} {vm.os_name:<15} {state_colored}")
     print()
-    if failures:
-        _err(f"Failed: {', '.join(failures)}")
-        sys.exit(1)
-    _ok("All done.")
 
 
-def cmd_build(args: argparse.Namespace, boxes: list[Box]) -> None:
-    box_by_id = {b.id: b for b in boxes}
-    if args.all:
-        sel = boxes[:]
-    elif args.targets:
-        sel, unknown = [], []
-        for t in args.targets:
-            (sel if t in box_by_id else unknown).append(t)
-        if unknown:
-            _err(f"Unknown box(es): {', '.join(unknown)}")
-            sys.exit(1)
-        sel = [box_by_id[t] for t in args.targets]
-    else:
-        ops = _build_ops(boxes, [])
-        build_ops = [o for o in ops if o.label.startswith("build")]
-        sel_ops = interactive_pick(build_ops)
-        _run_ops(sel_ops)
-        return
-    _run_ops([Op(label=f"build {b.id}", action=lambda b=b: packer_build(b)) for b in sel])
+# ── Interactive picker ────────────────────────────────────────────────────────
+
+def _pick_vm() -> Optional[str]:
+    """Simple numbered picker for terminals."""
+    vms = _discover_vms()
+    if not vms:
+        _err("No VMs found.")
+        return None
+    names = sorted(vms.keys())
+    print("\nAvailable VMs:\n")
+    for i, name in enumerate(names, 1):
+        state = _vm_state(name)
+        print(f"  [{i:2}] {name}  ({state})")
+    print()
+    try:
+        choice = input("  Select VM number (or q to quit): ").strip()
+        if choice.lower() == "q":
+            return None
+        idx = int(choice) - 1
+        if 0 <= idx < len(names):
+            return names[idx]
+        _err("Invalid selection")
+    except (ValueError, EOFError):
+        pass
+    return None
 
 
-def cmd_register(args: argparse.Namespace, boxes: list[Box]) -> None:
-    box_by_id = {b.id: b for b in boxes}
-    if args.all:
-        sel = boxes[:]
-    elif args.targets:
-        sel, unknown = [], []
-        for t in args.targets:
-            (sel if t in box_by_id else unknown).append(t)
-        if unknown:
-            _err(f"Unknown box(es): {', '.join(unknown)}")
-            sys.exit(1)
-        sel = [box_by_id[t] for t in args.targets]
-    else:
-        ops = _build_ops(boxes, [])
-        reg_ops = [o for o in ops if o.label.startswith("register")]
-        sel_ops = interactive_pick(reg_ops)
-        _run_ops(sel_ops)
-        return
-    _run_ops([Op(label=f"register {b.id}", action=lambda b=b: register_box(b)) for b in sel])
+def _pick_action(vm_name: str) -> Optional[str]:
+    actions = ["create", "start", "stop", "destroy"]
+    state   = _vm_state(vm_name)
+    print(f"\n  VM: {vm_name}  (state: {state})\n")
+    for i, action in enumerate(actions, 1):
+        print(f"  [{i}] {action}")
+    print()
+    try:
+        choice = input("  Select action: ").strip()
+        idx = int(choice) - 1
+        if 0 <= idx < len(actions):
+            return actions[idx]
+    except (ValueError, EOFError):
+        pass
+    return None
 
 
-def cmd_up(args: argparse.Namespace, vms: list[VM]) -> None:
-    vm_by_id = {v.id: v for v in vms}
-    if args.all:
-        sel = vms[:]
-    elif args.targets:
-        sel, unknown = [], []
-        for t in args.targets:
-            (sel if t in vm_by_id else unknown).append(t)
-        if unknown:
-            _err(f"Unknown VM(s): {', '.join(unknown)}")
-            sys.exit(1)
-        sel = [vm_by_id[t] for t in args.targets]
-    else:
-        ops = _build_ops([], vms)
-        up_ops = [o for o in ops if o.label.startswith("up")]
-        sel_ops = interactive_pick(up_ops)
-        _run_ops(sel_ops)
-        return
-    _run_ops([Op(label=f"up {v.id}", action=lambda v=v: vagrant_up(v)) for v in sel])
-
-# ─────────────────────────────────────────────────────────────────────────────
-# Entry point
-# ─────────────────────────────────────────────────────────────────────────────
+# ── CLI ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
-    boxes = discover_boxes()
-    vms   = discover_vms()
-
-    if not boxes and not vms:
-        _err(
-            "Nothing discovered.\n"
-            "  • Add environments/boxes/<name>/box.json for a new box\n"
-            "  • Add environments/<name>/Vagrantfile for a new VM"
-        )
-        sys.exit(1)
-
-    ap = argparse.ArgumentParser(
-        prog="build.py",
-        description="Build Packer boxes and start Vagrant VMs — one step at a time.",
+    parser = argparse.ArgumentParser(
+        description="VBoxManage-based FPGA VM manager",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog=__doc__,
     )
-    ap.add_argument("--list", "-l", action="store_true",
-                    help="List all discovered targets and exit")
-    subs = ap.add_subparsers(dest="cmd", metavar="COMMAND")
+    sub = parser.add_subparsers(dest="cmd")
 
-    for name, help_text, targets_help in [
-        ("build",    "packer init + packer build  (produces .box file)", "box ids to build"),
-        ("register", "vagrant box add             (register .box with Vagrant)", "box ids to register"),
-        ("up",       "vagrant up                  (start the VM)", "VM ids to start"),
-    ]:
-        p = subs.add_parser(name, help=help_text)
-        p.add_argument("targets", nargs="*", help=targets_help)
-        p.add_argument("--all", "-a", action="store_true",
-                       help=f"Run on all available targets")
+    sub.add_parser("list",    help="List all VMs and their state")
+    sub.add_parser("pick",    help="Interactive VM/action picker (default)")
 
-    args = ap.parse_args()
+    for cmd_name in ("create", "start", "stop", "destroy"):
+        p = sub.add_parser(cmd_name)
+        p.add_argument("vm", help="VM name (from vm.yml 'name' field)")
 
-    ops = _build_ops(boxes, vms)
+    args = parser.parse_args()
 
-    if args.list:
-        _print_ops(ops)
-        return
+    if args.cmd == "list" or args.cmd is None and len(sys.argv) == 1:
+        if args.cmd == "list":
+            cmd_list()
+            return
+        # Interactive picker
+        vm_name = _pick_vm()
+        if not vm_name:
+            return
+        action = _pick_action(vm_name)
+        if not action:
+            return
+        args.cmd = action
+        args.vm  = vm_name
 
-    if args.cmd == "build":
-        cmd_build(args, boxes)
-    elif args.cmd == "register":
-        cmd_register(args, boxes)
-    elif args.cmd == "up":
-        cmd_up(args, vms)
+    if args.cmd in ("create", "start", "stop", "destroy"):
+        try:
+            vm = _resolve_vm(args.vm)
+        except (KeyError, FileNotFoundError) as exc:
+            _err(str(exc))
+            sys.exit(1)
+        dispatch = {
+            "create":  cmd_create,
+            "start":   cmd_start,
+            "stop":    cmd_stop,
+            "destroy": cmd_destroy,
+        }
+        dispatch[args.cmd](vm)
+    elif args.cmd == "list":
+        cmd_list()
+    elif args.cmd == "pick" or args.cmd is None:
+        vm_name = _pick_vm()
+        if not vm_name:
+            return
+        action = _pick_action(vm_name)
+        if not action:
+            return
+        try:
+            vm = _resolve_vm(vm_name)
+        except (KeyError, FileNotFoundError) as exc:
+            _err(str(exc))
+            sys.exit(1)
+        dispatch = {
+            "create":  cmd_create,
+            "start":   cmd_start,
+            "stop":    cmd_stop,
+            "destroy": cmd_destroy,
+        }
+        dispatch[action](vm)
     else:
-        # No subcommand: full interactive picker across all three sections.
-        sel_ops = interactive_pick(ops)
-        _run_ops(sel_ops)
+        parser.print_help()
 
 
 if __name__ == "__main__":

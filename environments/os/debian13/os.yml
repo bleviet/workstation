@@ -1,0 +1,16 @@
+description: "Debian 13 (Trixie) — GenericCloud, ext4, VirtualBox"
+
+vbox_ostype: Debian_64   # VBoxManage --ostype value
+
+cloud_image:
+  url: "https://cloud.debian.org/images/cloud/trixie/latest/debian-13-genericcloud-amd64.qcow2"
+  checksum_url: "https://cloud.debian.org/images/cloud/trixie/latest/SHA256SUMS"
+  format: qcow2           # converted to VDI by build.py via qemu-img
+
+cloud_init_dir: cloud-init
+
+scripts:
+  setup:   scripts/setup.sh
+  cleanup: scripts/cleanup.sh
+
+grow_fs: ext4             # build.py selects grow command based on this value

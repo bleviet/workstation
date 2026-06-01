@@ -1,0 +1,16 @@
+description: "Ubuntu 24.04 LTS (Noble) — GenericCloud, ext4, VirtualBox"
+
+vbox_ostype: Ubuntu_64   # VBoxManage --ostype value
+
+cloud_image:
+  url: "https://cloud-images.ubuntu.com/releases/24.04/release/ubuntu-24.04-server-cloudimg-amd64.img"
+  checksum_url: "https://cloud-images.ubuntu.com/releases/24.04/release/SHA256SUMS"
+  format: qcow2           # .img is qcow2 format; converted to VDI by build.py
+
+cloud_init_dir: cloud-init
+
+scripts:
+  setup:   scripts/setup.sh
+  cleanup: scripts/cleanup.sh
+
+grow_fs: ext4             # build.py selects grow command based on this value

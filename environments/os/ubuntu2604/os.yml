@@ -1,0 +1,16 @@
+description: "Ubuntu 26.04 LTS (Plucky) — GenericCloud, ext4, VirtualBox"
+
+vbox_ostype: Ubuntu_64   # VBoxManage --ostype value
+
+cloud_image:
+  url: "https://cloud-images.ubuntu.com/releases/26.04/release/ubuntu-26.04-server-cloudimg-amd64.img"
+  checksum_url: "https://cloud-images.ubuntu.com/releases/26.04/release/SHA256SUMS"
+  format: qcow2           # converted to VDI by build.py via qemu-img
+
+cloud_init_dir: cloud-init
+
+scripts:
+  setup:   scripts/setup.sh
+  cleanup: scripts/cleanup.sh
+
+grow_fs: ext4             # build.py selects grow command based on this value

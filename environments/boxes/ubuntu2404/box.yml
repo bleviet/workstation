@@ -1,4 +1,0 @@
-vagrant_box_name: fpga-ubuntu2404
-packer_template: ubuntu2404.pkr.hcl
-box_file: ubuntu2404.box
-description: "Ubuntu 24.04 LTS (Noble) autoinstall — ext4, VMware"
