@@ -11,98 +11,70 @@ Builds a container per OS in parallel (Podman, rootless) and runs
 
 ## VM tests (full provisioning)
 
-Three providers are supported:
+Test VMs are defined in `tests/vm/machines.yml` and managed via
+`environments/build.py` (VBoxManage). No Vagrant or VMware required.
 
-| Provider | Host | Requirement |
+### Prerequisites
+
+| Tool | Where to get it |
+|---|---|
+| VirtualBox ≥ 7.0 | https://www.virtualbox.org/wiki/Downloads |
+| Python ≥ 3.10 | system or `pyenv` |
+| Python packages | `pip install -r environments/requirements.txt` |
+| `qemu-img` | `apt install qemu-utils` / `dnf install qemu-img` |
+
+### Available test machines
+
+| Name | OS | Profile |
 |---|---|---|
-| `virtualbox` | Windows / Linux desktop | VirtualBox installed |
-| `vmware_desktop` | Windows / Linux | VMware + [vagrant-vmware-desktop](https://developer.hashicorp.com/vagrant/docs/providers/vmware) |
-| `libvirt` | WSL2 / native Linux | KVM + vagrant-libvirt (see below) |
+| `workstation-test-debian` | Debian 13 | headless |
+| `workstation-test-ubuntu` | Ubuntu 24.04 | headless |
+| `workstation-test-almalinux` | AlmaLinux 9 | headless |
+| `workstation-test-debian-i3wm` | Debian 13 | desktop-i3wm |
+| `workstation-test-ubuntu-i3wm` | Ubuntu 24.04 | desktop-i3wm |
+| `workstation-test-almalinux-i3wm` | AlmaLinux 9 | desktop-i3wm |
+| `workstation-test-debian-xfce` | Debian 13 | desktop-xfce |
+| `workstation-test-ubuntu-xfce` | Ubuntu 24.04 | desktop-xfce |
+| `workstation-test-almalinux-xfce` | AlmaLinux 9 | desktop-xfce |
+| `workstation-test-debian-gnome` | Debian 13 | desktop-gnome |
+| `workstation-test-ubuntu-gnome` | Ubuntu 24.04 | desktop-gnome |
+| `workstation-test-almalinux-gnome` | AlmaLinux 9 | desktop-gnome |
+
+### Running tests
 
 ```bash
-# VirtualBox (default) — headless machines only
+# Headless machines only (default)
 ./tests/run_vm_tests.sh
 
-# Desktop i3wm machines
+# Desktop machines
 ./tests/run_vm_tests.sh --desktop
 
 # All machines (headless + desktop)
 ./tests/run_vm_tests.sh --all
 
-# VMware
-VAGRANT_PROVIDER=vmware_desktop ./tests/run_vm_tests.sh --desktop
-
-# KVM/libvirt (WSL2 or native Linux)
-VAGRANT_PROVIDER=libvirt ./tests/run_vm_tests.sh
-
 # Specific machine(s) by name
-./tests/run_vm_tests.sh debian-i3wm
+./tests/run_vm_tests.sh workstation-test-debian workstation-test-ubuntu
 ```
 
-Or drive Vagrant directly from `tests/vm/`:
+Or drive `build.py` directly:
 
 ```bash
-cd tests/vm
+# Create a single test VM
+python environments/build.py create workstation-test-debian
 
-vagrant up debian --provider=virtualbox
-vagrant up debian-i3wm --provider=vmware_desktop
-vagrant up ubuntu-i3wm --provider=virtualbox
-vagrant up ubuntu --provider=vmware_desktop
-vagrant up almalinux --provider=libvirt
-vagrant destroy debian -f
+# Connect via SSH (NAT port-forward set up by build.py)
+ssh vagrant@127.0.0.1 -p 2222
+
+# Run the full playbook against it
+ansible-playbook provisioning/site.yml \
+  -i '127.0.0.1,' \
+  -u vagrant -e ansible_port=2222 \
+  -e profile=headless
+
+# Destroy when done
+python environments/build.py destroy workstation-test-debian
 ```
 
-## Windows (PowerShell) setup
-
-Vagrant on Windows cannot reach the repo when it lives on the WSL filesystem.
-Clone the repo to a Windows path first:
-
-```powershell
-git clone <repo> C:\workspace\workstation
-cd C:\workspace\workstation\tests\vm
-```
-
-Bring up a VM with the installed provider:
-
-```powershell
-# VMware (vagrant-vmware-desktop plugin + VMware Utility required)
-vagrant up debian --provider=vmware_desktop
-
-# VirtualBox
-vagrant up debian --provider=virtualbox
-```
-
-Run all machines in sequence:
-
-```powershell
-$provider = "vmware_desktop"   # or virtualbox
-foreach ($os in @("debian", "ubuntu", "almalinux")) {
-    vagrant up $os --provider=$provider
-    vagrant destroy $os -f
-}
-```
-
-## libvirt / KVM setup (WSL2 or Linux)
-
-```bash
-sudo apt install qemu-kvm libvirt-daemon-system virtinst
-sudo usermod -aG libvirt "$USER"   # re-login after
-vagrant plugin install vagrant-libvirt
-```
-
-On WSL2, enable nested virtualisation. Create `%USERPROFILE%\.wslconfig`:
-
-```ini
-[wsl2]
-nestedVirtualization=true
-```
-
-Then run `wsl --shutdown` and restart.
-
-`bento/*` boxes are used because they ship pre-built for VirtualBox, VMware,
-and libvirt. Each VM installs Ansible inside the guest via a shell provisioner
-and runs the full `provisioning/site.yml`.
-
-All `features.fpga.*` and `features.xrdp` flags default to `false` in test VMs.
-`features.editor.neovim` defaults to `true`. Override any flag via
-`--extra-vars` if needed.
+All `features.fpga.*` and `features.xrdp` flags default to `false` in test
+VMs. `features.editor.neovim` defaults to `true`. Override via `--extra-vars`
+if needed.

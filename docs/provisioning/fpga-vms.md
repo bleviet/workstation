@@ -1,11 +1,15 @@
 # FPGA development VMs
 
-Two Vagrant environments are provided under `environments/`:
+Four VirtualBox-based FPGA development environments are provided under
+`environments/`. All are managed with `environments/build.py` via VBoxManage —
+no Vagrant or VMware required.
 
-| Directory | Box | Guest OS |
-|---|---|---|
-| `environments/fpga-alma/` | `almalinux/9` (official) | AlmaLinux 9 + XFCE4 |
-| `environments/fpga-ubuntu/` | `bento/ubuntu-24.04` | Ubuntu 24.04 + XFCE4 |
+| Directory | OS | Desktop | Primary use |
+|---|---|---|---|
+| `environments/fpga-alma/` | AlmaLinux 9 | XFCE4 (Ansible) | Vivado + Quartus (primary — RHEL-certified) |
+| `environments/fpga-ubuntu/` | Ubuntu 24.04 | XFCE4 (Ansible) | Alternative Ubuntu target |
+| `environments/fpga-ubuntu2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
+| `environments/fpga-debian/` | Debian 13 | XFCE4 (Ansible) | Debian target |
 
 The AlmaLinux variant is the primary target. Vivado and Quartus are both
 officially certified against RHEL 8/9, so it requires fewer library
@@ -13,168 +17,154 @@ workarounds than Ubuntu.
 
 ---
 
-## Bento boxes vs. official boxes
+## Prerequisites
 
-The test VMs (`tests/vm/`) use **bento/** boxes; the FPGA VMs use the
-**official** AlmaLinux box. They behave differently in a few important ways.
-
-### Who builds them
-
-| | Bento | Official |
-|---|---|---|
-| Maintainer | Chef / Progress | The OS vendor |
-| Build tooling | Packer with a consistent Chef pipeline | Vendor-specific |
-| Published at | `bento/<distro>` on Vagrant Cloud | `<vendor>/<distro>` on Vagrant Cloud |
-
-### Behaviour differences that matter in practice
-
-| | Bento | Official AlmaLinux |
-|---|---|---|
-| SSH password auth | **Enabled** — `vagrant`/`vagrant` works | **Disabled** — key-only |
-| RHEL fidelity | Trimmed for Vagrant convenience | Mirrors RHEL as closely as possible |
-| Multi-provider support | VirtualBox, VMware, libvirt (pre-built) | Varies; VMware supported |
-| SELinux / sshd policy | Relaxed | Vendor defaults (stricter) |
-
-**Why this matters for FPGA work:** Vivado and Quartus link against specific
-RHEL system libraries. Using the official `almalinux/9` box gives you the
-closest environment to what AMD/Intel actually test against, catching
-compatibility issues early. The stricter SSH configuration is a side effect
-of that fidelity — see the SSH key section below.
+| Tool | Where to get it |
+|---|---|
+| VirtualBox ≥ 7.0 | https://www.virtualbox.org/wiki/Downloads |
+| Python ≥ 3.10 | system or `pyenv` |
+| Python packages | `pip install -r environments/requirements.txt` |
+| `qemu-img` | `apt install qemu-utils` / `dnf install qemu-img` |
 
 ---
 
-## SSH key workflow
+## VM definitions
 
-The FPGA VMs are created by Vagrant running on **Windows** but provisioned by
-Ansible running in **WSL**. These are two separate environments with separate
-SSH key stores, which requires a one-time bootstrap.
+Each FPGA environment is declared in a `vm.yml` file:
 
-### Why `vagrant`/`vagrant` password login does not work
+```yaml
+# environments/fpga-alma/vm.yml
+name: fpga-dev-alma9
+os: alma9            # references environments/os/alma9/os.yml
+hostname: fpga-dev
 
-The official `almalinux/9` box ships with `PasswordAuthentication no` in
-`/etc/ssh/sshd_config`. Only key-based SSH works.
+ram_mb: 32768
+cpus: 8
+vram_mb: 256
+disk_gb: 512
 
-During `vagrant up`, Vagrant replaces the default insecure keypair with a
-freshly generated one:
+accel3d: true
 
+usb:
+  ehci: true         # USB 2.0 — USB-Blaster, Platform Cable USB
+  xhci: true         # USB 3.0 — USB-Blaster II, Digilent boards
+
+shared_folders:
+  - host: "../.."
+    guest: "/home/vagrant/workspace/workstation"
+  - host: "projects"
+    guest: "/home/vagrant/projects"
+    create: true
+  - host: "installers"
+    guest: "/opt/fpga-installers"
+    create: true
 ```
-Vagrant insecure key detected. Vagrant will automatically replace
-this with a newly generated keypair for better security.
-Inserting generated public key within guest...
-```
 
-The generated private key is stored on the **Windows** filesystem:
+OS metadata lives in `environments/os/<name>/os.yml` and specifies the cloud
+image URL, checksum, filesystem type, and setup/cleanup scripts. `build.py`
+downloads the cloud image once and caches it in `environments/.cache/images/`.
 
-```
-environments/fpga-alma/.vagrant/machines/default/vmware_workstation/private_key
-```
+---
 
-WSL mounts Windows drives (`/mnt/d/…`) with fixed `0777` permissions. SSH
-refuses private key files with permissions wider than `0600`, so the key
-cannot be used directly from WSL.
+## Command reference
 
-### The admin-ssh-key provisioner
-
-Each Vagrantfile includes an `admin-ssh-key` provisioner that injects an
-admin public key into the VM during `vagrant up`, bypassing the need to use
-the Vagrant-generated key at all.
-
-It resolves the key in this order:
-
-1. `admin.pub` alongside the Vagrantfile *(gitignored)*
-2. `%USERPROFILE%\.ssh\id_ed25519.pub` (then `id_rsa.pub`, `id_ecdsa.pub`)
-3. If nothing is found: prints a warning and skips
-
-### First-time setup
-
-**Step 1 — Create `admin.pub` on the Windows machine.**
-
-From WSL, write your WSL public key to the Windows-accessible path:
+All commands run from the repo root. `<vm>` is the `name` field in `vm.yml`.
 
 ```bash
-cat ~/.ssh/id_ed25519.pub \
-  > /mnt/d/workspace/workstation/environments/fpga-alma/admin.pub
+# Full pipeline: download image → create VM → run setup → snapshot
+python environments/build.py create fpga-dev-alma9
+
+# Start / stop (graceful ACPI)
+python environments/build.py start   fpga-dev-alma9
+python environments/build.py stop    fpga-dev-alma9
+
+# Permanently delete VM and cached VDI
+python environments/build.py destroy fpga-dev-alma9
+
+# List all discovered VMs with their VirtualBox state
+python environments/build.py list
+
+# Interactive picker (no args)
+python environments/build.py
 ```
 
-Or in PowerShell on Windows:
+---
 
-```powershell
-# paste your public key content
-"ssh-ed25519 AAAA..." | Out-File -Encoding ascii `
-  D:\workspace\workstation\environments\fpga-alma\admin.pub
-```
+## First-time setup
 
-**Step 2 — Create the VM.**
-
-```powershell
-# Windows PowerShell, inside environments/fpga-alma/
-vagrant up
-```
-
-Vagrant injects `admin.pub` into the VM's `~/.ssh/authorized_keys` during
-provisioning. The `admin.pub` file is gitignored and never committed.
-
-**Step 3 — Fill in the VM's IP.**
-
-Find the IP from the VMware console or via SSH:
+**Step 1 — Create the VM.**
 
 ```bash
-ssh vagrant@<ip> "ip addr show eth0 | grep 'inet '"
+python environments/build.py create fpga-dev-alma9
 ```
 
-Edit `provisioning/inventory/hosts.yml` and set `ansible_host` for the
-relevant entry.
+`build.py` will:
+1. Download and verify the OS cloud image (cached for reuse)
+2. Convert it to VDI and resize to the declared `disk_gb`
+3. Build a cloud-init seed ISO
+4. Create and configure the VirtualBox VM
+5. Boot the VM and wait for SSH (NAT port-forward: `127.0.0.1:2222`)
+6. Run `os.yml`'s `setup.sh` (installs VirtualBox Guest Additions + Python)
+7. Inject your SSH public key (see below)
+8. Run `cleanup.sh` and detach the seed ISO
+9. Add shared folders
+10. Take a `clean-base` snapshot
 
-**Step 4 — Run Ansible from WSL.**
+When complete:
+```
+  ✓ VM ready — SSH: ssh vagrant@127.0.0.1 -p 2222
+  Next: add the VM's IP to provisioning/inventory/hosts.yml and run Ansible.
+```
+
+**Step 2 — Find the VM's IP and update the inventory.**
+
+The VM uses NAT for initial setup (`127.0.0.1:2222`). To run Ansible from
+outside, use a bridged or host-only adapter, or find the NAT IP:
 
 ```bash
-# From the repo root in WSL
+ssh vagrant@127.0.0.1 -p 2222 "ip addr show | grep 'inet '"
+```
+
+Edit `provisioning/inventory/hosts.yml` and set `ansible_host`:
+
+```yaml
+fpga-dev-alma9:
+  ansible_host: 192.168.x.x    # IP found above
+  ansible_user: vagrant
+```
+
+**Step 3 — Run Ansible.**
+
+```bash
 ansible-playbook provisioning/site.yml --limit fpga-dev-alma9
 ```
 
-### Applying the key to an already-running VM
+---
 
-If the VM was created before `admin.pub` existed, create the file and then
-re-run only the key provisioner:
+## Admin SSH key injection
 
-```powershell
-# Windows PowerShell
-vagrant provision --provision-with admin-ssh-key
-```
+During `create`, `build.py` automatically injects a public key into
+`~/.ssh/authorized_keys` on the VM. It searches in this order:
 
-Or inject manually from WSL using the Vagrant private key as a one-time
-bootstrap:
+1. `admin.pub` in the **repo root** *(gitignored)*
+2. `~/.ssh/id_ed25519.pub`
+3. `~/.ssh/id_rsa.pub`
+4. `~/.ssh/id_ecdsa.pub`
 
-```bash
-# Copy Vagrant key to WSL filesystem so permissions can be set
-cp /mnt/d/workspace/workstation/environments/fpga-alma/.vagrant/machines/default/vmware_workstation/private_key \
-   ~/.ssh/fpga-alma-vagrant
-chmod 600 ~/.ssh/fpga-alma-vagrant
-
-# Push your WSL public key into the VM
-cat ~/.ssh/id_ed25519.pub | \
-  ssh -i ~/.ssh/fpga-alma-vagrant vagrant@<ip> \
-      "cat >> ~/.ssh/authorized_keys"
-```
-
-### Sharing one SSH key across Windows and WSL (alternative)
-
-If you copy your WSL key pair to the Windows SSH directory, the Vagrantfile
-auto-detects and injects it without needing `admin.pub`:
+If you have a standard `~/.ssh/id_ed25519.pub` no extra steps are needed.
+If you want to inject a different key (e.g. a CI key), create `admin.pub`
+at the repo root before running `create`.
 
 ```bash
-cp ~/.ssh/id_ed25519     /mnt/c/Users/<WindowsUsername>/.ssh/id_ed25519
-cp ~/.ssh/id_ed25519.pub /mnt/c/Users/<WindowsUsername>/.ssh/id_ed25519.pub
+# optional — only needed if your default key isn't id_ed25519
+cp /path/to/key.pub admin.pub
 ```
-
-Both machines then share the same identity and no manual steps are needed
-for future VMs.
 
 ---
 
 ## Inventory and host variables
 
-Both FPGA VMs are declared in the `fpga_vms` group in
+FPGA VMs are declared in the `fpga_vms` group in
 `provisioning/inventory/hosts.yml`. Profile and features are set in
 `provisioning/inventory/group_vars/fpga_vms.yml` and can be overridden
 per host in `provisioning/inventory/host_vars/<hostname>.yml`.
