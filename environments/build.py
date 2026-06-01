@@ -242,15 +242,20 @@ def _vm_state(name: str) -> str:
 
 
 def _wait_for_ssh(host: str, port: int = 22, timeout: int = 300) -> None:
+    """Wait until sshd is ready: TCP connect succeeds AND SSH banner is received."""
     _info(f"Waiting for SSH on {host}:{port} (up to {timeout}s)…")
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            with socket.create_connection((host, port), timeout=3):
-                _ok("SSH is up")
-                return
+            with socket.create_connection((host, port), timeout=5) as sock:
+                sock.settimeout(5)
+                banner = sock.recv(256)
+                if banner.startswith(b"SSH-"):
+                    _ok("SSH is up")
+                    return
         except OSError:
-            time.sleep(3)
+            pass
+        time.sleep(3)
     raise TimeoutError(f"SSH on {host}:{port} did not become available within {timeout}s")
 
 
@@ -291,41 +296,60 @@ def _scp(src: Path, host: str, dest: str, user: str, key: Optional[Path] = None)
 
 
 def _paramiko_put(host: str, port: int, user: str, password: str,
-                  local: Path, remote: str) -> None:
+                  local: Path, remote: str, retries: int = 5) -> None:
     """Upload a file via SFTP using password auth (no SSH agent required)."""
     import paramiko  # type: ignore
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(host, port=port, username=user, password=password,
-                   allow_agent=False, look_for_keys=False, timeout=30)
-    try:
-        sftp = client.open_sftp()
-        sftp.put(str(local), remote)
-        sftp.close()
-    finally:
-        client.close()
+    for attempt in range(1, retries + 1):
+        try:
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(host, port=port, username=user, password=password,
+                           allow_agent=False, look_for_keys=False, timeout=30)
+            try:
+                sftp = client.open_sftp()
+                sftp.put(str(local), remote)
+                sftp.close()
+            finally:
+                client.close()
+            return
+        except Exception as exc:
+            if attempt == retries:
+                raise
+            _warn(f"SSH not ready yet ({exc}); retrying in 5s…")
+            time.sleep(5)
 
 
-def _paramiko_exec(host: str, port: int, user: str, password: str, cmd: str) -> None:
+def _paramiko_exec(host: str, port: int, user: str, password: str,
+                   cmd: str, retries: int = 5) -> None:
     """Run a shell command via SSH using password auth (no SSH agent required)."""
     import paramiko  # type: ignore
-    client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(host, port=port, username=user, password=password,
-                   allow_agent=False, look_for_keys=False, timeout=30)
-    try:
-        _, stdout, stderr = client.exec_command(cmd, get_pty=True)
-        out = stdout.read().decode(errors="replace")
-        rc  = stdout.channel.recv_exit_status()
-        if out.strip():
-            print(out.rstrip())
-        if rc != 0:
-            err = stderr.read().decode(errors="replace")
-            raise RuntimeError(
-                f"Remote command failed (exit {rc}):\n  cmd: {cmd}\n  stderr: {err.strip()}"
-            )
-    finally:
-        client.close()
+    for attempt in range(1, retries + 1):
+        try:
+            client = paramiko.SSHClient()
+            client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            client.connect(host, port=port, username=user, password=password,
+                           allow_agent=False, look_for_keys=False, timeout=30)
+            try:
+                _, stdout, stderr = client.exec_command(cmd, get_pty=True)
+                out = stdout.read().decode(errors="replace")
+                rc  = stdout.channel.recv_exit_status()
+                if out.strip():
+                    print(out.rstrip())
+                if rc != 0:
+                    err = stderr.read().decode(errors="replace")
+                    raise RuntimeError(
+                        f"Remote command failed (exit {rc}):\n  cmd: {cmd}\n  stderr: {err.strip()}"
+                    )
+            finally:
+                client.close()
+            return
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            if attempt == retries:
+                raise
+            _warn(f"SSH not ready yet ({exc}); retrying in 5s…")
+            time.sleep(5)
 
 
 # ── Cloud image helpers ───────────────────────────────────────────────────────
