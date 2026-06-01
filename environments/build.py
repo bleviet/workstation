@@ -373,7 +373,7 @@ def _make_seed_iso(cloud_init_dir: Path, dest: Path) -> None:
         raise FileNotFoundError(f"user-data not found: {user_data}")
 
     # Create a minimal meta-data if missing
-    with tempfile.TemporaryDirectory() as tmp:
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
         tmp_path = Path(tmp)
         shutil.copy(user_data, tmp_path / "user-data")
         if meta_data.exists():
@@ -388,15 +388,22 @@ def _make_seed_iso(cloud_init_dir: Path, dest: Path) -> None:
             import pycdlib  # type: ignore
             iso = pycdlib.PyCdlib()
             iso.new(interchange_level=4, vol_ident="cidata", joliet=3)
-            for fname in ["user-data", "meta-data", "network-config"]:
-                src = tmp_path / fname
-                if src.exists():
-                    iso.add_fp(
-                        src.open("rb"), src.stat().st_size,
-                        f"/{fname.upper()};1", joliet_path=f"/{fname}"
-                    )
-            iso.write(str(dest))
-            iso.close()
+            handles: list = []
+            try:
+                for fname in ["user-data", "meta-data", "network-config"]:
+                    src = tmp_path / fname
+                    if src.exists():
+                        fh = src.open("rb")
+                        handles.append(fh)
+                        iso.add_fp(
+                            fh, src.stat().st_size,
+                            f"/{fname.upper()};1", joliet_path=f"/{fname}"
+                        )
+                iso.write(str(dest))
+            finally:
+                iso.close()
+                for fh in handles:
+                    fh.close()
         except ImportError:
             tool = shutil.which("genisoimage") or shutil.which("mkisofs")
             if not tool:
