@@ -4,3 +4,4 @@
     name: "{{ ssh_service_name }}"
     state: restarted
   become: true
+  failed_when: false

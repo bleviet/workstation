@@ -38,3 +38,5 @@
     state: started
     enabled: true
   become: true
+  when: ansible_facts['virtualization_type'] | default('') not in ['docker', 'containerd', 'podman']
+  failed_when: false

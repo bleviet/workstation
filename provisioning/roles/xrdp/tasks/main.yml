@@ -50,3 +50,4 @@
     enabled: true
   become: true
   notify: Restart xrdp
+  failed_when: false

@@ -1,9 +1,12 @@
 # Testing
 
-## Container tests (fast — syntax-check only)
+## Container tests (Automated pipeline)
 
-Builds a container per OS in parallel (Podman, rootless) and runs
-`ansible-playbook --syntax-check` against both playbooks.
+Builds a container per OS in parallel (Podman/Docker, rootless) and executes a robust four-stage testing pipeline:
+1. **Syntax Check:** Runs `ansible-playbook --syntax-check` against the playbooks.
+2. **Provisioning:** Runs the full Ansible playbook inside the container to verify clean deployment.
+3. **Idempotency:** Runs the playbook a second time to ensure zero unhandled changes (`changed=0`).
+4. **BATS Unit Tests:** Executes the BATS shell testing framework (`tests/bats/`) against dotfiles functions.
 
 ```bash
 ./tests/run_container_tests.sh

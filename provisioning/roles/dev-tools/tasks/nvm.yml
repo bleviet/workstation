@@ -14,12 +14,15 @@
   when: not nvm_stat.stat.exists
   changed_when: true
 
-- name: Check if any Node.js version is installed
-  ansible.builtin.find:
-    paths: "{{ dev_user_home }}/.nvm/versions/node"
-    file_type: directory
-  register: nvm_node_dirs
+- name: Check if node LTS is already installed
+  ansible.builtin.shell: |
+    . "{{ dev_user_home }}/.nvm/nvm.sh"
+    nvm ls --no-colors --no-alias 'lts/*' | grep -q "N/A"
+  environment:
+    HOME: "{{ dev_user_home }}"
+  register: nvm_lts_missing
   failed_when: false
+  changed_when: false
 
 - name: Install Node.js LTS via nvm
   ansible.builtin.shell: |
@@ -28,5 +31,5 @@
     nvm alias default 'lts/*'
   environment:
     HOME: "{{ dev_user_home }}"
-  when: nvm_node_dirs.matched == 0
+  when: nvm_lts_missing.rc == 0
   changed_when: true

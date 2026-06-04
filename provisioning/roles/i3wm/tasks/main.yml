@@ -20,3 +20,4 @@
     enabled: true
     state: started
   become: true
+  failed_when: false

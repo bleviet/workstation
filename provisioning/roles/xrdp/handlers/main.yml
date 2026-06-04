@@ -4,3 +4,4 @@
     name: xrdp
     state: restarted
   become: true
+  failed_when: false

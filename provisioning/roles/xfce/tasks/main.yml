@@ -20,6 +20,7 @@
     enabled: true
     state: started
   become: true
+  failed_when: false
 
 - name: Ensure /etc/lightdm/lightdm.conf.d exists
   ansible.builtin.file:

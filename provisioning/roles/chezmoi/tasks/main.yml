@@ -87,7 +87,8 @@
       - "{{ chezmoi_source_path }}"
   environment:
     HOME: "{{ dev_user_home }}"
-  changed_when: true
+  register: chezmoi_apply
+  changed_when: chezmoi_apply.stdout != "" or chezmoi_apply.stderr != ""
   when: chezmoi_init_repo == ""
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
@@ -137,7 +138,8 @@
       ssh -i {{ chezmoi_ssh_key_file }}
       -o StrictHostKeyChecking=accept-new
       -o BatchMode=yes
-  changed_when: true
+  register: chezmoi_apply_ext1
+  changed_when: chezmoi_apply_ext1.stdout != "" or chezmoi_apply_ext1.stderr != ""
   when:
     - chezmoi_init_repo != ""
     - chezmoi_ssh_key_file != ""
@@ -156,7 +158,8 @@
   environment:
     HOME: "{{ dev_user_home }}"
     SSH_AUTH_SOCK: "{{ ansible_facts['env']['SSH_AUTH_SOCK'] | default('') }}"
-  changed_when: true
+  register: chezmoi_apply_ext2
+  changed_when: chezmoi_apply_ext2.stdout != "" or chezmoi_apply_ext2.stderr != ""
   when:
     - chezmoi_init_repo != ""
     - chezmoi_ssh_key_file == ""

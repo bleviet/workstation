@@ -1,6 +1,7 @@
 FROM almalinux:9
 
-RUN dnf install -y --allowerasing ansible-core curl git sudo && \
+RUN dnf install -y --allowerasing epel-release && \
+    dnf install -y --allowerasing curl git sudo bats python3-pip && \
     dnf clean all
 
 RUN useradd -m -s /bin/bash user && \
@@ -9,8 +10,23 @@ RUN useradd -m -s /bin/bash user && \
 USER user
 WORKDIR /home/user/workspace/workstation
 
+ENV PATH="/home/user/.local/bin:${PATH}"
+RUN pip3 install --user "ansible-core>=2.15"
+
 COPY --chown=user:user . .
 
 RUN ansible-galaxy collection install -r requirements.yml
 
-RUN ansible-playbook playbooks/site.yml --syntax-check
+# 1. Syntax check
+RUN ansible-playbook provisioning/site.yml --syntax-check
+
+# 2. Provision the container locally
+RUN ansible-playbook provisioning/site.yml --limit localhost --connection=local
+
+# 3. Idempotency test (ensure nothing changes on second run)
+RUN ansible-playbook provisioning/site.yml --limit localhost --connection=local | tee /tmp/ansible-idempotency.log && \
+    grep -q 'changed=0.*failed=0' /tmp/ansible-idempotency.log && \
+    (echo 'Idempotence test: pass' && exit 0) || (echo 'Idempotence test: fail' && exit 1)
+
+# 4. Run BATS dotfiles tests
+RUN bats tests/bats/
