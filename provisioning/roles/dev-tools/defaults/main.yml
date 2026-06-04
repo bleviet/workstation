@@ -66,3 +66,9 @@ github_binaries:
     version: "0.9.7"
     url: "https://github.com/ajeetdsouza/zoxide/releases/download/v0.9.7/zoxide-0.9.7-x86_64-unknown-linux-musl.tar.gz"
     binary: zoxide
+
+  - name: delta
+    version: "0.19.2"
+    url: "https://github.com/dandavison/delta/releases/download/0.19.2/delta-0.19.2-x86_64-unknown-linux-musl.tar.gz"
+    binary: delta
+

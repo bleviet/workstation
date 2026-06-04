@@ -5,6 +5,23 @@
 [core]
     editor = nvim
     autocrlf = input
+    pager = delta
+
+[interactive]
+    diffFilter = delta --color-only
+
+[delta]
+    navigate = true
+    light = false
+
+[merge]
+    conflictstyle = diff3
+
+[alias]
+    co = checkout
+    br = branch
+    st = status
+    lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr) %C(bold blue)<%an>%Creset' --abbrev-commit
 
 [init]
     defaultBranch = main

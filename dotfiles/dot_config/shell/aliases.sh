@@ -41,13 +41,26 @@ if command -v gitk >/dev/null 2>&1; then
 fi
 
 # lazygit TUI — only define if available
-command -v lazygit >/dev/null 2>&1 && alias gg='lazygit'
+command -v lazygit >/dev/null 2>&1 && {
+  alias gg='lazygit'
+  alias lg='lazygit'
+}
 
 ###############################################################################
 ## Misc
 ###############################################################################
 alias c='clear'
 alias src='source ~/.bashrc'
+
+# Replace cat with bat
+if command -v bat >/dev/null 2>&1; then
+  alias cat='bat --style=plain'
+fi
+
+# Replace grep with ripgrep
+if command -v rg >/dev/null 2>&1; then
+  alias grep='rg'
+fi
 
 ###############################################################################
 ## FZF helpers — require fzf; clipboard helpers additionally require xclip
