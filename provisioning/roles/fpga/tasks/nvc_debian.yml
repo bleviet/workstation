@@ -8,21 +8,81 @@
     path: /usr/local/lib/.nvc-{{ nvc_version }}
   register: _nvc_marker
 
-- name: Install nvc {{ nvc_version }} from GitHub .deb
+- name: Install nvc {{ nvc_version }}
   when: not _nvc_marker.stat.exists
   block:
-    - name: Verify Ubuntu version has a matching nvc .deb
-      ansible.builtin.assert:
-        that: ansible_facts['distribution_version'] in nvc_debian_urls
-        fail_msg: >
-          No pre-built nvc .deb for Ubuntu {{ ansible_facts['distribution_version'] }}.
-          See https://github.com/nickg/nvc/releases to check for a new package.
+    - name: Try installing pre-built .deb
+      when: ansible_facts['distribution_version'] in nvc_debian_urls
+      block:
+        - name: Install nvc .deb from GitHub
+          become: true
+          ansible.builtin.apt:
+            deb: "{{ nvc_debian_urls[ansible_facts['distribution_version']] }}"
+            state: present
 
-    - name: Install nvc .deb from GitHub
-      become: true
-      ansible.builtin.apt:
-        deb: "{{ nvc_debian_urls[ansible_facts['distribution_version']] }}"
-        state: present
+    - name: Fall back to compiling from source
+      when: ansible_facts['distribution_version'] not in nvc_debian_urls
+      block:
+        - name: Install nvc build dependencies (Debian/Ubuntu)
+          become: true
+          ansible.builtin.apt:
+            name:
+              - autoconf
+              - automake
+              - flex
+              - gcc
+              - make
+              - pkg-config
+              - libffi-dev
+              - zlib1g-dev
+              - libzstd-dev
+              - libdw-dev
+            state: present
+
+        - name: Create nvc temp directory
+          ansible.builtin.tempfile:
+            state: directory
+            suffix: _nvc
+          register: _nvc_tmp
+
+        - name: Download nvc source tarball
+          ansible.builtin.get_url:
+            url: "{{ nvc_source_url }}"
+            dest: "{{ _nvc_tmp.path }}/nvc.tar.gz"
+            mode: "0644"
+
+        - name: Extract nvc source tarball
+          ansible.builtin.unarchive:
+            src: "{{ _nvc_tmp.path }}/nvc.tar.gz"
+            dest: "{{ _nvc_tmp.path }}"
+            remote_src: true
+
+        - name: Configure and build nvc
+          ansible.builtin.shell: |
+            set -e
+            SRC=$(find "{{ _nvc_tmp.path }}" -maxdepth 1 -name "nvc-*" -type d | head -1)
+            [ -z "$SRC" ] && { echo "ERROR: nvc source directory not found" >&2; exit 1; }
+            cd "$SRC"
+            mkdir build && cd build
+            ../configure --prefix=/usr/local --disable-llvm
+            make -j$(nproc)
+          changed_when: true
+
+        - name: Install nvc
+          become: true
+          ansible.builtin.shell: |
+            set -e
+            SRC=$(find "{{ _nvc_tmp.path }}" -maxdepth 1 -name "nvc-*" -type d | head -1)
+            cd "$SRC/build"
+            make install
+          changed_when: true
+
+      always:
+        - name: Clean up nvc temp directory
+          ansible.builtin.file:
+            path: "{{ _nvc_tmp.path }}"
+            state: absent
+          when: _nvc_tmp.path is defined
 
     - name: Write nvc version marker
       become: true
