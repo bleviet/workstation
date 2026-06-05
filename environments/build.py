@@ -147,7 +147,7 @@ def _load_vm(vm_yml: Path, gui: Optional[bool] = None) -> VMConfig:
         hostname       = raw.get("hostname", raw["name"]),
         ram_mb         = int(raw.get("ram_mb", 2048)),
         cpus           = int(raw.get("cpus", 2)),
-        vram_mb        = int(raw.get("vram_mb", 16)),
+        vram_mb        = int(raw.get("vram_mb", 128)),
         disk_gb        = int(raw.get("disk_gb", 40)),
         accel3d        = bool(raw.get("accel3d", False)),
         usb            = USBConfig(
@@ -192,7 +192,7 @@ def _load_machine_entry(machines_yml: Path, name: str) -> VMConfig:
                 hostname       = m["name"],
                 ram_mb         = int(m.get("ram_mb", 2048)),
                 cpus           = int(m.get("cpus", 2)),
-                vram_mb        = int(m.get("vram_mb", 16)),
+                vram_mb        = int(m.get("vram_mb", 128)),
                 disk_gb        = int(m.get("disk_gb", 40)),
                 accel3d        = False,
                 usb            = USBConfig(),
@@ -567,7 +567,16 @@ def cmd_create(vm: VMConfig) -> None:
 
     # 5. Create VM
     _info("Creating VirtualBox VM…")
-    _vbm("createvm", "--name", vm.name, "--ostype", os_cfg.vbox_ostype, "--register")
+    create_args = ["createvm", "--name", vm.name, "--ostype", os_cfg.vbox_ostype, "--register"]
+    
+    settings_yml = SCRIPT_DIR / "settings.yml"
+    if settings_yml.exists():
+        settings = yaml.safe_load(settings_yml.read_text()) or {}
+        base_folder = settings.get("vbox_base_folder")
+        if base_folder:
+            create_args.extend(["--basefolder", base_folder])
+
+    _vbm(*create_args)
 
     # 6. Configure hardware
     modify_args = [
