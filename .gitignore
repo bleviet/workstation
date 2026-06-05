@@ -28,3 +28,14 @@ __pycache__/
 *.swp
 *.swo
 .DS_Store
+
+# VM Build Cache
+environments/.cache/
+
+# Packer / Vagrant Cache
+packer_cache/
+*.box
+
+# Temporary Screenshots
+screen*.png
+screenshot*.png

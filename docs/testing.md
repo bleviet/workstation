@@ -45,6 +45,10 @@ Test VMs are defined in `tests/vm/machines.yml` and managed via
 
 ### Running tests
 
+#### Linux/macOS
+
+On Linux/macOS, use the shell runner:
+
 ```bash
 # Headless machines only (default)
 ./tests/run_vm_tests.sh
@@ -58,6 +62,38 @@ Test VMs are defined in `tests/vm/machines.yml` and managed via
 # Specific machine(s) by name
 ./tests/run_vm_tests.sh workstation-test-debian workstation-test-ubuntu
 ```
+
+#### Windows (with WSL)
+
+On Windows, the VM lifecycle is managed natively on Windows via Python (`VBoxManage.exe`), while the Ansible control node runs inside **WSL** (since Ansible cannot run natively on Windows).
+
+**Prerequisites:**
+1. **VirtualBox:** Installed on Windows, with `VBoxManage` available in your Windows PATH (usually `C:\Program Files\Oracle\VirtualBox`).
+2. **Python:** Installed on Windows (venv/uv).
+3. **WSL (Ubuntu):** Installed on the host with Ansible installed inside the WSL distribution.
+4. **SSH Keys:** The WSL user must have an SSH key pair (e.g., `~/.ssh/id_ed25519` with no passphrase for automation). The Windows host-side public key (e.g. `C:\Users\<user>\.ssh\id_ed25519.pub`) is injected into the VM during creation to facilitate SSH logins.
+
+To run the VM tests on Windows, run the PowerShell script:
+
+```powershell
+# Run the tests for a specific VM (e.g. Debian 13)
+.\tests\run_vm_tests.ps1 -Machines "workstation-test-debian"
+
+# Run headless VMs (default)
+.\tests\run_vm_tests.ps1
+
+# Run desktop VMs
+.\tests\run_vm_tests.ps1 -Desktop
+
+# Run all test VMs
+.\tests\run_vm_tests.ps1 -All
+```
+
+*Note: You may need to bypass the PowerShell Execution Policy if running local scripts is restricted:*
+```powershell
+powershell -ExecutionPolicy Bypass -File .\tests\run_vm_tests.ps1 -Machines "workstation-test-debian"
+```
+
 
 Or drive `build.py` directly:
 

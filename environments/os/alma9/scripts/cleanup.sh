@@ -26,6 +26,10 @@ WantedBy=multi-user.target
 UNIT
 systemctl enable sshd-host-keygen.service
 
+# Generate keys immediately so that socket-activated SSH connections still work during this session
+ssh-keygen -A
+
+
 # ── Machine identity ──────────────────────────────────────────────────────────
 # Empty file → systemd regenerates a unique ID on first boot.
 truncate -s 0 /etc/machine-id

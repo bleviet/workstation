@@ -22,8 +22,7 @@ sed -i 's/ main$/ main contrib/' /etc/apt/sources.list.d/debian.sources \
   2>/dev/null || sed -i 's/ main$/ main contrib/' /etc/apt/sources.list
 apt-get update -qq
 apt-get install -y --no-install-recommends \
-  dkms linux-headers-$(uname -r) \
-  virtualbox-guest-utils virtualbox-guest-dkms
+  dkms linux-headers-$(uname -r)
 
 # ── SSH hardening ─────────────────────────────────────────────────────────────
 # Keep password auth on until build.py injects the admin public key, then

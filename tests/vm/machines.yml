@@ -17,15 +17,29 @@ machines:
     cpus:    2
     gui:     false
 
-  - name:    workstation-test-ubuntu
+  - name:    workstation-test-ubuntu24
     os:      ubuntu2404
     profile: headless
     ram_mb:  2048
     cpus:    2
     gui:     false
 
-  - name:    workstation-test-almalinux
+  - name:    workstation-test-ubuntu26
+    os:      ubuntu2604
+    profile: headless
+    ram_mb:  2048
+    cpus:    2
+    gui:     false
+
+  - name:    workstation-test-alma9
     os:      alma9
+    profile: headless
+    ram_mb:  2048
+    cpus:    2
+    gui:     false
+
+  - name:    workstation-test-alma10
+    os:      alma10
     profile: headless
     ram_mb:  2048
     cpus:    2
@@ -39,15 +53,29 @@ machines:
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-ubuntu-i3wm
+  - name:    workstation-test-ubuntu24-i3wm
     os:      ubuntu2404
     profile: desktop-i3wm
     ram_mb:  4096
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-almalinux-i3wm
+  - name:    workstation-test-ubuntu26-i3wm
+    os:      ubuntu2604
+    profile: desktop-i3wm
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-alma9-i3wm
     os:      alma9
+    profile: desktop-i3wm
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-alma10-i3wm
+    os:      alma10
     profile: desktop-i3wm
     ram_mb:  4096
     cpus:    2
@@ -61,15 +89,29 @@ machines:
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-ubuntu-xfce
+  - name:    workstation-test-ubuntu24-xfce
     os:      ubuntu2404
     profile: desktop-xfce
     ram_mb:  4096
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-almalinux-xfce
+  - name:    workstation-test-ubuntu26-xfce
+    os:      ubuntu2604
+    profile: desktop-xfce
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-alma9-xfce
     os:      alma9
+    profile: desktop-xfce
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-alma10-xfce
+    os:      alma10
     profile: desktop-xfce
     ram_mb:  4096
     cpus:    2
@@ -83,15 +125,29 @@ machines:
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-ubuntu-gnome
+  - name:    workstation-test-ubuntu24-gnome
     os:      ubuntu2404
     profile: desktop-gnome
     ram_mb:  4096
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-almalinux-gnome
+  - name:    workstation-test-ubuntu26-gnome
+    os:      ubuntu2604
+    profile: desktop-gnome
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-alma9-gnome
     os:      alma9
+    profile: desktop-gnome
+    ram_mb:  4096
+    cpus:    2
+    gui:     true
+
+  - name:    workstation-test-alma10-gnome
+    os:      alma10
     profile: desktop-gnome
     ram_mb:  4096
     cpus:    2

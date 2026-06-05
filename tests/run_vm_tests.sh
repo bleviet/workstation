@@ -17,17 +17,40 @@ BUILD_PY="${REPO_ROOT}/environments/build.py"
 
 HEADLESS_MACHINES=(
   workstation-test-debian
-  workstation-test-ubuntu
-  workstation-test-almalinux
+  workstation-test-ubuntu24
+  workstation-test-ubuntu26
+  workstation-test-alma9
+  workstation-test-alma10
 )
 DESKTOP_MACHINES=(
   workstation-test-debian-i3wm
-  workstation-test-ubuntu-i3wm
-  workstation-test-almalinux-i3wm
+  workstation-test-ubuntu24-i3wm
+  workstation-test-ubuntu26-i3wm
+  workstation-test-alma9-i3wm
+  workstation-test-alma10-i3wm
 )
 
-if [ $# -gt 0 ]; then
-  case "$1" in
+SHOW_LOG=0
+GUI_ARG=""
+
+# Extract flags
+ARGS=()
+for arg in "$@"; do
+  if [ "$arg" = "--show-log" ]; then
+    SHOW_LOG=1
+  elif [ "$arg" = "--gui" ]; then
+    GUI_ARG="--gui"
+  elif [ "$arg" = "--all" ]; then
+    ARGS+=("$arg")
+  elif [ "$arg" = "--desktop" ]; then
+    ARGS+=("$arg")
+  else
+    ARGS+=("$arg")
+  fi
+done
+
+if [ ${#ARGS[@]} -gt 0 ]; then
+  case "${ARGS[0]}" in
     --all)
       MACHINES=("${HEADLESS_MACHINES[@]}" "${DESKTOP_MACHINES[@]}")
       ;;
@@ -35,7 +58,7 @@ if [ $# -gt 0 ]; then
       MACHINES=("${DESKTOP_MACHINES[@]}")
       ;;
     *)
-      MACHINES=("$@")
+      MACHINES=("${ARGS[@]}")
       ;;
   esac
 else
@@ -51,7 +74,7 @@ for machine in "${MACHINES[@]}"; do
   echo "=== [${machine}] ==="
 
   {
-    python "${BUILD_PY}" create "${machine}" && \
+    python "${BUILD_PY}" create "${machine}" ${GUI_ARG} && \
     ansible-playbook "${REPO_ROOT}/provisioning/site.yml" \
       -i '127.0.0.1,' \
       -u vagrant \
@@ -60,7 +83,15 @@ for machine in "${MACHINES[@]}"; do
   } > "${LOG}" 2>&1
   EXIT=$?
 
-  python "${BUILD_PY}" destroy "${machine}" >> "${LOG}" 2>&1 || true
+  if [ "$SHOW_LOG" -eq 1 ]; then
+    cat "${LOG}"
+  fi
+
+  if [ "$SHOW_LOG" -eq 1 ]; then
+    python "${BUILD_PY}" destroy "${machine}" 2>&1 | tee -a "${LOG}" || true
+  else
+    python "${BUILD_PY}" destroy "${machine}" >> "${LOG}" 2>&1 || true
+  fi
 
   if [ $EXIT -eq 0 ]; then
     echo "[${machine}] PASS"

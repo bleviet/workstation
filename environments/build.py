@@ -204,7 +204,7 @@ def _load_machine_entry(machines_yml: Path, name: str) -> VMConfig:
     raise KeyError(f"Machine '{name}' not found in {machines_yml}")
 
 
-def _resolve_vm(name: str) -> VMConfig:
+def _resolve_vm(name: str, force_gui: bool = False) -> VMConfig:
     vms = _discover_vms()
     if name not in vms:
         raise KeyError(f"VM '{name}' not found. Run 'list' to see available VMs.")
@@ -212,17 +212,42 @@ def _resolve_vm(name: str) -> VMConfig:
     machines_yml = SCRIPT_DIR.parent / "tests" / "vm" / "machines.yml"
     if yml_path == machines_yml:
         vm = _load_machine_entry(yml_path, name)
+        if force_gui:
+            vm.gui = True
     else:
-        vm = _load_vm(yml_path)
+        vm = _load_vm(yml_path, gui=True if force_gui else None)
     vm.os = _load_os(vm.os_name)
     return vm
+
+
+def _get_static_ip(os_cfg: OSConfig) -> str:
+    """Parse network-config and return the first static IP address (defaulting to 192.168.56.50 if not found)."""
+    net_cfg_path = os_cfg.os_dir / os_cfg.cloud_init_dir / "network-config"
+    default_ip = "192.168.56.50"
+    if not net_cfg_path.exists():
+        return default_ip
+    try:
+        data = yaml.safe_load(net_cfg_path.read_text())
+        if not data or "ethernets" not in data:
+            return default_ip
+        for interface in data["ethernets"].values():
+            if not interface.get("dhcp4", True): # static interface
+                addresses = interface.get("addresses", [])
+                for addr in addresses:
+                    if "/" in addr:
+                        return addr.split("/", 1)[0]
+                    return addr
+    except Exception as e:
+        _warn(f"Failed to parse network-config at {net_cfg_path}: {e}")
+    return default_ip
 
 
 # ── VBoxManage helpers ────────────────────────────────────────────────────────
 
 def _vbm(*args: str, check: bool = True) -> subprocess.CompletedProcess:
     """Run VBoxManage with the given arguments."""
-    cmd = ["VBoxManage"] + list(args)
+    vbox = "VBoxManage.exe" if shutil.which("VBoxManage.exe") else "VBoxManage"
+    cmd = [vbox] + list(args)
     return subprocess.run(cmd, capture_output=True, text=True, check=check)
 
 
@@ -506,6 +531,7 @@ def _find_admin_key() -> Optional[Path]:
 def cmd_create(vm: VMConfig) -> None:
     os_cfg = vm.os
     assert os_cfg is not None
+    ip = _get_static_ip(os_cfg)
 
     if _vm_exists(vm.name):
         _warn(f"VM '{vm.name}' already exists. Destroy it first with: build.py destroy {vm.name}")
@@ -548,10 +574,16 @@ def cmd_create(vm: VMConfig) -> None:
         "--graphicscontroller", "vmsvga",
         "--audio-driver", "none",
         "--rtcuseutc",  "on",
+        # virtio is the standard for KVM/cloud images
+        "--nictype1",   "virtio",
+        "--nictype2",   "virtio",
         "--boot1",      "disk",
         "--boot2",      "dvd",
         "--nic1",       "nat",
-        "--natpf1",     "ssh,tcp,,2222,,22",
+        "--nic2",       "hostonly",
+        "--hostonlyadapter2", "VirtualBox Host-Only Ethernet Adapter",
+        "--uart1",      "0x3F8", "4",
+        "--uartmode1",  "file", str(vm_vdi_dir / "console.log"),
     ]
     if vm.accel3d:
         modify_args += ["--accelerate3d", "on"]
@@ -564,64 +596,14 @@ def cmd_create(vm: VMConfig) -> None:
 
     # 7. Storage controllers + attach disks
     _vbm("storagectl", vm.name, "--name", "SATA", "--add", "sata",
-         "--controller", "IntelAhci", "--portcount", "2")
+         "--controller", "IntelAhci", "--portcount", "2", "--hostiocache", "on")
     _vbm("storageattach", vm.name, "--storagectl", "SATA",
          "--port", "0", "--device", "0", "--type", "hdd", "--medium", str(vm_vdi))
     _vbm("storageattach", vm.name, "--storagectl", "SATA",
          "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", str(seed_iso))
     _ok("Disks attached")
 
-    # 8. Start VM
-    vm_type = "gui" if vm.gui else "headless"
-    _info(f"Starting VM ({vm_type})…")
-    _vbm("startvm", vm.name, "--type", vm_type)
-
-    # 9. Wait for SSH (cloud-init runs; vagrant user becomes available)
-    _wait_for_ssh("127.0.0.1", port=2222, timeout=600)
-    # Extra grace time for cloud-init to finish applying users/ssh_pwauth
-    _info("Giving cloud-init 30s to finish…")
-    time.sleep(30)
-
-    # 10. Run setup.sh
-    _VAGRANT_PASS = "vagrant"
-    setup_sh = os_cfg.os_dir / os_cfg.setup_script
-    if not setup_sh.exists():
-        _warn(f"setup.sh not found at {setup_sh}; skipping")
-    else:
-        _info("Uploading and running setup.sh…")
-        _paramiko_put("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS, setup_sh, "/tmp/setup.sh")
-        _paramiko_exec("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS,
-                       "chmod +x /tmp/setup.sh && sudo /tmp/setup.sh")
-        _ok("setup.sh completed")
-
-    # 11. Inject admin public key
-    admin_key = _find_admin_key()
-    if admin_key:
-        _info(f"Injecting admin key from {admin_key}…")
-        pub = admin_key.read_text().strip()
-        _paramiko_exec("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS,
-                       f"mkdir -p ~/.ssh && echo '{pub}' >> ~/.ssh/authorized_keys"
-                       " && chmod 600 ~/.ssh/authorized_keys")
-        _ok("Admin key injected")
-    else:
-        _warn("No admin public key found; add ~/.ssh/id_ed25519.pub or admin.pub at repo root")
-
-    # 12. Run cleanup.sh
-    cleanup_sh = os_cfg.os_dir / os_cfg.cleanup_script
-    if cleanup_sh.exists():
-        _info("Running cleanup.sh…")
-        _paramiko_put("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS, cleanup_sh, "/tmp/cleanup.sh")
-        _paramiko_exec("127.0.0.1", 2222, "vagrant", _VAGRANT_PASS,
-                       "chmod +x /tmp/cleanup.sh && sudo /tmp/cleanup.sh")
-        _ok("cleanup.sh completed")
-
-    # 13. Detach seed ISO
-    _info("Detaching seed ISO…")
-    _vbm("storageattach", vm.name, "--storagectl", "SATA",
-         "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "emptydrive")
-    _ok("Seed ISO detached")
-
-    # 14. Add shared folders
+    # 7.5 Add shared folders (Must be done before starting VM to avoid VBOX_E_INVALID_OBJECT_STATE)
     if vm.shared_folders:
         _info("Adding shared folders…")
         for sf in vm.shared_folders:
@@ -635,13 +617,66 @@ def cmd_create(vm: VMConfig) -> None:
                  "--automount", "--auto-mount-point", sf.guest)
         _ok("Shared folders added")
 
+    # 8. Start VM
+    vm_type = "gui" if vm.gui else "headless"
+    _info(f"Starting VM ({vm_type})…")
+    _vbm("startvm", vm.name, "--type", vm_type)
+
+    # 9. Wait for SSH (cloud-init runs; vagrant user becomes available)
+    _wait_for_ssh(ip, port=22, timeout=600)
+    # Extra grace time for cloud-init to finish applying users/ssh_pwauth
+    _info("Giving cloud-init 30s to finish…")
+    time.sleep(30)
+
+    # 10. Run setup.sh
+    _VAGRANT_PASS = "vagrant"
+    setup_sh = os_cfg.os_dir / os_cfg.setup_script
+    if not setup_sh.exists():
+        _warn(f"setup.sh not found at {setup_sh}; skipping")
+    else:
+        _info("Uploading and running setup.sh…")
+        _paramiko_put(ip, 22, "vagrant", _VAGRANT_PASS, setup_sh, "/tmp/setup.sh")
+        _paramiko_exec(ip, 22, "vagrant", _VAGRANT_PASS,
+                       "chmod +x /tmp/setup.sh && sudo TERM=dumb /tmp/setup.sh")
+        _ok("setup.sh completed")
+
+    # 11. Inject admin public key
+    admin_key = _find_admin_key()
+    if admin_key:
+        _info(f"Injecting admin key from {admin_key}…")
+        pub = admin_key.read_text().strip()
+        _paramiko_exec(ip, 22, "vagrant", _VAGRANT_PASS,
+                       f"mkdir -p ~/.ssh && echo '{pub}' >> ~/.ssh/authorized_keys"
+                       " && chmod 600 ~/.ssh/authorized_keys")
+        _ok("Admin key injected")
+    else:
+        _warn("No admin public key found; add ~/.ssh/id_ed25519.pub or admin.pub at repo root")
+
+    # 12. Run cleanup.sh
+    cleanup_sh = os_cfg.os_dir / os_cfg.cleanup_script
+    if cleanup_sh.exists():
+        _info("Running cleanup.sh…")
+        _paramiko_put(ip, 22, "vagrant", _VAGRANT_PASS, cleanup_sh, "/tmp/cleanup.sh")
+        _paramiko_exec(ip, 22, "vagrant", _VAGRANT_PASS,
+                       "chmod +x /tmp/cleanup.sh && sudo /tmp/cleanup.sh")
+        _ok("cleanup.sh completed")
+
+    # 13. Detach seed ISO
+    _info("Detaching seed ISO…")
+    _vbm("storageattach", vm.name, "--storagectl", "SATA",
+         "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", "emptydrive", "--forceunmount")
+    _ok("Seed ISO detached")
+
+    # 14. Add shared folders
+    # (Moved to Step 7.5 to avoid VBOX_E_INVALID_OBJECT_STATE on running VM)
+
     # 15. Snapshot
     _info("Taking 'clean-base' snapshot…")
     _vbm("snapshot", vm.name, "take", "clean-base",
          "--description", "Minimal base before Ansible provisioning")
     _ok("Snapshot taken")
 
-    print(f"\n{_c('32;1', '✓ VM ready')} — SSH: ssh vagrant@127.0.0.1 -p 2222\n")
+    print(f"\n{_c('32;1', '✓ VM ready')} — SSH: ssh vagrant@{ip}\n")
     print("  Next: add the VM's IP to provisioning/inventory/hosts.yml and run Ansible.\n")
 
 
@@ -684,6 +719,12 @@ def cmd_destroy(vm: VMConfig) -> None:
     if vm_vdi_dir.exists():
         shutil.rmtree(vm_vdi_dir)
         _ok(f"Removed cached VDI for {vm.name}")
+
+
+def cmd_ip(vm: VMConfig) -> None:
+    os_cfg = vm.os
+    assert os_cfg is not None
+    print(_get_static_ip(os_cfg))
 
 
 def cmd_list() -> None:
@@ -765,9 +806,11 @@ def main() -> None:
     sub.add_parser("list",    help="List all VMs and their state")
     sub.add_parser("pick",    help="Interactive VM/action picker (default)")
 
-    for cmd_name in ("create", "start", "stop", "destroy"):
+    for cmd_name in ("create", "start", "stop", "destroy", "ip"):
         p = sub.add_parser(cmd_name)
         p.add_argument("vm", help="VM name (from vm.yml 'name' field)")
+        if cmd_name in ("create", "start"):
+            p.add_argument("--gui", action="store_true", help="Start with GUI instead of headless")
 
     args = parser.parse_args()
 
@@ -785,9 +828,10 @@ def main() -> None:
         args.cmd = action
         args.vm  = vm_name
 
-    if args.cmd in ("create", "start", "stop", "destroy"):
+    if args.cmd in ("create", "start", "stop", "destroy", "ip"):
         try:
-            vm = _resolve_vm(args.vm)
+            force_gui = getattr(args, "gui", False)
+            vm = _resolve_vm(args.vm, force_gui=force_gui)
         except (KeyError, FileNotFoundError) as exc:
             _err(str(exc))
             sys.exit(1)
@@ -796,6 +840,7 @@ def main() -> None:
             "start":   cmd_start,
             "stop":    cmd_stop,
             "destroy": cmd_destroy,
+            "ip":      cmd_ip,
         }
         dispatch[args.cmd](vm)
     elif args.cmd == "list":
@@ -808,7 +853,8 @@ def main() -> None:
         if not action:
             return
         try:
-            vm = _resolve_vm(vm_name)
+            force_gui = getattr(args, "gui", False)
+            vm = _resolve_vm(vm_name, force_gui=force_gui)
         except (KeyError, FileNotFoundError) as exc:
             _err(str(exc))
             sys.exit(1)
@@ -817,6 +863,7 @@ def main() -> None:
             "start":   cmd_start,
             "stop":    cmd_stop,
             "destroy": cmd_destroy,
+            "ip":      cmd_ip,
         }
         dispatch[action](vm)
     else:

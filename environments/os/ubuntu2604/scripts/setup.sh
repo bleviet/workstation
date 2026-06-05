@@ -16,7 +16,8 @@ apt-get update -qq
 DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
   python3 \
   dkms linux-headers-$(uname -r) \
-  virtualbox-guest-utils virtualbox-guest-dkms
+  virtualbox-guest-utils
+
 
 # ── SSH hardening ─────────────────────────────────────────────────────────────
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config

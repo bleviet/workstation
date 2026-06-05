@@ -10,3 +10,9 @@ users:
 
 # Allow password auth so build.py can SSH in before setup.sh installs the admin key.
 ssh_pwauth: true
+
+runcmd:
+  - ip a > /dev/ttyS0
+  - ip r > /dev/ttyS0
+  - systemctl status ssh > /dev/ttyS0
+
