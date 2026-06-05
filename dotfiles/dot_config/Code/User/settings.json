@@ -1,0 +1,6 @@
+{
+  "workbench.colorTheme": "Dracula",
+  "editor.fontFamily": "'JetBrains Mono', 'Fira Code', Consolas, 'Courier New', monospace",
+  "editor.fontLigatures": true,
+  "terminal.integrated.fontFamily": "'JetBrainsMono Nerd Font', 'JetBrains Mono', 'Fira Code', monospace"
+}
