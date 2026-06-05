@@ -35,7 +35,7 @@ if ($All) {
     $TargetMachines = $HeadlessMachines + $DesktopMachines
 } elseif ($Desktop) {
     $TargetMachines = $DesktopMachines
-} elseif ($Machines.Count -gt 0) {
+} elseif ($Machines -and $Machines.Count -gt 0) {
     $TargetMachines = $Machines
 } else {
     $TargetMachines = $HeadlessMachines
