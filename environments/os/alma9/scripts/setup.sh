@@ -14,18 +14,12 @@ chmod 0440 /etc/sudoers.d/vagrant
 # ── Python 3 ─────────────────────────────────────────────────────────────────
 dnf install -y python3
 
-# ── VirtualBox Guest Additions ────────────────────────────────────────────────
 # RPM Fusion (free) provides virtualbox-guest-additions for RHEL-based distros.
 # EPEL is required first; CRB repo unlocks kernel-devel.
 dnf install -y epel-release
 dnf config-manager --set-enabled crb 2>/dev/null \
   || dnf config-manager --set-enabled powertools 2>/dev/null \
   || true
-dnf install -y \
-  https://mirrors.rpmfusion.org/free/el/rpmfusion-free-release-$(rpm -E %rhel).noarch.rpm
-dnf install -y \
-  kernel-devel-$(uname -r) dkms \
-  virtualbox-guest-additions
 
 # ── SSH hardening ─────────────────────────────────────────────────────────────
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication yes/' /etc/ssh/sshd_config

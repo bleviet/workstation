@@ -69,6 +69,8 @@ class OSConfig:
     cleanup_script: str
     grow_fs:       str
     os_dir:        Path
+    firmware:      str
+    storage_bus:   str
 
 @dataclass
 class SharedFolder:
@@ -123,6 +125,8 @@ def _load_os(name: str) -> OSConfig:
         cleanup_script = scripts.get("cleanup", "scripts/cleanup.sh"),
         grow_fs        = raw.get("grow_fs", "ext4"),
         os_dir         = os_dir,
+        firmware       = raw.get("firmware", "bios"),
+        storage_bus    = raw.get("storage_bus", "sata"),
     )
 
 
@@ -574,6 +578,9 @@ def cmd_create(vm: VMConfig) -> None:
         "--graphicscontroller", "vmsvga",
         "--audio-driver", "none",
         "--rtcuseutc",  "on",
+        "--cpuid-portability-level", "0",
+        "--nested-hw-virt", "on",
+        "--x86-x2apic", "on",
         # virtio is the standard for KVM/cloud images
         "--nictype1",   "virtio",
         "--nictype2",   "virtio",
@@ -585,6 +592,8 @@ def cmd_create(vm: VMConfig) -> None:
         "--uart1",      "0x3F8", "4",
         "--uartmode1",  "file", str(vm_vdi_dir / "console.log"),
     ]
+    if os_cfg.firmware == "efi":
+        modify_args += ["--firmware", "efi"]
     if vm.accel3d:
         modify_args += ["--accelerate3d", "on"]
     if vm.usb.ehci:
@@ -595,12 +604,26 @@ def cmd_create(vm: VMConfig) -> None:
     _ok("Hardware configured")
 
     # 7. Storage controllers + attach disks
-    _vbm("storagectl", vm.name, "--name", "SATA", "--add", "sata",
-         "--controller", "IntelAhci", "--portcount", "2", "--hostiocache", "on")
-    _vbm("storageattach", vm.name, "--storagectl", "SATA",
-         "--port", "0", "--device", "0", "--type", "hdd", "--medium", str(vm_vdi))
-    _vbm("storageattach", vm.name, "--storagectl", "SATA",
-         "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", str(seed_iso))
+    if os_cfg.storage_bus == "nvme":
+        _vbm("storagectl", vm.name, "--name", "NVMe", "--add", "pcie", "--controller", "NVMe")
+        _vbm("storageattach", vm.name, "--storagectl", "NVMe",
+             "--port", "0", "--device", "0", "--type", "hdd", "--medium", str(vm_vdi))
+        _vbm("storageattach", vm.name, "--storagectl", "NVMe",
+             "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", str(seed_iso))
+    elif os_cfg.storage_bus == "virtio":
+        _vbm("storagectl", vm.name, "--name", "VirtIO", "--add", "virtio", "--controller", "VirtIO")
+        _vbm("storageattach", vm.name, "--storagectl", "VirtIO",
+             "--port", "0", "--device", "0", "--type", "hdd", "--medium", str(vm_vdi))
+        _vbm("storageattach", vm.name, "--storagectl", "VirtIO",
+             "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", str(seed_iso))
+    else:
+        # Default SATA
+        _vbm("storagectl", vm.name, "--name", "SATA", "--add", "sata",
+             "--controller", "IntelAhci", "--portcount", "2", "--hostiocache", "on")
+        _vbm("storageattach", vm.name, "--storagectl", "SATA",
+             "--port", "0", "--device", "0", "--type", "hdd", "--medium", str(vm_vdi))
+        _vbm("storageattach", vm.name, "--storagectl", "SATA",
+             "--port", "1", "--device", "0", "--type", "dvddrive", "--medium", str(seed_iso))
     _ok("Disks attached")
 
     # 7.5 Add shared folders (Must be done before starting VM to avoid VBOX_E_INVALID_OBJECT_STATE)

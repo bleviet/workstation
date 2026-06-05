@@ -15,3 +15,4 @@ scripts:
   cleanup: scripts/cleanup.sh
 
 grow_fs: xfs              # build.py selects grow command based on this value
+firmware: efi             # Alma 10 requires UEFI

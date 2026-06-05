@@ -34,6 +34,7 @@ ssh-keygen -A
 # Empty file → systemd regenerates a unique ID on first boot.
 truncate -s 0 /etc/machine-id
 rm -f /var/lib/dbus/machine-id
+mkdir -p /var/lib/dbus
 ln -sf /etc/machine-id /var/lib/dbus/machine-id
 
 # ── Logs ──────────────────────────────────────────────────────────────────────
