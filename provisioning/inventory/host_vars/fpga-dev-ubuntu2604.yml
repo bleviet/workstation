@@ -11,7 +11,7 @@ profile: desktop-gnome
 features:
   editor:
     neovim: true
-    lazyvim: false
+    lazyvim: true
     vscode: true
   fpga:
     vivado: false

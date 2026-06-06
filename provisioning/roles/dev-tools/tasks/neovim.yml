@@ -1,15 +1,37 @@
 ---
-# Installed via the same marker-based pattern as github_binaries so re-runs
-# are idempotent and a version bump triggers a fresh download.
+- name: "Check neovim version marker"
+  ansible.builtin.stat:
+    path: "{{ dev_tools_bin_dir }}/.neovim-{{ neovim_version }}"
+  register: nvim_marker
+
 - name: Install neovim
-  ansible.builtin.include_tasks:
-    file: github_binaries.yml
-    apply:
-      become: "{{ dev_user != ansible_facts['user_id'] }}"
-      become_user: "{{ dev_user }}"
-  vars:
-    tool:
-      name: neovim
-      version: "{{ neovim_version }}"
-      url: "{{ neovim_url }}"
-      binary: nvim
+  when: not nvim_marker.stat.exists
+  block:
+    - name: "Ensure neovim directory exists"
+      ansible.builtin.file:
+        path: "{{ dev_user_home }}/.local/nvim"
+        state: directory
+
+    - name: "Download and extract neovim"
+      ansible.builtin.unarchive:
+        src: "{{ neovim_url }}"
+        dest: "{{ dev_user_home }}/.local/nvim"
+        remote_src: yes
+        extra_opts:
+          - "--strip-components=1"
+
+    - name: "Symlink nvim binary"
+      ansible.builtin.file:
+        src: "{{ dev_user_home }}/.local/nvim/bin/nvim"
+        dest: "{{ dev_tools_bin_dir }}/nvim"
+        state: link
+        force: yes
+
+    - name: "Write version marker for neovim"
+      ansible.builtin.file:
+        path: "{{ dev_tools_bin_dir }}/.neovim-{{ neovim_version }}"
+        state: touch
+        mode: "0644"
+
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
