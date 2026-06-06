@@ -3,7 +3,7 @@ require 'yaml'
 Vagrant.configure("2") do |config|
   # Map custom OS names from your old build.py configs to standard Vagrant Cloud boxes
   os_box_map = {
-    "debian13"   => "debian/bookworm64", # Fallback until debian13 (trixie) box exists
+    "debian13"   => "bento/debian-13", # bento for VBox/VMware, libvirt overrides to debian/trixie64
     "ubuntu2404" => "bento/ubuntu-24.04",
     "ubuntu2604" => "bento/ubuntu-26.04",
     "alma9"      => "almalinux/9",
@@ -57,7 +57,11 @@ Vagrant.configure("2") do |config|
           end
         end
 
-        node.vm.provider "libvirt" do |libvirt|
+        node.vm.provider "libvirt" do |libvirt, override|
+          if vm_data["os"] == "debian13"
+            override.vm.box = "debian/trixie64"
+          end
+
           libvirt.memory = vm_data["ram_mb"] || 32768
           libvirt.cpus = vm_data["cpus"] || 8
           libvirt.nested = true
@@ -128,7 +132,11 @@ Vagrant.configure("2") do |config|
             v.vmx["vhv.enable"] = "TRUE"
           end
 
-          node.vm.provider "libvirt" do |libvirt|
+          node.vm.provider "libvirt" do |libvirt, override|
+            if m["os"] == "debian13"
+              override.vm.box = "debian/trixie64"
+            end
+
             libvirt.memory = m["ram_mb"] || 2048
             libvirt.cpus = m["cpus"] || 2
             libvirt.nested = true
