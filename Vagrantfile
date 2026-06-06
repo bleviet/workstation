@@ -10,6 +10,43 @@ Vagrant.configure("2") do |config|
     "alma10"     => "almalinux/10"
   }
 
+  pre_provision_script = <<-SHELL
+    export DEBIAN_FRONTEND=noninteractive
+
+    # 1. Install Ansible if missing
+    if ! command -v ansible-playbook &> /dev/null; then
+      if [ -f /etc/debian_version ]; then
+        apt-get update -qq
+        apt-get install -y -qq ansible-core || apt-get install -y -qq ansible
+      elif [ -f /etc/redhat-release ]; then
+        dnf install -y epel-release
+        dnf install -y ansible-core
+      fi
+    fi
+
+    # 2. Fix Ubuntu boot delays and VirtualBox graphics
+    if [ -f /etc/debian_version ]; then
+      # Mask the network-wait service so it doesn't hang the boot for 2 minutes
+      systemctl disable systemd-networkd-wait-online.service 2>/dev/null || true
+      systemctl mask systemd-networkd-wait-online.service 2>/dev/null || true
+
+      # Rebuild VirtualBox Guest Additions if they crashed against the bleeding-edge kernel
+      if command -v systemctl &> /dev/null && systemctl is-failed --quiet vboxadd-service.service 2>/dev/null; then
+        apt-get update -qq
+        apt-get install -y -qq dkms build-essential linux-headers-$(uname -r)
+        if [ -f /sbin/rcvboxadd ]; then
+          /sbin/rcvboxadd setup || true
+          systemctl restart vboxadd-service.service || true
+        fi
+      fi
+      
+      # Force X11 instead of Wayland for GDM3 to fix slow VirtualBox 3D acceleration
+      if [ -f /etc/gdm3/custom.conf ]; then
+        sed -i 's/^#WaylandEnable=false/WaylandEnable=false/' /etc/gdm3/custom.conf
+      fi
+    fi
+  SHELL
+
   # --- 0. Load Local Settings ---
   settings = {}
   settings_file = "environments/settings.yml"
@@ -118,7 +155,7 @@ Vagrant.configure("2") do |config|
         end
 
         # Pre-install Ansible natively to avoid Vagrant PPA bugs on new Ubuntu releases
-        node.vm.provision "shell", inline: "if ! command -v ansible-playbook &> /dev/null; then if [ -f /etc/debian_version ]; then export DEBIAN_FRONTEND=noninteractive; apt-get update -qq; apt-get install -y -qq ansible-core || apt-get install -y -qq ansible; elif [ -f /etc/redhat-release ]; then dnf install -y epel-release; dnf install -y ansible-core; fi; fi"
+        node.vm.provision "shell", inline: pre_provision_script
 
         # Run Ansible locally inside the VM (no WSL needed on the host!)
         node.vm.provision "ansible_local" do |ansible|
@@ -188,7 +225,7 @@ Vagrant.configure("2") do |config|
           # For testing VMs, map the entire repository workspace
           node.vm.synced_folder ".", "/home/vagrant/workspace/workstation"
 
-          node.vm.provision "shell", inline: "if ! command -v ansible-playbook &> /dev/null; then if [ -f /etc/debian_version ]; then export DEBIAN_FRONTEND=noninteractive; apt-get update -qq; apt-get install -y -qq ansible-core || apt-get install -y -qq ansible; elif [ -f /etc/redhat-release ]; then dnf install -y epel-release; dnf install -y ansible-core; fi; fi"
+          node.vm.provision "shell", inline: pre_provision_script
 
           node.vm.provision "ansible_local" do |ansible|
             ansible.install = false
@@ -285,7 +322,7 @@ Vagrant.configure("2") do |config|
         end
       end
 
-      node.vm.provision "shell", inline: "if ! command -v ansible-playbook &> /dev/null; then if [ -f /etc/debian_version ]; then export DEBIAN_FRONTEND=noninteractive; apt-get update -qq; apt-get install -y -qq ansible-core || apt-get install -y -qq ansible; elif [ -f /etc/redhat-release ]; then dnf install -y epel-release; dnf install -y ansible-core; fi; fi"
+      node.vm.provision "shell", inline: pre_provision_script
 
       node.vm.provision "ansible_local" do |ansible|
         ansible.install = false
