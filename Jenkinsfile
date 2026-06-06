@@ -1,5 +1,10 @@
 pipeline {
-    agent any
+    agent {
+        node {
+            // Allocate a unique workspace folder for each build configuration
+            customWorkspace "workspace/workstation-${params.OS}-${params.PROFILE}-${env.BUILD_NUMBER}"
+        }
+    }
 
     parameters {
         choice(name: 'OS', choices: ['debian13', 'ubuntu2404', 'ubuntu2604', 'alma9', 'alma10'], description: 'Select the OS variant')
