@@ -15,6 +15,18 @@ environment. **chezmoi** owns common dotfiles — no templates, no conditionals,
 
 ## Quick start
 
+### 1. GUI VM Builder (Recommended)
+If you are on Windows, you can use the interactive Jenkins pipeline to easily spin up a VirtualBox, VMware, or Libvirt development VM with a single click.
+
+```powershell
+# Open a PowerShell terminal and run:
+.\scripts\setup_local_jenkins.ps1
+```
+Then navigate to **http://localhost:8080/job/workstation-vm-builder/**, log in with `admin/admin`, and click **Build with Parameters** to customize your RAM, CPU, OS, and Desktop environment!
+
+### 2. Manual Bare-Metal Provisioning
+To provision a bare-metal machine manually using the owner flow:
+
 ```bash
 git clone <repo> ~/workspace/workstation
 cd ~/workspace/workstation

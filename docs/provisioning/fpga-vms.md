@@ -63,6 +63,18 @@ The `Vagrantfile` dynamically scans these files and loads the boxes, allocating 
 
 ## Command reference
 
+The easiest and recommended way to manage FPGA VMs is using the interactive Jenkins GUI, but you can also manage them directly from the command line.
+
+### Method 1: Jenkins GUI (Recommended)
+
+Run the local Jenkins bootstrap script from your Windows host:
+```powershell
+.\scripts\setup_local_jenkins.ps1
+```
+Navigate to **http://localhost:8080/job/workstation-vm-builder/** and click **Build with Parameters**. The pipeline provides drop-downs to dynamically select the OS, desktop environment, RAM (up to 32GB), CPU allocation, and USB passthrough. Jenkins will automatically isolate the build in its own custom workspace folder so your builds never collide.
+
+### Method 2: Vagrant CLI
+
 All commands are run using Vagrant from the repository root.
 
 ```bash
