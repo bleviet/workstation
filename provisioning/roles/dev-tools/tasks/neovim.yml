@@ -1,4 +1,11 @@
 ---
+- name: "Check neovim runtime"
+  ansible.builtin.stat:
+    path: "{{ dev_user_home }}/.local/nvim/bin/nvim"
+  register: nvim_runtime_stat
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
 - name: "Check neovim version marker"
   ansible.builtin.stat:
     path: "{{ dev_tools_bin_dir }}/.neovim-{{ neovim_version }}"
@@ -7,7 +14,7 @@
   become_user: "{{ dev_user }}"
 
 - name: Install neovim
-  when: not nvim_marker.stat.exists
+  when: not nvim_marker.stat.exists or not nvim_runtime_stat.stat.exists
   block:
     - name: "Ensure neovim directory exists"
       ansible.builtin.file:
