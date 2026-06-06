@@ -196,7 +196,7 @@ Vagrant.configure("2") do |config|
       gui_enabled = ENV['JENKINS_PROFILE'] != 'headless'
 
       node.vm.provider "virtualbox" do |vb|
-        vb.name = "jenkins-param-vm"
+        vb.name = ENV['BUILD_TAG'] || "jenkins-param-vm"
         vb.gui = gui_enabled
         vb.memory = 4096
         vb.cpus = 2
