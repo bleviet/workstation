@@ -63,3 +63,6 @@ blue = "#d6acff"
 magenta = "#ff92df"
 cyan = "#a4ffff"
 white = "#ffffff"
+
+[selection]
+save_to_clipboard = true
