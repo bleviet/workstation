@@ -201,24 +201,47 @@ Vagrant.configure("2") do |config|
       node.vm.hostname = "jenkins-param-vm"
 
       gui_enabled = ENV['JENKINS_PROFILE'] != 'headless'
+      
+      # Parse hardware specifications or fallback to safe defaults
+      vm_ram = (ENV['JENKINS_RAM_MB'] || 4096).to_i
+      vm_cpus = (ENV['JENKINS_CPUS'] || 2).to_i
+      vm_vram = (ENV['JENKINS_VRAM_MB'] || 128).to_i
+      vm_accel3d = ENV['JENKINS_ACCEL3D'] == 'true'
+      vm_usb = ENV['JENKINS_USB'] == 'true'
 
       node.vm.provider "virtualbox" do |vb|
         vb.name = ENV['BUILD_TAG'] || "jenkins-param-vm"
         vb.gui = gui_enabled
-        vb.memory = 4096
-        vb.cpus = 2
+        vb.memory = vm_ram
+        vb.cpus = vm_cpus
         
+        vb.customize ["modifyvm", :id, "--vram", vm_vram.to_s]
         vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
         vb.customize ["modifyvm", :id, "--audio-driver", "none"]
         vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
         vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+        
+        if vm_accel3d
+          vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+        end
+        if vm_usb
+          vb.customize ["modifyvm", :id, "--usbehci", "on"]
+          vb.customize ["modifyvm", :id, "--usbxhci", "on"]
+        end
       end
 
       node.vm.provider "vmware_desktop" do |v|
         v.gui = gui_enabled
-        v.vmx["memsize"] = "4096"
-        v.vmx["numvcpus"] = "2"
+        v.vmx["memsize"] = vm_ram.to_s
+        v.vmx["numvcpus"] = vm_cpus.to_s
         v.vmx["vhv.enable"] = "TRUE"
+        v.vmx["mks.enable3d"] = vm_accel3d ? "TRUE" : "FALSE"
+        v.vmx["svga.vramSize"] = (vm_vram * 1024 * 1024).to_s
+        
+        if vm_usb
+          v.vmx["usb.present"] = "TRUE"
+          v.vmx["usb_xhci.present"] = "TRUE"
+        end
       end
 
       node.vm.provider "libvirt" do |libvirt, override|
@@ -226,15 +249,23 @@ Vagrant.configure("2") do |config|
           override.vm.box = "debian/trixie64"
         end
 
-        libvirt.memory = 4096
-        libvirt.cpus = 2
+        libvirt.memory = vm_ram
+        libvirt.cpus = vm_cpus
         libvirt.nested = true
         
         if gui_enabled
           libvirt.graphics_type = "spice"
           libvirt.video_type = "qxl"
+          libvirt.video_vram = vm_vram * 1024
+          if vm_accel3d
+            libvirt.graphics_gl = true
+          end
         else
           libvirt.graphics_type = "none"
+        end
+        
+        if vm_usb
+           libvirt.usb_controller :model => "qemu-xhci"
         end
       end
 

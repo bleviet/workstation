@@ -11,6 +11,11 @@ pipeline {
         choice(name: 'OS', choices: ['debian13', 'ubuntu2404', 'ubuntu2604', 'alma9', 'alma10'], description: 'Select the OS variant')
         choice(name: 'PROFILE', choices: ['headless', 'desktop-gnome', 'desktop-xfce', 'desktop-i3wm'], description: 'Select the environment profile')
         choice(name: 'PROVIDER', choices: ['virtualbox', 'libvirt', 'vmware_desktop'], description: 'Select Vagrant provider')
+        choice(name: 'RAM_MB', choices: ['4096', '8192', '16384', '32768'], description: 'Memory (RAM) in MB. FPGA development requires 32768.')
+        choice(name: 'CPUS', choices: ['2', '4', '8', '16'], description: 'Number of logical CPUs.')
+        choice(name: 'VRAM_MB', choices: ['128', '256'], description: 'Video RAM in MB.')
+        booleanParam(name: 'ACCEL3D', defaultValue: false, description: 'Enable 3D hardware acceleration for the desktop?')
+        booleanParam(name: 'USB_PASSTHROUGH', defaultValue: false, description: 'Enable USB xHCI/EHCI passthrough (Required for JTAG/FPGA boards)?')
         booleanParam(name: 'FPGA_DEV', defaultValue: false, description: 'Enable FPGA development tools?')
         booleanParam(name: 'XRDP', defaultValue: false, description: 'Enable remote desktop via xRDP?')
         booleanParam(name: 'DESTROY_AFTER_BUILD', defaultValue: true, description: 'Destroy the VM after provisioning? Uncheck to keep it running for manual usage.')
@@ -25,6 +30,11 @@ pipeline {
         JENKINS_OS = "${params.OS}"
         JENKINS_PROFILE = "${params.PROFILE}"
         JENKINS_PROVIDER = "${params.PROVIDER}"
+        JENKINS_RAM_MB = "${params.RAM_MB}"
+        JENKINS_CPUS = "${params.CPUS}"
+        JENKINS_VRAM_MB = "${params.VRAM_MB}"
+        JENKINS_ACCEL3D = "${params.ACCEL3D}"
+        JENKINS_USB = "${params.USB_PASSTHROUGH}"
         JENKINS_FPGA = "${params.FPGA_DEV}"
         JENKINS_XRDP = "${params.XRDP}"
     }
