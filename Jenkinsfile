@@ -52,11 +52,14 @@ pipeline {
 
     post {
         always {
-            node {
-                script {
+            script {
+                try {
+                    // Test if we have a node context. If SCM checkout failed, this throws an exception.
+                    def is_unix = isUnix()
+                    
                     if (params.DESTROY_AFTER_BUILD) {
                         echo "Cleaning up: Destroying the temporary VM..."
-                        if (isUnix()) {
+                        if (is_unix) {
                             sh 'vagrant destroy jenkins-param-vm -f || true'
                         } else {
                             powershell 'vagrant destroy jenkins-param-vm -f || true'
@@ -66,6 +69,8 @@ pipeline {
                         echo "Connect using: vagrant ssh jenkins-param-vm"
                         echo "Ensure you destroy it manually later to free resources."
                     }
+                } catch (org.jenkinsci.plugins.workflow.steps.MissingContextVariableException e) {
+                    echo "Pipeline failed before a workspace was allocated. No VM to clean up."
                 }
             }
         }
