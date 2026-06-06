@@ -10,6 +10,28 @@ Vagrant.configure("2") do |config|
     "alma10"     => "almalinux/10"
   }
 
+  # --- 0. Load Local Settings ---
+  settings = {}
+  settings_file = "environments/settings.yml"
+  if File.exist?(settings_file)
+    begin
+      settings = YAML.load_file(settings_file) || {}
+    rescue Exception => e
+      puts "Failed to load #{settings_file}: #{e}"
+    end
+  end
+
+  # Configure VMware Desktop cloning directory globally
+  if settings["vmware_base_folder"]
+    ENV['VAGRANT_VMWARE_CLONE_DIRECTORY'] = settings["vmware_base_folder"]
+  end
+
+  # Configure VirtualBox default machine folder globally
+  if settings["vbox_base_folder"]
+    # This invokes VBoxManage (if available) to set the global Default Machine Folder
+    system("VBoxManage setproperty machinefolder \"#{settings['vbox_base_folder']}\" >nul 2>&1")
+  end
+
   # --- 1. Load FPGA Environments ---
   Dir.glob("environments/fpga-*/vm.yml").each do |vm_yml_path|
     begin
