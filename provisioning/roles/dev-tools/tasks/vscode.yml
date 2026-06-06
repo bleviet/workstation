@@ -50,3 +50,14 @@
       ansible.builtin.dnf:
         name: code
         state: present
+
+- name: Install VS Code extensions
+  ansible.builtin.command:
+    cmd: "code --install-extension {{ item }}"
+  loop:
+    - dracula-theme.theme-dracula
+    - mshr-h.veriloghdl
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  register: vscode_ext_install
+  changed_when: "'was successfully installed' in vscode_ext_install.stdout"
