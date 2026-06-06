@@ -186,4 +186,67 @@ Vagrant.configure("2") do |config|
       puts "Failed to load #{machines_yml}: #{e}"
     end
   end
+
+  # --- 3. Load Parameterized Jenkins VM ---
+  if ENV['JENKINS_PARAM_BUILD'] == 'true'
+    config.vm.define "jenkins-param-vm" do |node|
+      node.vm.box = os_box_map[ENV['JENKINS_OS']] || "ubuntu/noble64"
+      node.vm.hostname = "jenkins-param-vm"
+
+      gui_enabled = ENV['JENKINS_PROFILE'] != 'headless'
+
+      node.vm.provider "virtualbox" do |vb|
+        vb.name = "jenkins-param-vm"
+        vb.gui = gui_enabled
+        vb.memory = 4096
+        vb.cpus = 2
+        
+        vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+        vb.customize ["modifyvm", :id, "--audio-driver", "none"]
+        vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
+        vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+      end
+
+      node.vm.provider "vmware_desktop" do |v|
+        v.gui = gui_enabled
+        v.vmx["memsize"] = "4096"
+        v.vmx["numvcpus"] = "2"
+        v.vmx["vhv.enable"] = "TRUE"
+      end
+
+      node.vm.provider "libvirt" do |libvirt, override|
+        if ENV['JENKINS_OS'] == "debian13"
+          override.vm.box = "debian/trixie64"
+        end
+
+        libvirt.memory = 4096
+        libvirt.cpus = 2
+        libvirt.nested = true
+        
+        if gui_enabled
+          libvirt.graphics_type = "spice"
+          libvirt.video_type = "qxl"
+        else
+          libvirt.graphics_type = "none"
+        end
+      end
+
+      node.vm.provision "ansible_local" do |ansible|
+        ansible.playbook = "provisioning/site.yml"
+        ansible.inventory_path = "provisioning/inventory"
+        ansible.limit = "all"
+        
+        features = {}
+        features["fpga"] = { "enabled" => true } if ENV['JENKINS_FPGA'] == 'true'
+        features["xrdp"] = true if ENV['JENKINS_XRDP'] == 'true'
+
+        extra_vars = { 
+          "profile" => ENV['JENKINS_PROFILE'] || "headless"
+        }
+        extra_vars["features"] = features unless features.empty?
+        
+        ansible.extra_vars = extra_vars
+      end
+    end
+  end
 end

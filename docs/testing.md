@@ -110,3 +110,46 @@ vagrant destroy workstation-test-debian
 All `features.fpga.*` and `features.xrdp` flags default to `false` in test
 VMs. `features.editor.neovim` defaults to `true`. Override via `--extra-vars`
 if needed.
+
+## Continuous Integration (Jenkins)
+
+The repository includes a `Jenkinsfile` at the root, defining a declarative, cross-platform CI pipeline.
+
+### Pipeline Stages
+
+The pipeline is split into three main parts:
+1. **Syntax Check**: Runs `ansible-playbook --syntax-check` on the active agent (works on both Linux and Windows).
+2. **Container Tests**: Runs `./tests/run_container_tests.sh` on Unix-like agents where Podman is installed.
+3. **VM Provisioning Tests**: Runs full OS VM provisions in parallel on host agents labeled:
+   - `linux-vm` (triggers `./tests/run_vm_tests.sh`)
+   - `windows-vm` (triggers `.\tests\run_vm_tests.ps1` via PowerShell)
+
+### Local Jenkins Setup Guide
+
+To run this pipeline locally on your machine:
+
+#### 1. Start Jenkins Controller
+You can run Jenkins on your system natively or via a lightweight container (Docker/Podman):
+```bash
+podman run -d \
+  --name jenkins-local \
+  -p 8080:8080 -p 50000:50000 \
+  -v jenkins_home:/var/jenkins_home \
+  jenkins/jenkins:lts
+```
+
+#### 2. Configure Local/Host Agents
+* **Container-based builds:** Ensure the node where the build runs has `podman` installed.
+* **VM-based builds (Vagrant/VirtualBox):** Because nested virtualization is complex to configure inside containerized agents, it is recommended to run a native Jenkins agent directly on the host operating system:
+  1. Go to **Manage Jenkins** -> **Nodes** -> **New Node**.
+  2. Configure a permanent agent running on your host machine.
+  3. Assign labels to the agent based on the environment:
+     - Add `linux-vm` if running on Linux/macOS host with Vagrant + Libvirt/VirtualBox.
+     - Add `windows-vm` if running on a Windows host with Vagrant + VirtualBox.
+  4. Ensure Vagrant is added to the system `PATH` of the agent.
+
+#### 3. Create Jenkins Job
+1. Create a new **Pipeline** or **Multibranch Pipeline** job.
+2. Select **Pipeline script from SCM** under the Pipeline configuration.
+3. Configure the Git repository path. Jenkins will automatically load and run the `Jenkinsfile`.
+
