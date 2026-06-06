@@ -4,7 +4,7 @@ Vagrant.configure("2") do |config|
   # Map custom OS names from your old build.py configs to standard Vagrant Cloud boxes
   os_box_map = {
     "debian13"   => "debian/bookworm64", # Fallback until debian13 (trixie) box exists
-    "ubuntu2404" => "ubuntu/noble64",
+    "ubuntu2404" => "alvistack/ubuntu-24.04",
     "ubuntu2604" => "alvistack/ubuntu-26.04",
     "alma9"      => "almalinux/9",
     "alma10"     => "almalinux/10"
