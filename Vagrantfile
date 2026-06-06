@@ -112,8 +112,12 @@ Vagrant.configure("2") do |config|
           end
         end
 
+        # Pre-install Ansible natively to avoid Vagrant PPA bugs on new Ubuntu releases
+        node.vm.provision "shell", inline: "if ! command -v ansible-playbook &> /dev/null; then if [ -f /etc/debian_version ]; then export DEBIAN_FRONTEND=noninteractive; apt-get update -qq; apt-get install -y -qq ansible-core || apt-get install -y -qq ansible; elif [ -f /etc/redhat-release ]; then dnf install -y epel-release; dnf install -y ansible-core; fi; fi"
+
         # Run Ansible locally inside the VM (no WSL needed on the host!)
         node.vm.provision "ansible_local" do |ansible|
+          ansible.install = false
           ansible.playbook = "provisioning/site.yml"
           ansible.inventory_path = "provisioning/inventory"
           ansible.limit = "localhost"
@@ -174,7 +178,10 @@ Vagrant.configure("2") do |config|
           # For testing VMs, map the entire repository workspace
           node.vm.synced_folder ".", "/home/vagrant/workspace/workstation"
 
+          node.vm.provision "shell", inline: "if ! command -v ansible-playbook &> /dev/null; then if [ -f /etc/debian_version ]; then export DEBIAN_FRONTEND=noninteractive; apt-get update -qq; apt-get install -y -qq ansible-core || apt-get install -y -qq ansible; elif [ -f /etc/redhat-release ]; then dnf install -y epel-release; dnf install -y ansible-core; fi; fi"
+
           node.vm.provision "ansible_local" do |ansible|
+            ansible.install = false
             ansible.playbook = "provisioning/site.yml"
             ansible.inventory_path = "provisioning/inventory"
             ansible.limit = "localhost"
@@ -231,7 +238,10 @@ Vagrant.configure("2") do |config|
         end
       end
 
+      node.vm.provision "shell", inline: "if ! command -v ansible-playbook &> /dev/null; then if [ -f /etc/debian_version ]; then export DEBIAN_FRONTEND=noninteractive; apt-get update -qq; apt-get install -y -qq ansible-core || apt-get install -y -qq ansible; elif [ -f /etc/redhat-release ]; then dnf install -y epel-release; dnf install -y ansible-core; fi; fi"
+
       node.vm.provision "ansible_local" do |ansible|
+        ansible.install = false
         ansible.playbook = "provisioning/site.yml"
         ansible.inventory_path = "provisioning/inventory"
         ansible.limit = "localhost"
