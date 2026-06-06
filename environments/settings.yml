@@ -1,0 +1,8 @@
+# Default environment settings
+# This file allows you to override default paths and settings for your host.
+
+# Change these to store your VMs on a drive with more space
+# (e.g. your D:\ drive) to prevent your C:\ drive from filling up.
+# Use forward slashes (/) for paths.
+vbox_base_folder: "D:/vm/vbox"
+vmware_base_folder: "D:/vm/vmware"

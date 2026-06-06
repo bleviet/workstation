@@ -40,4 +40,3 @@ packer_cache/
 # Temporary Screenshots
 screen*.png
 screenshot*.png
-environments/settings.yml
