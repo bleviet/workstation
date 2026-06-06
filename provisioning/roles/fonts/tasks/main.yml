@@ -1,6 +1,5 @@
 ---
 - name: Install fonts
-  when: features.gui | default(false) | bool
   block:
     - name: Ensure font directories exist
       ansible.builtin.file:
