@@ -80,7 +80,10 @@
       when: features.editor.lazyvim | default(false) | bool
 
     - name: Pre-install Tmux plugins
-      ansible.builtin.command: "{{ dev_user_home }}/.tmux/plugins/tpm/bin/install_plugins"
+      ansible.builtin.shell: |
+        tmux start-server
+        tmux source-file ~/.tmux.conf || true
+        ~/.tmux/plugins/tpm/bin/install_plugins
       environment:
         HOME: "{{ dev_user_home }}"
         TMUX_PLUGIN_MANAGER_PATH: "{{ dev_user_home }}/.tmux/plugins"
