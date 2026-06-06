@@ -5,9 +5,9 @@ Vagrant.configure("2") do |config|
   os_box_map = {
     "debian13"   => "debian/bookworm64", # Fallback until debian13 (trixie) box exists
     "ubuntu2404" => "ubuntu/noble64",
-    "ubuntu2604" => "ubuntu/noble64",    # Fallback until 26.04 box exists
+    "ubuntu2604" => "alvistack/ubuntu-26.04",
     "alma9"      => "almalinux/9",
-    "alma10"     => "almalinux/9"        # Fallback until alma10 box exists
+    "alma10"     => "almalinux/10"
   }
 
   # --- 1. Load FPGA Environments ---
