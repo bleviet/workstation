@@ -51,6 +51,8 @@ Vagrant.configure("2") do |config|
           vb.customize ["modifyvm", :id, "--audio-driver", "none"]
           vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
           vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+          vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+          vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
           
           if vm_data["accel3d"]
             vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
@@ -70,6 +72,9 @@ Vagrant.configure("2") do |config|
           v.vmx["vhv.enable"] = "TRUE"
           v.vmx["mks.enable3d"] = vm_data["accel3d"] ? "TRUE" : "FALSE"
           v.vmx["svga.vramSize"] = ((vm_data["vram_mb"] || 256) * 1024 * 1024).to_s
+          v.vmx["isolation.tools.copy.disable"] = "FALSE"
+          v.vmx["isolation.tools.paste.disable"] = "FALSE"
+          v.vmx["isolation.tools.dnd.disable"] = "FALSE"
           
           if vm_data.dig("usb", "xhci") || vm_data.dig("usb", "ehci")
             v.vmx["usb.present"] = "TRUE"
@@ -149,6 +154,8 @@ Vagrant.configure("2") do |config|
             vb.customize ["modifyvm", :id, "--audio-driver", "none"]
             vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
             vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+            vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+            vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
           end
 
           node.vm.provider "vmware_desktop" do |v|
@@ -156,6 +163,9 @@ Vagrant.configure("2") do |config|
             v.vmx["memsize"] = (m["ram_mb"] || 2048).to_s
             v.vmx["numvcpus"] = (m["cpus"] || 2).to_s
             v.vmx["vhv.enable"] = "TRUE"
+            v.vmx["isolation.tools.copy.disable"] = "FALSE"
+            v.vmx["isolation.tools.paste.disable"] = "FALSE"
+            v.vmx["isolation.tools.dnd.disable"] = "FALSE"
           end
 
           node.vm.provider "libvirt" do |libvirt, override|
@@ -221,6 +231,8 @@ Vagrant.configure("2") do |config|
         vb.customize ["modifyvm", :id, "--audio-driver", "none"]
         vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
         vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+        vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
+        vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
         
         if vm_accel3d
           vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
@@ -238,6 +250,9 @@ Vagrant.configure("2") do |config|
         v.vmx["vhv.enable"] = "TRUE"
         v.vmx["mks.enable3d"] = vm_accel3d ? "TRUE" : "FALSE"
         v.vmx["svga.vramSize"] = (vm_vram * 1024 * 1024).to_s
+        v.vmx["isolation.tools.copy.disable"] = "FALSE"
+        v.vmx["isolation.tools.paste.disable"] = "FALSE"
+        v.vmx["isolation.tools.dnd.disable"] = "FALSE"
         
         if vm_usb
           v.vmx["usb.present"] = "TRUE"
