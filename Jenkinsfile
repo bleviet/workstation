@@ -1,6 +1,7 @@
 pipeline {
     agent {
         node {
+            label ''
             // Allocate a unique workspace folder for each build configuration
             customWorkspace "workspace/workstation-${params.OS}-${params.PROFILE}-${env.BUILD_NUMBER}"
         }
