@@ -34,7 +34,7 @@ Each FPGA environment is declared in a `vm.yml` file:
 
 ```yaml
 # environments/fpga-alma/vm.yml
-name: fpga-dev-alma9
+name: fpga-dev-alma-9
 os: alma9            # references environments/os/alma9/os.yml
 hostname: fpga-dev
 
@@ -72,14 +72,14 @@ All commands run from the repo root. `<vm>` is the `name` field in `vm.yml`.
 
 ```bash
 # Full pipeline: download image → create VM → run setup → snapshot
-python environments/build.py create fpga-dev-alma9
+python environments/build.py create fpga-dev-alma-9
+# ... Wait for install to finish, then turn off the VM.
+# Now boot it normally (which attaches the custom virtual disk).
+python environments/build.py start   fpga-dev-alma-9
+python environments/build.py stop    fpga-dev-alma-9
 
-# Start / stop (graceful ACPI)
-python environments/build.py start   fpga-dev-alma9
-python environments/build.py stop    fpga-dev-alma9
-
-# Permanently delete VM and cached VDI
-python environments/build.py destroy fpga-dev-alma9
+# To delete the VM and its disk
+python environments/build.py destroy fpga-dev-alma-9
 
 # List all discovered VMs with their VirtualBox state
 python environments/build.py list
@@ -95,7 +95,7 @@ python environments/build.py
 **Step 1 — Create the VM.**
 
 ```bash
-python environments/build.py create fpga-dev-alma9
+python environments/build.py create fpga-dev-alma-9
 ```
 
 `build.py` will:
@@ -128,7 +128,7 @@ ssh vagrant@127.0.0.1 -p 2222 "ip addr show | grep 'inet '"
 Edit `provisioning/inventory/hosts.yml` and set `ansible_host`:
 
 ```yaml
-fpga-dev-alma9:
+fpga-dev-alma-9:
   ansible_host: 192.168.x.x    # IP found above
   ansible_user: vagrant
 ```
@@ -136,7 +136,7 @@ fpga-dev-alma9:
 **Step 3 — Run Ansible.**
 
 ```bash
-ansible-playbook provisioning/site.yml --limit fpga-dev-alma9
+ansible-playbook provisioning/site.yml --limit fpga-dev-alma-9
 ```
 
 ---
@@ -170,7 +170,7 @@ FPGA VMs are declared in the `fpga_vms` group in
 per host in `provisioning/inventory/host_vars/<hostname>.yml`.
 
 ```yaml
-# host_vars/fpga-dev-alma9.yml
+# host_vars/fpga-dev-alma-9.yml
 dev_user: yourname          # account provisioned inside the VM
 dev_user_ssh_pubkey: ""     # SSH public key deployed for dev_user
 

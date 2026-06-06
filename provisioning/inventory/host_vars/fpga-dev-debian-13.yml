@@ -1,5 +1,5 @@
 ---
-# fpga-dev-ubuntu2404 — Ubuntu 24.04 FPGA development VM (environments/fpga-ubuntu/).
+# fpga-dev-debian-13 — Debian 13 FPGA development VM (environments/fpga-debian-13/).
 # Profile and features are inherited from group_vars/fpga_vms.yml.
 dev_user: bleviet
 dev_user_ssh_pubkey: "" # paste your SSH public key here

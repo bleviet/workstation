@@ -1,5 +1,5 @@
 ---
-# fpga-dev-alma9 — AlmaLinux 9 FPGA development VM (environments/fpga-alma/).
+# fpga-dev-alma-10 — AlmaLinux 10 FPGA development VM (environments/fpga-alma-10/).
 # Profile and features are inherited from group_vars/fpga_vms.yml.
 
 # Ansible connects as 'vagrant' (ansible_user in hosts.yml) but provisions
