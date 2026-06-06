@@ -84,7 +84,7 @@ Vagrant.configure("2") do |config|
           vb.cpus = vm_data["cpus"] || 8
           
           vb.customize ["modifyvm", :id, "--vram", (vm_data["vram_mb"] || 256).to_s]
-          vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+          vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxsvga"]
           vb.customize ["modifyvm", :id, "--audio-driver", "none"]
           vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
           vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
@@ -92,7 +92,7 @@ Vagrant.configure("2") do |config|
           vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
           
           if vm_data["accel3d"]
-            vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+            vb.customize ["modifyvm", :id, "--accelerate3d", "off"]
           end
           if vm_data.dig("usb", "ehci")
             vb.customize ["modifyvm", :id, "--usbehci", "on"]
@@ -187,7 +187,7 @@ Vagrant.configure("2") do |config|
             vb.memory = m["ram_mb"] || 2048
             vb.cpus = m["cpus"] || 2
             
-            vb.customize ["modifyvm", :id, "--graphicscontroller", "vmsvga"]
+            vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxsvga"]
             vb.customize ["modifyvm", :id, "--audio-driver", "none"]
             vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
             vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
