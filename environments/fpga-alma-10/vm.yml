@@ -5,7 +5,7 @@
 # Hardware note: all values are thin-provisioned where applicable.
 # Ansible handles software: desktop env, FPGA tools, udev rules, dotfiles.
 
-name: fpga-dev-alma10
+name: fpga-dev-alma-10
 os: alma10            # matches environments/os/alma10/os.yml
 hostname: fpga-dev
 

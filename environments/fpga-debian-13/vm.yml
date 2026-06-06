@@ -5,7 +5,7 @@
 # Hardware note: all values are thin-provisioned where applicable.
 # Ansible handles software: desktop env, FPGA tools, udev rules, dotfiles.
 
-name: fpga-dev-debian13
+name: fpga-dev-debian-13
 os: debian13         # matches environments/os/debian13/os.yml
 hostname: fpga-dev
 

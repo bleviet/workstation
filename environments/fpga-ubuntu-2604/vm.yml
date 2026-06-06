@@ -5,7 +5,7 @@
 # Hardware note: all values are thin-provisioned where applicable.
 # Ansible handles software: desktop env, FPGA tools, udev rules, dotfiles.
 
-name: fpga-dev-ubuntu2604
+name: fpga-dev-ubuntu-2604
 os: ubuntu2604       # matches environments/os/ubuntu2604/os.yml
 hostname: fpga-dev
 

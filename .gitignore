@@ -35,6 +35,7 @@ environments/.cache/
 # Packer / Vagrant Cache
 packer_cache/
 *.box
+.vagrant/
 
 # Temporary Screenshots
 screen*.png
