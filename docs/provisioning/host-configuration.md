@@ -174,14 +174,20 @@ dotfiles/                 # chezmoi source — applied to ~/
     nvim/                 # LazyVim configuration
 
 environments/
-  fpga-ubuntu/            # FPGA dev VM (Ubuntu 24.04, VMware)
-  fpga-alma/              # FPGA dev VM (AlmaLinux 9, VMware)
+  fpga-alma9/             # FPGA dev VM (AlmaLinux 9)
+  fpga-alma-10/           # FPGA dev VM (AlmaLinux 10)
+  fpga-debian-13/         # FPGA dev VM (Debian 13)
+  fpga-ubuntu-2404/       # FPGA dev VM (Ubuntu 24.04)
+  fpga-ubuntu-2604/       # FPGA dev VM (Ubuntu 26.04)
+  settings.yml            # Local hypervisor storage settings overrides
 
 tests/
   container/
     Dockerfile.{debian,ubuntu,almalinux}
   vm/
-    Vagrantfile           # multi-machine test matrix (3 OSes × 4 profiles)
+    machines.yml          # Declarative test machine definitions
   run_container_tests.sh
   run_vm_tests.sh
+  run_vm_tests.ps1
+
 ```

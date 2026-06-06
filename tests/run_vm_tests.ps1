@@ -14,7 +14,7 @@ $OutputEncoding = [System.Text.Encoding]::UTF8
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
 
 $RepoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$BuildPy = Join-Path $RepoRoot "environments\build.py"
+
 
 $HeadlessMachines = @(
     "workstation-test-debian"

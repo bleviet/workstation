@@ -1,21 +1,5 @@
 ---
-xfce_packages_apt:
-  - xfce4
-  - xfce4-goodies
-  - xfce4-terminal
-  - thunar
-  - lightdm
-  - lightdm-gtk-greeter
-
-xfce_packages_dnf:
-  - xfce4-session
-  - xfwm4
-  - xfce4-panel
-  - Thunar
-  - xfce4-terminal
-  - lightdm
-  - lightdm-gtk
-
 # Set to a username to configure LightDM auto-login for that user.
 # Leave empty (default) to require a password on the login screen.
 xfce_autologin_user: ""
+

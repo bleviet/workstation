@@ -2,17 +2,12 @@
 - name: Install VM guest tools for desktop integration
   ansible.builtin.include_tasks: guest_tools.yml
 
-- name: Install Xorg and display server base (Debian/Ubuntu)
-  ansible.builtin.apt:
-    name: "{{ desktop_base_packages_apt }}"
-    state: present
-    update_cache: true
-  become: true
-  when: ansible_facts['os_family'] == "Debian"
+- name: Include OS-specific variables
+  ansible.builtin.include_vars: "{{ ansible_facts['os_family'] }}.yml"
 
-- name: Install Xorg and display server base (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name: "{{ desktop_base_packages_dnf }}"
+- name: Install Xorg and display server base
+  ansible.builtin.package:
+    name: "{{ desktop_base_packages }}"
     state: present
   become: true
-  when: ansible_facts['os_family'] == "RedHat"
+

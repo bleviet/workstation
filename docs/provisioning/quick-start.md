@@ -12,8 +12,7 @@ cd ~/workspace/workstation
 ./bootstrap.sh
 ```
 
-`bootstrap.sh` installs Ansible (`ansible-core` on AlmaLinux 9 via AppStream;
-`ansible` on Debian/Ubuntu via apt), pulls the required collections, and runs
+`bootstrap.sh` installs pip3, uses it to install a modern version of `ansible-core` (>=2.17) in user space, pulls the required collections, and runs
 `provisioning/site.yml`.
 
 The profile that gets installed depends on `provisioning/inventory/host_vars/<hostname>.yml`.

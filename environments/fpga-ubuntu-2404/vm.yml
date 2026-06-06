@@ -6,7 +6,7 @@
 # Ansible handles software: desktop env, FPGA tools, udev rules, dotfiles.
 
 name: fpga-dev-ubuntu-2404
-os: ubuntu2404       # matches environments/os/ubuntu2404/os.yml
+os: ubuntu2404       # references os_box_map in Vagrantfile
 hostname: fpga-dev
 
 ram_mb: 32768        # 32 GB — leaves 32 GB for the Windows host
@@ -20,7 +20,7 @@ usb:
   ehci: true         # USB 2.0 — USB-Blaster (original), Platform Cable USB
   xhci: true         # USB 3.0 — USB-Blaster II, modern Digilent boards
 
-# Paths are relative to this vm.yml; build.py resolves them to absolute paths.
+# Paths are relative to this vm.yml; Vagrantfile resolves them to absolute paths.
 shared_folders:
   - host: "../.."
     guest: "/home/vagrant/workspace/workstation"

@@ -1,0 +1,12 @@
+---
+i3wm_packages:
+  - i3
+  - polybar
+  - rofi
+  - dunst
+  - picom
+  - feh
+  - kitty
+  - lightdm
+  - lightdm-gtk-greeter
+  - arandr

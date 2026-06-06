@@ -1,33 +1,18 @@
 ---
-- name: Install GNOME desktop environment (Debian/Ubuntu)
-  ansible.builtin.apt:
-    name: "{{ gnome_packages_apt }}"
-    state: present
-    update_cache: true
-  become: true
-  when: ansible_facts['os_family'] == "Debian"
+- name: Include OS-specific variables
+  ansible.builtin.include_vars: "{{ ansible_facts['os_family'] }}.yml"
 
-- name: Install GNOME desktop environment (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name: "{{ gnome_packages_dnf }}"
+- name: Install GNOME desktop environment
+  ansible.builtin.package:
+    name: "{{ gnome_packages }}"
     state: present
   become: true
-  when: ansible_facts['os_family'] == "RedHat"
 
-- name: Enable and start GDM (Debian/Ubuntu)
+- name: Enable and start GDM
   ansible.builtin.service:
-    name: gdm3
+    name: "{{ gnome_service }}"
     enabled: true
     state: started
   become: true
-  when: ansible_facts['os_family'] == "Debian"
   failed_when: false
 
-- name: Enable and start GDM (RedHat/AlmaLinux)
-  ansible.builtin.service:
-    name: gdm
-    enabled: true
-    state: started
-  become: true
-  when: ansible_facts['os_family'] == "RedHat"
-  failed_when: false

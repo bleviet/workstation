@@ -1,0 +1,9 @@
+---
+gnome_packages:
+  - gnome-shell
+  - gnome-session
+  - gnome-tweaks
+  - gnome-terminal
+  - nautilus
+  - gdm
+gnome_service: gdm

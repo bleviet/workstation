@@ -1,12 +1,11 @@
 # Multi-machine test environment for workstation provisioning.
 # Replaces tests/vm/Vagrantfile.
 #
-# Usage (once build.py supports test VMs):
-#   build.py create debian                # headless
-#   build.py create debian-i3wm           # desktop profile — GUI window opens
+# Usage via Vagrant:
+#   vagrant up workstation-test-debian
 #
-# All machines use our own cloud images (environments/os/) — no Vagrant boxes.
-# Ansible provisioning runs separately after VM is up; see provisioning/README.md.
+# All machines use standard Vagrant boxes mapped via os_box_map in Vagrantfile.
+# Ansible local provisioning runs automatically inside the guest VM.
 
 machines:
   # ── Headless / CI ──────────────────────────────────────────────────────────

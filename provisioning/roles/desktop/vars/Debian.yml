@@ -1,0 +1,8 @@
+---
+desktop_base_packages:
+  - xorg
+  - xserver-xorg
+  - dbus-x11
+  - fonts-noto
+  - fonts-noto-color-emoji
+  - kitty

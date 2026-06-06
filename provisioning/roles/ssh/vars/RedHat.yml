@@ -1,0 +1,4 @@
+---
+ssh_packages:
+  - openssh-server
+  - xorg-x11-xauth

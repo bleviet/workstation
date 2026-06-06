@@ -1,22 +1,12 @@
 ---
-- name: Install openssh-server and xauth (Debian/Ubuntu)
-  ansible.builtin.apt:
-    name:
-      - openssh-server
-      - xauth
-    state: present
-    update_cache: true
-  become: true
-  when: ansible_facts['os_family'] == "Debian"
+- name: Include OS-specific variables
+  ansible.builtin.include_vars: "{{ ansible_facts['os_family'] }}.yml"
 
-- name: Install openssh-server and xauth (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name:
-      - openssh-server
-      - xorg-x11-xauth
+- name: Install openssh-server and xauth
+  ansible.builtin.package:
+    name: "{{ ssh_packages }}"
     state: present
   become: true
-  when: ansible_facts['os_family'] == "RedHat"
 
 - name: Deploy sshd hardening + X11 forwarding config
   ansible.builtin.copy:

@@ -54,9 +54,7 @@
 - name: Install VS Code extensions
   ansible.builtin.command:
     cmd: "code --install-extension {{ item }}"
-  loop:
-    - dracula-theme.theme-dracula
-    - mshr-h.veriloghdl
+  loop: "{{ vscode_extensions }}"
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
   register: vscode_ext_install

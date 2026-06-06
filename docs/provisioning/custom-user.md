@@ -84,29 +84,17 @@ environment.
 
 ## Example — Vagrant VM with a custom user
 
-Pass `dev_user` via `--extra-vars` when bringing up a Vagrant machine:
+Since Vagrant provisions VMs using Ansible locally, the easiest way to provision a custom user on a Vagrant VM is to define it in the host variables file corresponding to your VM's hostname.
 
-```bash
-vagrant up ubuntu --provider=libvirt
-vagrant provision ubuntu -- --extra-vars '{"dev_user": "bach"}'
+For example, if your VM is named `workstation-test-ubuntu24`, create a file at `provisioning/inventory/host_vars/workstation-test-ubuntu24.yml` and add:
+
+```yaml
+dev_user: bach
+dev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"
 ```
 
-Or set it permanently in the `MACHINES` table in `tests/vm/Vagrantfile`:
+When you run `vagrant up workstation-test-ubuntu24`, Vagrant automatically boots the VM and triggers Ansible locally, which reads these host variables, creates the user `bach`, and installs the public key.
 
-```ruby
-"ubuntu" => { box: "bento/ubuntu-24.04", profile: "headless",
-               memory: 2048, cpus: 2, gui: false, dev_user: "bach" },
-```
-
-and pass it through `extra_vars` alongside the existing keys:
-
-```ruby
-extra_vars = {
-  "profile"   => cfg[:profile],
-  "dev_user"  => cfg.fetch(:dev_user, "vagrant"),
-  "features"  => { ... },
-}
-```
 
 ## Default behaviour (no change required)
 

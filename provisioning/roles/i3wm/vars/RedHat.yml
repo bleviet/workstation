@@ -1,0 +1,7 @@
+---
+i3wm_packages:
+  - i3
+  - i3status
+  - kitty
+  - lightdm
+  - lightdm-gtk

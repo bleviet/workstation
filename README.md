@@ -33,7 +33,7 @@ cd ~/workspace/workstation
 | [Host configuration](docs/provisioning/host-configuration.md) | Profiles, feature flags, host\_vars, shared tunables, repo structure |
 | [Remote deployment](docs/provisioning/remote-deployment.md) | Deploy to remote hosts from an admin PC or container |
 | [Custom developer user](docs/provisioning/custom-user.md) | Provision a machine for a user other than the SSH login |
-| [FPGA development VMs](docs/provisioning/fpga-vms.md) | Create and manage VirtualBox FPGA VMs with `build.py` |
+| [FPGA development VMs](docs/provisioning/fpga-vms.md) | Create and manage local FPGA development VMs with Vagrant |
 
 **Dotfiles and personal workflow**
 

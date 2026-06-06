@@ -48,7 +48,7 @@ BOXES_ROOT = ENV_ROOT / "boxes"
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _load_env(env_id: str, label: str, box_dir: str | None = None) -> dict:
-    """Build an env entry; packer metadata is read from boxes/<box_dir>/box.json."""
+    """Build an env entry; packer metadata is read from boxes/<box_dir>/box.json if box_dir is set."""
     entry: dict = {
         "id":     env_id,
         "label":  label,
@@ -66,13 +66,15 @@ def _load_env(env_id: str, label: str, box_dir: str | None = None) -> dict:
             "box_output":       meta["box_file"],
         })
     else:
-        entry["desc"] = label
+        entry["desc"] = f"{label}  ·  Vagrant VM"
     return entry
 
 ENVS: list[dict] = [
-    _load_env("fpga-alma",   "AlmaLinux 9",        box_dir="alma9"),
-    _load_env("fpga-ubuntu", "Ubuntu 24.04 LTS",   box_dir="ubuntu2404"),
-    _load_env("fpga-debian", "Debian 13 (Trixie)", box_dir="debian13"),
+    _load_env("fpga-alma9",       "AlmaLinux 9"),
+    _load_env("fpga-alma-10",     "AlmaLinux 10"),
+    _load_env("fpga-ubuntu-2404", "Ubuntu 24.04 LTS"),
+    _load_env("fpga-ubuntu-2604", "Ubuntu 26.04 LTS"),
+    _load_env("fpga-debian-13",   "Debian 13 (Trixie)"),
 ]
 
 # Vagrant machine-readable state → (bullet, rich-color, label)

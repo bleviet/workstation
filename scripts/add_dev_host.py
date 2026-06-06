@@ -101,7 +101,10 @@ def write_host_vars(args: argparse.Namespace) -> Path:
         f"dev_user: {args.dev_user}\n"
         "\n"
         "features:\n"
-        f"  fpga: {str(args.fpga).lower()}\n"
+        "  fpga:\n"
+        f"    vivado: {str(args.fpga).lower()}\n"
+        f"    quartus: {str(args.fpga).lower()}\n"
+        f"    oss: {str(args.fpga).lower()}\n"
         f"  xrdp: {str(args.xrdp).lower()}\n"
     )
     # Newline="\n" pins LF even on Windows (matches .gitattributes for the repo).

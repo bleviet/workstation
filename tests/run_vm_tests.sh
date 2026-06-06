@@ -1,5 +1,5 @@
 #!/bin/bash
-# tests/run_vm_tests.sh — provision and verify on real VMs via VBoxManage/build.py.
+# tests/run_vm_tests.sh — provision and verify on real VMs via Vagrant.
 #
 # Usage:
 #   ./tests/run_vm_tests.sh                              # headless machines only
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BUILD_PY="${REPO_ROOT}/environments/build.py"
+
 
 HEADLESS_MACHINES=(
   workstation-test-debian
