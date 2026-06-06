@@ -50,3 +50,12 @@
     update: false
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
+
+- name: Install Tmux Plugin Manager (TPM)
+  ansible.builtin.git:
+    repo: https://github.com/tmux-plugins/tpm
+    dest: "{{ dev_user_home }}/.tmux/plugins/tpm"
+    depth: 1
+    update: false
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"

@@ -78,3 +78,13 @@
       become_user: "{{ dev_user }}"
       changed_when: true
       when: features.editor.lazyvim | default(false) | bool
+
+    - name: Pre-install Tmux plugins
+      ansible.builtin.command: "{{ dev_user_home }}/.tmux/plugins/tpm/bin/install_plugins"
+      environment:
+        HOME: "{{ dev_user_home }}"
+        TMUX_PLUGIN_MANAGER_PATH: "{{ dev_user_home }}/.tmux/plugins"
+      become: "{{ dev_user != ansible_facts['user_id'] }}"
+      become_user: "{{ dev_user }}"
+      changed_when: true
+      ignore_errors: true
