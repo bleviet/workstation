@@ -40,3 +40,8 @@ packer_cache/
 # Temporary Screenshots
 screen*.png
 screenshot*.png
+
+# Local Jenkins Automation
+jenkins.war
+jenkins-cli.jar
+jenkins_home/

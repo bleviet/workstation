@@ -52,18 +52,20 @@ pipeline {
 
     post {
         always {
-            script {
-                if (params.DESTROY_AFTER_BUILD) {
-                    echo "Cleaning up: Destroying the temporary VM..."
-                    if (isUnix()) {
-                        sh 'vagrant destroy jenkins-param-vm -f || true'
+            node {
+                script {
+                    if (params.DESTROY_AFTER_BUILD) {
+                        echo "Cleaning up: Destroying the temporary VM..."
+                        if (isUnix()) {
+                            sh 'vagrant destroy jenkins-param-vm -f || true'
+                        } else {
+                            powershell 'vagrant destroy jenkins-param-vm -f || true'
+                        }
                     } else {
-                        powershell 'vagrant destroy jenkins-param-vm -f || true'
+                        echo "VM retention requested. The VM is still running."
+                        echo "Connect using: vagrant ssh jenkins-param-vm"
+                        echo "Ensure you destroy it manually later to free resources."
                     }
-                } else {
-                    echo "VM retention requested. The VM is still running."
-                    echo "Connect using: vagrant ssh jenkins-param-vm"
-                    echo "Ensure you destroy it manually later to free resources."
                 }
             }
         }
