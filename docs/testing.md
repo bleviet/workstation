@@ -63,17 +63,22 @@ On Linux/macOS, use the shell runner:
 ./tests/run_vm_tests.sh workstation-test-debian workstation-test-ubuntu
 ```
 
-#### Windows (with WSL)
+#### Windows (Native via Vagrant)
 
-On Windows, the VM lifecycle is managed natively on Windows via Python (`VBoxManage.exe`), while the Ansible control node runs inside **WSL** (since Ansible cannot run natively on Windows).
+On Windows, the VM lifecycle and Ansible provisioning are fully automated natively via **HashiCorp Vagrant**. You do NOT need WSL or Python.
 
 **Prerequisites:**
-1. **VirtualBox:** Installed on Windows, with `VBoxManage` available in your Windows PATH (usually `C:\Program Files\Oracle\VirtualBox`).
-2. **Python:** Installed on Windows (venv/uv).
-3. **WSL (Ubuntu):** Installed on the host with Ansible installed inside the WSL distribution.
-4. **SSH Keys:** The WSL user must have an SSH key pair (e.g., `~/.ssh/id_ed25519` with no passphrase for automation). The Windows host-side public key (e.g. `C:\Users\<user>\.ssh\id_ed25519.pub`) is injected into the VM during creation to facilitate SSH logins.
+1. **VirtualBox:** Installed on Windows.
+2. **Vagrant:** Installed on Windows (e.g. `winget install HashiCorp.Vagrant`).
 
-To run the VM tests on Windows, run the PowerShell script:
+Vagrant automatically handles creating the VM, configuring USB passthrough, injecting SSH keys, and running the Ansible playbook *locally* inside the guest VM (`ansible_local` provisioner).
+
+To manually bring up a specific machine without running tests:
+```powershell
+vagrant up workstation-test-ubuntu24
+```
+
+To run the automated VM tests on Windows, run the PowerShell script:
 
 ```powershell
 # Run the tests for a specific VM (e.g. Debian 13)

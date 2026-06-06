@@ -49,58 +49,33 @@ foreach ($machine in $TargetMachines) {
     Write-Host ""
     Write-Host "=== [$machine] ==="
 
-    $Env:PYTHONIOENCODING = "utf-8"
-    $Env:NO_COLOR = "1"
+    $Env:VAGRANT_NO_COLOR = "1"
     
     Write-Host "Ensuring clean state (destroying any existing VM)..."
     if ($ShowLog) {
-        & .venv\Scripts\python.exe $BuildPy destroy $machine *>&1 | Tee-Object -FilePath $Log
+        & vagrant destroy -f $machine *>&1 | Tee-Object -FilePath $Log
     } else {
-        & .venv\Scripts\python.exe $BuildPy destroy $machine *>&1 > $Log
+        & vagrant destroy -f $machine *>&1 > $Log
     }
 
-    # 1. Create VM using native Python
-    Write-Host "Creating VM..."
+    # 1. Create and provision VM using Vagrant
+    Write-Host "Creating and provisioning VM via Vagrant..."
     if ($ShowLog) {
-        if ($Gui) {
-            & .venv\Scripts\python.exe $BuildPy create $machine --gui *>&1 | Tee-Object -FilePath $Log -Append
-        } else {
-            & .venv\Scripts\python.exe $BuildPy create $machine *>&1 | Tee-Object -FilePath $Log -Append
-        }
+        & vagrant up $machine *>&1 | Tee-Object -FilePath $Log -Append
     } else {
-        if ($Gui) {
-            & .venv\Scripts\python.exe $BuildPy create $machine --gui *>&1 >> $Log
-        } else {
-            & .venv\Scripts\python.exe $BuildPy create $machine *>&1 >> $Log
-        }
+        & vagrant up $machine *>&1 >> $Log
     }
     $CreateExit = $LASTEXITCODE
 
-    if ($CreateExit -eq 0) {
-        # Get dynamic IP of the machine
-        $VMIP = (& .venv\Scripts\python.exe $BuildPy ip $machine).Trim()
-
-        # 2. Provision using WSL Ansible (since Windows can't run ansible control node natively)
-        Write-Host "Provisioning with Ansible..."
-        if ($ShowLog) {
-            & wsl -d Ubuntu bash -c "cd /mnt/d/workspace/workstation && ANSIBLE_NOCOLOR=1 ANSIBLE_CONFIG=/mnt/d/workspace/workstation/ansible.cfg ANSIBLE_HOST_KEY_CHECKING=False ANSIBLE_SSH_ARGS='-o ControlMaster=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' ansible-playbook provisioning/site.yml -i provisioning/inventory -i '$VMIP,' --limit '$VMIP' -u vagrant -e ansible_port=22 -e profile=headless 2>&1" | Tee-Object -FilePath $Log -Append
-        } else {
-            & wsl -d Ubuntu bash -c "cd /mnt/d/workspace/workstation && ANSIBLE_NOCOLOR=1 ANSIBLE_CONFIG=/mnt/d/workspace/workstation/ansible.cfg ANSIBLE_HOST_KEY_CHECKING=False ANSIBLE_SSH_ARGS='-o ControlMaster=no -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null' ansible-playbook provisioning/site.yml -i provisioning/inventory -i '$VMIP,' --limit '$VMIP' -u vagrant -e ansible_port=22 -e profile=headless 2>&1" >> $Log
-        }
-        $AnsibleExit = $LASTEXITCODE
-    } else {
-        $AnsibleExit = 1
-    }
-
-    # 3. Destroy VM using native Python
+    # 2. Destroy VM using Vagrant
     Write-Host "Destroying VM..."
     if ($ShowLog) {
-        & .venv\Scripts\python.exe $BuildPy destroy $machine *>&1 | Tee-Object -FilePath $Log -Append
+        & vagrant destroy -f $machine *>&1 | Tee-Object -FilePath $Log -Append
     } else {
-        & .venv\Scripts\python.exe $BuildPy destroy $machine *>&1 >> $Log
+        & vagrant destroy -f $machine *>&1 >> $Log
     }
 
-    if ($CreateExit -eq 0 -and $AnsibleExit -eq 0) {
+    if ($CreateExit -eq 0) {
         Write-Host "[$machine] PASS"
         $Pass++
     } else {

@@ -74,12 +74,8 @@ for machine in "${MACHINES[@]}"; do
   echo "=== [${machine}] ==="
 
   {
-    python "${BUILD_PY}" create "${machine}" ${GUI_ARG} && \
-    ansible-playbook "${REPO_ROOT}/provisioning/site.yml" \
-      -i '127.0.0.1,' \
-      -u vagrant \
-      -e ansible_port=2222 \
-      -e profile=headless
+    vagrant destroy -f "${machine}" || true
+    vagrant up "${machine}"
   } > "${LOG}" 2>&1
   EXIT=$?
 
@@ -88,9 +84,9 @@ for machine in "${MACHINES[@]}"; do
   fi
 
   if [ "$SHOW_LOG" -eq 1 ]; then
-    python "${BUILD_PY}" destroy "${machine}" 2>&1 | tee -a "${LOG}" || true
+    vagrant destroy -f "${machine}" 2>&1 | tee -a "${LOG}" || true
   else
-    python "${BUILD_PY}" destroy "${machine}" >> "${LOG}" 2>&1 || true
+    vagrant destroy -f "${machine}" >> "${LOG}" 2>&1 || true
   fi
 
   if [ $EXIT -eq 0 ]; then
