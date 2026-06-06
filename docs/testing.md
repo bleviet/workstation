@@ -14,34 +14,28 @@ Builds a container per OS in parallel (Podman/Docker, rootless) and executes a r
 
 ## VM tests (full provisioning)
 
-Test VMs are defined in `tests/vm/machines.yml` and managed via
-`environments/build.py` (VBoxManage). No Vagrant or VMware required.
+Test VMs are defined in `tests/vm/machines.yml` and managed via **Vagrant**.
+Vagrant natively supports multiple providers including VirtualBox, VMware Desktop, and Libvirt.
 
 ### Prerequisites
 
 | Tool | Where to get it |
 |---|---|
-| VirtualBox ≥ 7.0 | https://www.virtualbox.org/wiki/Downloads |
-| Python ≥ 3.10 | system or `pyenv` |
-| Python packages | `pip install -r environments/requirements.txt` |
-| `qemu-img` | `apt install qemu-utils` / `dnf install qemu-img` |
+| Vagrant | https://developer.hashicorp.com/vagrant/downloads |
+| A hypervisor | VirtualBox (default), VMware Desktop, or Libvirt/KVM |
 
 ### Available test machines
 
 | Name | OS | Profile |
 |---|---|---|
 | `workstation-test-debian` | Debian 13 | headless |
-| `workstation-test-ubuntu` | Ubuntu 24.04 | headless |
-| `workstation-test-almalinux` | AlmaLinux 9 | headless |
-| `workstation-test-debian-i3wm` | Debian 13 | desktop-i3wm |
-| `workstation-test-ubuntu-i3wm` | Ubuntu 24.04 | desktop-i3wm |
-| `workstation-test-almalinux-i3wm` | AlmaLinux 9 | desktop-i3wm |
-| `workstation-test-debian-xfce` | Debian 13 | desktop-xfce |
-| `workstation-test-ubuntu-xfce` | Ubuntu 24.04 | desktop-xfce |
-| `workstation-test-almalinux-xfce` | AlmaLinux 9 | desktop-xfce |
-| `workstation-test-debian-gnome` | Debian 13 | desktop-gnome |
-| `workstation-test-ubuntu-gnome` | Ubuntu 24.04 | desktop-gnome |
-| `workstation-test-almalinux-gnome` | AlmaLinux 9 | desktop-gnome |
+| `workstation-test-ubuntu24` | Ubuntu 24.04 | headless |
+| `workstation-test-ubuntu26` | Ubuntu 26.04 | headless |
+| `workstation-test-alma9` | AlmaLinux 9 | headless |
+| `workstation-test-alma10` | AlmaLinux 10 | headless |
+| `workstation-test-*-i3wm` | *OS matched* | desktop-i3wm |
+| `workstation-test-*-xfce` | *OS matched* | desktop-xfce |
+| `workstation-test-*-gnome` | *OS matched* | desktop-gnome |
 
 ### Running tests
 
@@ -100,23 +94,17 @@ powershell -ExecutionPolicy Bypass -File .\tests\run_vm_tests.ps1 -Machines "wor
 ```
 
 
-Or drive `build.py` directly:
+Or drive Vagrant directly:
 
 ```bash
-# Create a single test VM
-python environments/build.py create workstation-test-debian
+# Bring up and automatically provision a single test VM
+vagrant up workstation-test-debian
 
-# Connect via SSH (NAT port-forward set up by build.py)
-ssh vagrant@127.0.0.1 -p 2222
-
-# Run the full playbook against it
-ansible-playbook provisioning/site.yml \
-  -i '127.0.0.1,' \
-  -u vagrant -e ansible_port=2222 \
-  -e profile=headless
+# Connect via SSH
+vagrant ssh workstation-test-debian
 
 # Destroy when done
-python environments/build.py destroy workstation-test-debian
+vagrant destroy workstation-test-debian
 ```
 
 All `features.fpga.*` and `features.xrdp` flags default to `false` in test
