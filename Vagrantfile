@@ -41,6 +41,43 @@ Vagrant.configure("2") do |config|
           end
         end
 
+        node.vm.provider "vmware_desktop" do |v|
+          v.gui = vm_data["gui"] || true
+          v.vmx["memsize"] = (vm_data["ram_mb"] || 32768).to_s
+          v.vmx["numvcpus"] = (vm_data["cpus"] || 8).to_s
+          v.vmx["vhv.enable"] = "TRUE"
+          v.vmx["mks.enable3d"] = vm_data["accel3d"] ? "TRUE" : "FALSE"
+          v.vmx["svga.vramSize"] = ((vm_data["vram_mb"] || 256) * 1024 * 1024).to_s
+          
+          if vm_data.dig("usb", "xhci") || vm_data.dig("usb", "ehci")
+            v.vmx["usb.present"] = "TRUE"
+            if vm_data.dig("usb", "xhci")
+              v.vmx["usb_xhci.present"] = "TRUE"
+            end
+          end
+        end
+
+        node.vm.provider "libvirt" do |libvirt|
+          libvirt.memory = vm_data["ram_mb"] || 32768
+          libvirt.cpus = vm_data["cpus"] || 8
+          libvirt.nested = true
+          
+          if vm_data["gui"] || true
+            libvirt.graphics_type = "spice"
+            libvirt.video_type = "qxl"
+            libvirt.video_vram = (vm_data["vram_mb"] || 256) * 1024
+            if vm_data["accel3d"]
+              libvirt.graphics_gl = true
+            end
+          else
+            libvirt.graphics_type = "none"
+          end
+
+          if vm_data.dig("usb", "xhci")
+             libvirt.usb_controller :model => "qemu-xhci"
+          end
+        end
+
         # Mount shared folders specified in vm.yml
         if vm_data["shared_folders"]
           vm_data["shared_folders"].each do |sf|
@@ -82,6 +119,26 @@ Vagrant.configure("2") do |config|
             vb.customize ["modifyvm", :id, "--audio-driver", "none"]
             vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
             vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+          end
+
+          node.vm.provider "vmware_desktop" do |v|
+            v.gui = m["gui"] || false
+            v.vmx["memsize"] = (m["ram_mb"] || 2048).to_s
+            v.vmx["numvcpus"] = (m["cpus"] || 2).to_s
+            v.vmx["vhv.enable"] = "TRUE"
+          end
+
+          node.vm.provider "libvirt" do |libvirt|
+            libvirt.memory = m["ram_mb"] || 2048
+            libvirt.cpus = m["cpus"] || 2
+            libvirt.nested = true
+            
+            if m["gui"]
+              libvirt.graphics_type = "spice"
+              libvirt.video_type = "qxl"
+            else
+              libvirt.graphics_type = "none"
+            end
           end
 
           # For testing VMs, map the entire repository workspace
