@@ -1,6 +1,9 @@
 require 'yaml'
 
 Vagrant.configure("2") do |config|
+  if Vagrant.has_plugin?("vagrant-vbguest")
+    config.vbguest.auto_update = false
+  end
   # Map custom OS names from your old build.py configs to standard Vagrant Cloud boxes
   os_box_map = {
     "debian13"   => "bento/debian-13", # bento for VBox/VMware, libvirt overrides to debian/trixie64
