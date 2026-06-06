@@ -116,7 +116,7 @@ Vagrant.configure("2") do |config|
         node.vm.provision "ansible_local" do |ansible|
           ansible.playbook = "provisioning/site.yml"
           ansible.inventory_path = "provisioning/inventory"
-          ansible.limit = "all"
+          ansible.limit = "localhost"
           ansible.extra_vars = { profile: vm_data["profile"] || "desktop-gnome" }
         end
       end
@@ -177,7 +177,7 @@ Vagrant.configure("2") do |config|
           node.vm.provision "ansible_local" do |ansible|
             ansible.playbook = "provisioning/site.yml"
             ansible.inventory_path = "provisioning/inventory"
-            ansible.limit = "all"
+            ansible.limit = "localhost"
             ansible.extra_vars = { profile: m["profile"] || "headless" }
           end
         end
@@ -234,7 +234,7 @@ Vagrant.configure("2") do |config|
       node.vm.provision "ansible_local" do |ansible|
         ansible.playbook = "provisioning/site.yml"
         ansible.inventory_path = "provisioning/inventory"
-        ansible.limit = "all"
+        ansible.limit = "localhost"
         
         features = {}
         features["fpga"] = { "enabled" => true } if ENV['JENKINS_FPGA'] == 'true'
