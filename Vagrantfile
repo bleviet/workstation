@@ -198,7 +198,8 @@ Vagrant.configure("2") do |config|
   if ENV['JENKINS_PARAM_BUILD'] == 'true'
     config.vm.define "jenkins-param-vm" do |node|
       node.vm.box = os_box_map[ENV['JENKINS_OS']] || "ubuntu/noble64"
-      node.vm.hostname = "jenkins-param-vm"
+      vm_name = "workstation-#{ENV['JENKINS_OS']}-#{ENV['JENKINS_PROFILE']}-#{ENV['BUILD_NUMBER']}"
+      node.vm.hostname = "workstation-#{ENV['BUILD_NUMBER']}"
 
       gui_enabled = ENV['JENKINS_PROFILE'] != 'headless'
       
@@ -210,7 +211,7 @@ Vagrant.configure("2") do |config|
       vm_usb = ENV['JENKINS_USB'] == 'true'
 
       node.vm.provider "virtualbox" do |vb|
-        vb.name = ENV['BUILD_TAG'] || "jenkins-param-vm"
+        vb.name = vm_name
         vb.gui = gui_enabled
         vb.memory = vm_ram
         vb.cpus = vm_cpus
