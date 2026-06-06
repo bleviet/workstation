@@ -2,23 +2,27 @@
 - name: Install fonts
   when: features.gui | default(false) | bool
   block:
-    - name: Check if Nerd Fonts are installed
-      ansible.builtin.stat:
-        path: "{{ dev_user_home }}/.local/share/fonts/NerdFonts"
-      register: nerd_fonts_stat
-      when: features.fonts | default(true) | bool
+    - name: Ensure font directories exist
+      ansible.builtin.file:
+        path: "{{ dev_user_home }}/.local/share/fonts/JetBrainsMono"
+        state: directory
+        mode: '0755'
 
-    - name: Install FiraCode Nerd Font
-      ansible.builtin.shell:
-        cmd: |
-          tmpdir=$(mktemp -d)
-          git clone --depth 1 https://github.com/ryanoasis/nerd-fonts.git "$tmpdir"
-          "$tmpdir/install.sh" FiraCode
-          rm -rf "$tmpdir"
-        executable: /bin/bash
-      environment:
-        HOME: "{{ dev_user_home }}"
-      when: (features.fonts | default(true) | bool) and not nerd_fonts_stat.stat.exists
-      changed_when: true
+    - name: Check if JetBrainsMono Nerd Font is installed
+      ansible.builtin.stat:
+        path: "{{ dev_user_home }}/.local/share/fonts/JetBrainsMono/JetBrainsMonoNerdFont-Regular.ttf"
+      register: jb_font_stat
+
+    - name: Download and extract JetBrainsMono Nerd Font
+      ansible.builtin.unarchive:
+        src: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/JetBrainsMono.zip"
+        dest: "{{ dev_user_home }}/.local/share/fonts/JetBrainsMono"
+        remote_src: yes
+      when: not jb_font_stat.stat.exists
+
+    - name: Update font cache
+      ansible.builtin.command: fc-cache -fv
+      when: not jb_font_stat.stat.exists
+
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
