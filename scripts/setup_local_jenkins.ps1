@@ -1,6 +1,10 @@
 # scripts/setup_local_jenkins.ps1
 # Automates the setup of a standalone Jenkins server locally for Windows
 
+param(
+    [int]$Port = 8080
+)
+
 $ErrorActionPreference = "Stop"
 
 $RootDir = Resolve-Path (Join-Path $PSScriptRoot "..")
@@ -35,10 +39,10 @@ Copy-Item -Path (Join-Path $RootDir "scripts\jenkins\init.groovy.d\*.groovy") -D
 $env:JENKINS_HOME = $JenkinsHomeDir
 
 Write-Host "Starting Jenkins..." -ForegroundColor Green
-Write-Host "-> The web interface will be available at http://localhost:8080" -ForegroundColor Cyan
+Write-Host "-> The web interface will be available at http://localhost:$Port" -ForegroundColor Cyan
 Write-Host "-> Login with admin / admin" -ForegroundColor Cyan
 Write-Host "-> The 'workstation-vm-builder' pipeline job will be created automatically!" -ForegroundColor Cyan
 Write-Host "-> Press Ctrl+C to stop Jenkins." -ForegroundColor Yellow
 Write-Host "===========================" -ForegroundColor Cyan
 
-& $JavaBin "-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true" -jar $JenkinsWar --httpPort=8080
+& $JavaBin "-Dhudson.plugins.git.GitSCM.ALLOW_LOCAL_CHECKOUT=true" -jar $JenkinsWar --httpPort=$Port
