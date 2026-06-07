@@ -106,7 +106,7 @@ Vagrant.configure("2") do |config|
           v.gui = vm_data["gui"] || true
           v.vmx["memsize"] = (vm_data["ram_mb"] || 32768).to_s
           v.vmx["numvcpus"] = (vm_data["cpus"] || 8).to_s
-          v.vmx["vhv.enable"] = "TRUE"
+          v.vmx["vhv.enable"] = "FALSE"
           v.vmx["answer.msg.cpuid.noVHVQuestion"] = "Yes"
           v.vmx["mks.enable3d"] = vm_data["accel3d"] ? "TRUE" : "FALSE"
           v.vmx["svga.vramSize"] = ((vm_data["vram_mb"] || 256) * 1024 * 1024).to_s
@@ -200,7 +200,7 @@ Vagrant.configure("2") do |config|
             v.gui = m["gui"] || false
             v.vmx["memsize"] = (m["ram_mb"] || 2048).to_s
             v.vmx["numvcpus"] = (m["cpus"] || 2).to_s
-            v.vmx["vhv.enable"] = "TRUE"
+            v.vmx["vhv.enable"] = "FALSE"
             v.vmx["answer.msg.cpuid.noVHVQuestion"] = "Yes"
             v.vmx["isolation.tools.copy.disable"] = "FALSE"
             v.vmx["isolation.tools.paste.disable"] = "FALSE"
@@ -286,7 +286,7 @@ Vagrant.configure("2") do |config|
         v.gui = false # Force headless under Jenkins to prevent GUI startup failures
         v.vmx["memsize"] = vm_ram.to_s
         v.vmx["numvcpus"] = vm_cpus.to_s
-        v.vmx["vhv.enable"] = "TRUE"
+        v.vmx["vhv.enable"] = "FALSE"
         v.vmx["answer.msg.cpuid.noVHVQuestion"] = "Yes"
         v.vmx["mks.enable3d"] = vm_accel3d ? "TRUE" : "FALSE"
         v.vmx["svga.vramSize"] = (vm_vram * 1024 * 1024).to_s
