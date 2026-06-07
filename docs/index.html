@@ -252,6 +252,104 @@
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
+
+    /* Markdown Drawer */
+    .md-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.4); backdrop-filter: blur(4px);
+      z-index: 100; opacity: 0; pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .md-overlay.open { opacity: 1; pointer-events: auto; }
+    
+    .md-drawer {
+      position: fixed; top: 0; right: -650px; bottom: 0;
+      width: 100%; max-width: 650px; background: var(--surface);
+      border-left: 1px solid var(--border); box-shadow: var(--shadow);
+      z-index: 101; display: flex; flex-direction: column;
+      transition: right 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .md-drawer.open { right: 0; }
+    
+    .md-header {
+      padding: 16px 24px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      background: var(--surface); position: sticky; top: 0; z-index: 10;
+    }
+    .md-header h3 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+    .md-header-actions { display: flex; align-items: center; gap: 8px; }
+    
+    .md-close {
+      background: transparent; border: none; font-size: 1.3rem;
+      cursor: pointer; color: var(--fg-muted); padding: 4px 8px;
+      border-radius: 6px; display: inline-flex; align-items: center;
+      transition: background 0.15s;
+    }
+    .md-close:hover { background: var(--surface-2); color: var(--fg); }
+    
+    .md-body {
+      padding: 24px 32px; overflow-y: auto; flex: 1;
+      font-size: 0.95rem; line-height: 1.6; color: var(--fg);
+    }
+    
+    /* Markdown typography inside drawer */
+    .md-body h1, .md-body h2, .md-body h3, .md-body h4 {
+      margin-top: 1.4em; margin-bottom: 0.5em; font-weight: 700;
+      letter-spacing: -0.01em; line-height: 1.25;
+    }
+    .md-body h1 { font-size: 1.5rem; border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+    .md-body h2 { font-size: 1.3rem; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+    .md-body h3 { font-size: 1.1rem; }
+    .md-body p { margin-top: 0; margin-bottom: 16px; }
+    .md-body ul, .md-body ol { padding-left: 2em; margin-bottom: 16px; }
+    .md-body li { margin-bottom: 4px; }
+    .md-body code {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 6px; padding: 0.12em 0.35em; font-size: 0.88em;
+    }
+    .md-body pre {
+      background: var(--code-bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 16px; overflow-x: auto; margin-bottom: 16px;
+    }
+    .md-body pre code {
+      background: transparent; border: none; padding: 0; font-size: 0.86em;
+    }
+    .md-body blockquote {
+      border-left: 4px solid var(--accent); color: var(--fg-muted);
+      padding: 4px 0 4px 16px; margin: 0 0 16px;
+    }
+    .md-body table {
+      width: 100%; border-collapse: collapse; margin-bottom: 16px;
+    }
+    .md-body th, .md-body td {
+      border: 1px solid var(--border); padding: 8px 12px; text-align: left;
+    }
+    .md-body th { background: var(--surface-2); font-weight: 600; }
+    
+    .md-error-box {
+      border: 1px solid var(--border); background: var(--surface-2);
+      border-radius: var(--radius); padding: 20px; text-align: center;
+      margin-top: 20px;
+    }
+    .md-error-box h4 { margin: 0 0 10px 0; font-size: 1.1rem; color: var(--fg); }
+    .md-error-box p { color: var(--fg-muted); font-size: 0.9rem; margin-bottom: 16px; }
+    
+    .btn-md-action {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: var(--accent); color: #fff; padding: 8px 16px;
+      border-radius: 8px; font-weight: 600; font-size: 0.85rem;
+      border: none; cursor: pointer; transition: opacity 0.15s;
+      text-decoration: none;
+    }
+    .btn-md-action:hover { opacity: 0.9; text-decoration: none; }
+    .btn-md-action.secondary {
+      background: var(--surface-2); color: var(--fg); border: 1px solid var(--border);
+    }
+    .btn-md-action.secondary:hover { background: var(--border); }
+
+    @media (max-width: 650px) {
+      .md-drawer { max-width: 100%; right: -100%; }
+    }
   </style>
 </head>
 <body>
@@ -303,6 +401,7 @@
 
   <script type="module">
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    import { marked } from "https://cdn.jsdelivr.net/npm/marked/lib/marked.esm.js";
 
     /* ── Scenario content ──────────────────────────────────────────────────
        Each scenario answers what/when/why/how and carries a Mermaid diagram. */
@@ -524,6 +623,90 @@
       flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis' }
     });
     applyTheme(initial);
+
+    /* ── Markdown Reader Actions ────────────────────────────────────────── */
+    async function openMarkdownReader(href, label) {
+      const overlay = document.getElementById("mdOverlay");
+      const drawer = document.getElementById("mdDrawer");
+      const title = document.getElementById("mdTitle");
+      const body = document.getElementById("mdBody");
+      const githubAction = document.getElementById("mdGithubAction");
+      const rawAction = document.getElementById("mdRawAction");
+      
+      title.textContent = label || "Documentation";
+      body.innerHTML = '<p style="color:var(--fg-muted)">Loading documentation...</p>';
+      
+      overlay.classList.add("open");
+      drawer.classList.add("open");
+      
+      const gitHubBase = "https://github.com/bleviet/workstation/blob/main/docs/";
+      const gitHubUrl = gitHubBase + href;
+      
+      githubAction.setAttribute("href", gitHubUrl);
+      rawAction.setAttribute("href", href);
+      
+      try {
+        const response = await fetch(href);
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        const markdown = await response.text();
+        const html = marked.parse(markdown);
+        body.innerHTML = html;
+      } catch (err) {
+        console.error("Failed to load local markdown file:", err);
+        body.innerHTML = `
+          <div class="md-error-box">
+            <h4>Cannot Read Local File Directly</h4>
+            <p>Your web browser blocks JavaScript from reading local files directly via the <code>file://</code> protocol for security reasons.</p>
+            <div style="display:flex; gap:10px; justify-content:center; margin-top: 14px;">
+              <a href="${gitHubUrl}" target="_blank" class="btn-md-action">Open on GitHub</a>
+              <a href="${href}" target="_blank" class="btn-md-action secondary">Open Raw File</a>
+            </div>
+          </div>
+        `;
+      }
+    }
+    
+    function closeMarkdownReader() {
+      document.getElementById("mdOverlay").classList.remove("open");
+      document.getElementById("mdDrawer").classList.remove("open");
+    }
+
+    document.getElementById("mdOverlay").addEventListener("click", closeMarkdownReader);
+    document.getElementById("mdCloseBtn").addEventListener("click", closeMarkdownReader);
+    
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeMarkdownReader();
+    });
+
+    // Intercept clicks on links that point to .md files
+    document.addEventListener("click", (e) => {
+      const link = e.target.closest("a");
+      if (!link) return;
+      
+      const href = link.getAttribute("href");
+      if (href && href.endsWith(".md")) {
+        e.preventDefault();
+        openMarkdownReader(href, link.textContent);
+      }
+    });
   </script>
+
+  <!-- Markdown Reader Drawer -->
+  <div class="md-overlay" id="mdOverlay"></div>
+  <div class="md-drawer" id="mdDrawer" role="dialog" aria-labelledby="mdTitle">
+    <div class="md-header">
+      <h3 id="mdTitle">Documentation</h3>
+      <div class="md-header-actions">
+        <a id="mdGithubAction" href="#" target="_blank" class="btn-md-action secondary" style="padding: 6px 12px; font-size: 0.8rem;">GitHub</a>
+        <a id="mdRawAction" href="#" target="_blank" class="btn-md-action secondary" style="padding: 6px 12px; font-size: 0.8rem;">Raw</a>
+        <button class="md-close" id="mdCloseBtn" aria-label="Close reader">&times;</button>
+      </div>
+    </div>
+    <div class="md-body" id="mdBody">
+      <!-- filled by JS -->
+    </div>
+  </div>
 </body>
 </html>
