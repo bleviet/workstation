@@ -1,5 +1,16 @@
 # Remote deployment
 
+```mermaid
+flowchart TD
+    subgraph Local ["Method 1: Local Admin PC (Ansible Installed)"]
+        A1["Admin PC (runs bootstrap.sh)"] -->|SSH with SSH keys| T1["Target Hosts (Provisioned)"]
+    end
+    subgraph Container ["Method 2: Containerized Controller (No Local Ansible)"]
+        A2["Admin PC"] -->|Mounts ~/.ssh read-only| C2["Controller Container<br/>(workstation-controller image)"]
+        C2 -->|Runs run.sh wrapper| T2["Target Hosts (Provisioned)"]
+    end
+```
+
 ## From an admin PC (Ansible installed)
 
 Add target hosts to `ansible/inventory/hosts.yml`, then run:

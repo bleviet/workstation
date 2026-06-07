@@ -1,5 +1,22 @@
 # Quick start — local installation
 
+```mermaid
+flowchart TD
+    Start([Start]) --> Clone["git clone &lt;repo&gt; ~/workspace/workstation"]
+    Clone --> RunScript["./bootstrap.sh"]
+    subgraph Bootstrap ["bootstrap.sh Execution"]
+        RunScript --> InstDeps["Install Python3 & Pip"]
+        InstDeps --> InstAnsible["Install ansible-core & packages"]
+        InstAnsible --> Galaxy["Download Galaxy Collections"]
+    end
+    Galaxy --> RunPlaybook["ansible-playbook ansible/site.yml"]
+    subgraph Provisioning ["Ansible Provisioning"]
+        RunPlaybook --> ReadHostVars["Read host_vars/localhost.yml"]
+        ReadHostVars --> ExecRoles["Execute Roles (Packages, Dev Tools, Shell, chezmoi)"]
+    end
+    ExecRoles --> Done([Machine Bootstrapped ✔])
+```
+
 Bootstrap this machine by cloning the repo locally and running the
 provisioning script directly. This is the owner flow: the repo itself is the
 dotfiles source.

@@ -291,6 +291,16 @@
       padding: 24px 32px; overflow-y: auto; flex: 1;
       font-size: 0.95rem; line-height: 1.6; color: var(--fg);
     }
+    .md-body .mermaid-block {
+      margin: 20px 0;
+      display: flex;
+      justify-content: center;
+      width: 100%;
+    }
+    .md-body .mermaid-block svg {
+      max-width: 100%;
+      height: auto;
+    }
     
     /* Markdown typography inside drawer */
     .md-body h1, .md-body h2, .md-body h3, .md-body h4 {
@@ -653,6 +663,26 @@
         const markdown = await response.text();
         const html = marked.parse(markdown);
         body.innerHTML = html;
+        
+        // Post-process to find Mermaid code blocks
+        const codeBlocks = body.querySelectorAll("pre code.language-mermaid");
+        codeBlocks.forEach((codeEl) => {
+          const preEl = codeEl.parentElement;
+          const rawCode = codeEl.textContent;
+          
+          const mermaidDiv = document.createElement("div");
+          mermaidDiv.className = "mermaid mermaid-block";
+          mermaidDiv.textContent = rawCode;
+          
+          preEl.replaceWith(mermaidDiv);
+        });
+        
+        // Dynamically render the newly added Mermaid blocks
+        if (codeBlocks.length > 0) {
+          await mermaid.run({
+            querySelector: '.mermaid-block'
+          });
+        }
       } catch (err) {
         console.error("Failed to load local markdown file:", err);
         body.innerHTML = `

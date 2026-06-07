@@ -57,6 +57,27 @@ shared_folders:
     create: true
 ```
 
+### Directory Mount Mapping
+
+```mermaid
+flowchart LR
+    subgraph Host ["Host Filesystem"]
+        H1["&lt;repo_root&gt;/ (workspace)"]
+        H2["&lt;repo_root&gt;/local-vms/vm-fpga-dev-.../projects/"]
+        H3["&lt;repo_root&gt;/local-vms/vm-fpga-dev-.../installers/"]
+    end
+    subgraph Hypervisor ["VM Shared Folders (HGFS/VirtualBox)"]
+        H1 --> SF1["Shared Folder 1"]
+        H2 --> SF2["Shared Folder 2"]
+        H3 --> SF3["Shared Folder 3"]
+    end
+    subgraph Guest ["Guest OS Filesystem (Ubuntu/AlmaLinux)"]
+        SF1 --> G1["/home/vagrant/workspace/workstation"]
+        SF2 --> G2["/home/vagrant/projects"]
+        SF3 --> G3["/opt/fpga-installers"]
+    end
+```
+
 The `Vagrantfile` dynamically scans these files and loads the boxes, allocating resources and providers accordingly.
 
 ---

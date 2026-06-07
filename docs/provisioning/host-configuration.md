@@ -161,6 +161,44 @@ ansible/
     fpga/                 # FPGA runtime libs + udev rules (per sub-flag)
     xrdp/                 # xrdp RDP server (features.xrdp)
 
+### Ansible Role Execution Flow
+
+```mermaid
+flowchart TD
+    Run([Start ansible-playbook]) --> RoleUser["1. user role (scaffolds dev_user & sudo)"]
+    RoleUser --> RolePkg["2. packages role (system packages & libs)"]
+    RolePkg --> RoleTools["3. dev-tools role (rustup, nvm, uv, neovim, vscode)"]
+    RoleTools --> RoleShell["4. shell role (zsh, oh-my-zsh)"]
+    RoleShell --> RoleChezmoi["5. chezmoi role (clones & applies dotfiles)"]
+    RoleChezmoi --> RoleFonts["6. fonts role (Nerd Fonts)"]
+    RoleFonts --> RoleSsh["7. ssh role (openssh + X11 forwarding)"]
+    
+    RoleSsh --> CheckProfile{"Is GUI Profile set?"}
+    
+    CheckProfile -- "headless" --> CheckFpga
+    
+    CheckProfile -- "desktop-*" --> RoleDesktop["8. desktop role (X11 base + kitty)"]
+    RoleDesktop --> CheckGnome{"Which desktop profile?"}
+    
+    CheckGnome -- "desktop-gnome" --> RoleGnome["9a. gnome role (GNOME shell + GDM)"]
+    CheckGnome -- "desktop-xfce" --> RoleXfce["9b. xfce role (XFCE4 + LightDM)"]
+    CheckGnome -- "desktop-i3wm" --> RoleI3["9c. i3wm role (i3wm + polybar)"]
+    
+    RoleGnome --> CheckFpga
+    RoleXfce --> CheckFpga
+    RoleI3 --> CheckFpga
+    
+    CheckFpga{"Any FPGA flags true?"}
+    CheckFpga -- "Yes" --> RoleFpga["10. fpga role (udev rules & target libraries)"]
+    CheckFpga -- "No" --> CheckXrdp
+    RoleFpga --> CheckXrdp
+    
+    CheckXrdp{"features.xrdp true?"}
+    CheckXrdp -- "Yes" --> RoleXrdp["11. xrdp role (Remote Desktop server)"]
+    CheckXrdp -- "No" --> End([Provisioning Complete ✔])
+    RoleXrdp --> End
+```
+
 dotfiles/                 # chezmoi source — applied to ~/
   dot_config/
     shell/

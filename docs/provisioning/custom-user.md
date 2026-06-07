@@ -42,6 +42,24 @@ you prefer to wire it up by hand.
 
 ## What happens when dev_user is set
 
+```mermaid
+flowchart TD
+    Start([Start scripts/add_dev_host.py]) --> ParseFlags["Parse Flags (-d dev_user, -p profile, --xrdp, etc.)"]
+    ParseFlags --> GenHostVars["Create host_vars/&lt;hostname&gt;.yml"]
+    ParseFlags --> RegHosts["Register host in hosts.yml"]
+    GenHostVars --> RunPlaybook{"With --run flag?"}
+    RegHosts --> RunPlaybook
+    RunPlaybook -- "No" --> Review["Scaffolding complete.<br/>Review files manually."]
+    RunPlaybook -- "Yes" --> ExecPlaybook["Run ansible-playbook site.yml"]
+    ExecPlaybook --> RoleUser["Role: user"]
+    subgraph RoleUserExecution ["user Role execution"]
+        RoleUser --> CreateUser["Create Linux account<br/>(shell: /bin/zsh, home dir)"]
+        CreateUser --> SetSudo["Add passwordless sudo entry in /etc/sudoers.d/"]
+        SetSudo --> DeploySSH["Deploy SSH key (if dev_user_ssh_pubkey set)"]
+    end
+    DeploySSH --> Done([User created & configured ✔])
+```
+
 The `user` role runs first and:
 
 1. Creates the account (shell: `/bin/zsh`, home directory auto-created).

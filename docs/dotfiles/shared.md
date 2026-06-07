@@ -27,6 +27,22 @@ git add -A && git commit && git push
 
 ## SSH authentication
 
+```mermaid
+flowchart TD
+    Start([Clone Private Dotfiles Repo]) --> CheckAuth{"Is chezmoi_ssh_key_file set?"}
+    
+    CheckAuth -- "Yes (Unattended / CI)" --> DeployKey["Use passphrase-less Deploy Key"]
+    DeployKey --> GitSSH["Configure GIT_SSH_COMMAND"]
+    GitSSH --> AuthDeploy["GitHub Authenticated (Read-Only)"]
+    
+    CheckAuth -- "No (Interactive Developer)" --> CheckURL{"Is Repo URL SSH (git@...)?"}
+    
+    CheckURL -- "No (HTTPS URL)" --> HTTPS["No SSH Auth Needed (Public Repo)"]
+    CheckURL -- "Yes (SSH URL)" --> AgentForward["Forward host SSH Agent socket"]
+    AgentForward --> AgentSocket["Ansible checks SSH_AUTH_SOCK"]
+    AgentSocket --> AuthAgent["GitHub Authenticated (Read/Write)"]
+```
+
 ### Interactive (passphrase-protected personal key)
 
 The role forwards your SSH agent socket into the chezmoi process so the agent

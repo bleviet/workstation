@@ -6,6 +6,18 @@ external dotfiles repo is needed.
 
 ## How it works
 
+```mermaid
+flowchart TD
+    subgraph EditLoop ["1. Local Edit Cycle (Machine A)"]
+        E1["Edit live file (~/.bashrc)"] --> E2["chezmoi re-add ~/.bashrc<br/>(pulls changes to repo source)"]
+        E2 --> E3["git add & commit & push<br/>(pushes to remote Git repo)"]
+    end
+    subgraph SyncLoop ["2. Remote Sync Cycle (Machine B)"]
+        E3 --> S1["git pull<br/>(downloads repo changes)"]
+        S1 --> S2["chezmoi apply<br/>(deploys files to ~/)"]
+    end
+```
+
 Ansible configures chezmoi to use `<repo>/dotfiles/` as its source directory.
 `chezmoi apply` copies files from there to `~`.
 
