@@ -104,6 +104,10 @@ Vagrant.configure("2") do |config|
 
         node.vm.provider "vmware_desktop" do |v|
           v.gui = vm_data["gui"] || true
+          if settings["vmware_base_folder"]
+            v.clone_directory = File.join(settings["vmware_base_folder"], vm_data["name"])
+          end
+          v.vmx["displayName"] = vm_data["name"]
           v.vmx["memsize"] = (vm_data["ram_mb"] || 32768).to_s
           v.vmx["numvcpus"] = (vm_data["cpus"] || 8).to_s
           v.vmx["vhv.enable"] = "FALSE"
@@ -198,6 +202,10 @@ Vagrant.configure("2") do |config|
 
           node.vm.provider "vmware_desktop" do |v|
             v.gui = m["gui"] || false
+            if settings["vmware_base_folder"]
+              v.clone_directory = File.join(settings["vmware_base_folder"], m["name"])
+            end
+            v.vmx["displayName"] = m["name"]
             v.vmx["memsize"] = (m["ram_mb"] || 2048).to_s
             v.vmx["numvcpus"] = (m["cpus"] || 2).to_s
             v.vmx["vhv.enable"] = "FALSE"
@@ -284,6 +292,10 @@ Vagrant.configure("2") do |config|
 
       node.vm.provider "vmware_desktop" do |v|
         v.gui = false # Force headless under Jenkins to prevent GUI startup failures
+        if settings["vmware_base_folder"]
+          v.clone_directory = File.join(settings["vmware_base_folder"], vm_name)
+        end
+        v.vmx["displayName"] = vm_name
         v.vmx["memsize"] = vm_ram.to_s
         v.vmx["numvcpus"] = vm_cpus.to_s
         v.vmx["vhv.enable"] = "FALSE"
