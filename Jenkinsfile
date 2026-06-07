@@ -24,6 +24,7 @@ pipeline {
     environment {
         // Suppress Vagrant color output in Jenkins
         VAGRANT_NO_COLOR = '1'
+        VAGRANT_HOME = 'D:/.vagrant.d'
         
         // Pass parameters to Vagrantfile via environment variables
         JENKINS_PARAM_BUILD = 'true'
