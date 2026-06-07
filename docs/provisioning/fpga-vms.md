@@ -40,7 +40,7 @@ cpus: 8              # logical CPUs visible inside the VM
 vram_mb: 256         # video RAM for display sessions
 disk_gb: 512         # thin-provisioned; grows on demand
 
-accel3d: true        # hardware 3D acceleration
+accel3d: false       # hardware 3D acceleration
 
 usb:
   ehci: true         # USB 2.0 — USB-Blaster (original), Platform Cable USB

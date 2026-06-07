@@ -93,6 +93,8 @@ Vagrant.configure("2") do |config|
           vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
           
           if vm_data["accel3d"]
+            vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+          else
             vb.customize ["modifyvm", :id, "--accelerate3d", "off"]
           end
           if vm_data.dig("usb", "ehci")
@@ -287,6 +289,8 @@ Vagrant.configure("2") do |config|
         vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
         
         if vm_accel3d
+          vb.customize ["modifyvm", :id, "--accelerate3d", "on"]
+        else
           vb.customize ["modifyvm", :id, "--accelerate3d", "off"]
         end
         if vm_usb

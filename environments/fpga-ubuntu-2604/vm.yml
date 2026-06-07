@@ -14,7 +14,7 @@ cpus: 8              # logical CPUs visible inside the VM
 vram_mb: 256         # video RAM for the GNOME session
 disk_gb: 512         # thin-provisioned; grows on demand
 
-accel3d: true        # set to false if the host GPU causes rendering glitches
+accel3d: false       # set to false if the host GPU causes rendering glitches
 
 usb:
   ehci: true         # USB 2.0 — USB-Blaster (original), Platform Cable USB
