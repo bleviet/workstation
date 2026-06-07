@@ -173,7 +173,14 @@ Vagrant.configure("2") do |config|
           ansible.playbook = "provisioning/site.yml"
           ansible.inventory_path = "provisioning/inventory"
           ansible.limit = "localhost"
-          ansible.extra_vars = { profile: vm_data["profile"] || "desktop-gnome" }
+          
+          # Pass consolidated provisioning variables from vm.yml
+          ansible_vars = {
+            "profile" => vm_data["profile"] || "headless",
+            "dev_user" => vm_data["dev_user"] || "vagrant"
+          }
+          ansible_vars["features"] = vm_data["features"] if vm_data["features"]
+          ansible.extra_vars = ansible_vars
         end
       end
     rescue Exception => e

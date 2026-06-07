@@ -30,3 +30,17 @@ shared_folders:
   - host: "installers"
     guest: "/opt/fpga-installers"
     create: true
+
+# --- Ansible Provisioning ---
+dev_user: bleviet
+profile: desktop-gnome
+features:
+  editor:
+    neovim: true
+    lazyvim: true
+    vscode: true
+  fpga:
+    vivado: false
+    quartus: false
+    oss: true
+  xrdp: false
