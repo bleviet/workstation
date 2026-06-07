@@ -14,10 +14,10 @@ Vagrant.configure("2") do |config|
     export DEBIAN_FRONTEND=noninteractive
 
     # 1. Install Ansible if missing
-    if ! command -v ansible-playbook &> /dev/null; then
+    if ! command -v ansible-playbook >/dev/null 2>&1; then
       if [ -f /etc/debian_version ]; then
         apt-get update -qq
-        apt-get install -y -qq ansible-core || apt-get install -y -qq ansible
+        apt-get install -y -qq ansible-core
       elif [ -f /etc/redhat-release ]; then
         dnf install -y epel-release
         dnf install -y ansible-core
@@ -30,13 +30,13 @@ Vagrant.configure("2") do |config|
       systemctl disable systemd-networkd-wait-online.service 2>/dev/null || true
       systemctl mask systemd-networkd-wait-online.service 2>/dev/null || true
 
-      # Rebuild VirtualBox Guest Additions if they crashed against the bleeding-edge kernel
-      if command -v systemctl &> /dev/null && systemctl is-failed --quiet vboxadd-service.service 2>/dev/null; then
-        apt-get update -qq
-        apt-get install -y -qq dkms build-essential linux-headers-$(uname -r)
-        if [ -f /sbin/rcvboxadd ]; then
+      # Rebuild VirtualBox Guest Additions if running on VirtualBox and they are not working
+      if command -v systemd-detect-virt >/dev/null 2>&1 && systemd-detect-virt 2>/dev/null | grep -q "oracle"; then
+        if [ -f /sbin/rcvboxadd ] && ! /sbin/rcvboxadd status >/dev/null 2>&1; then
+          apt-get update -qq
+          apt-get install -y -qq dkms build-essential linux-headers-$(uname -r)
           /sbin/rcvboxadd setup || true
-          systemctl restart vboxadd-service.service || true
+          systemctl restart vboxadd-service.service 2>/dev/null || true
         fi
       fi
       
@@ -66,7 +66,8 @@ Vagrant.configure("2") do |config|
   # Configure VirtualBox default machine folder globally
   if settings["vbox_base_folder"]
     # This invokes VBoxManage (if available) to set the global Default Machine Folder
-    system("VBoxManage setproperty machinefolder \"#{settings['vbox_base_folder']}\" >nul 2>&1")
+    null_device = Vagrant::Util::Platform.windows? ? "NUL" : "/dev/null"
+    system("VBoxManage setproperty machinefolder \"#{settings['vbox_base_folder']}\" >#{null_device} 2>&1")
   end
 
   # --- 1. Load FPGA Environments ---
@@ -79,7 +80,7 @@ Vagrant.configure("2") do |config|
 
         node.vm.provider "virtualbox" do |vb|
           vb.name = vm_data["name"]
-          vb.gui = vm_data["gui"] || true # Default to GUI for FPGA dev
+          vb.gui = vm_data["gui"].nil? ? true : vm_data["gui"] # Default to GUI for FPGA dev
           vb.memory = vm_data["ram_mb"] || 32768
           vb.cpus = vm_data["cpus"] || 8
           
@@ -87,7 +88,7 @@ Vagrant.configure("2") do |config|
           vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxsvga"]
           vb.customize ["modifyvm", :id, "--audio-driver", "none"]
           vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
-          vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+          vb.customize ["modifyvm", :id, "--nested-hw-virt", "off"]
           vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
           vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
           
@@ -103,7 +104,7 @@ Vagrant.configure("2") do |config|
         end
 
         node.vm.provider "vmware_desktop" do |v|
-          v.gui = vm_data["gui"] || true
+          v.gui = vm_data["gui"].nil? ? true : vm_data["gui"]
           if settings["vmware_base_folder"]
             v.clone_directory = File.join(settings["vmware_base_folder"], vm_data["name"])
           end
@@ -112,6 +113,8 @@ Vagrant.configure("2") do |config|
           v.vmx["numvcpus"] = (vm_data["cpus"] || 8).to_s
           v.vmx["vhv.enable"] = "FALSE"
           v.vmx["answer.msg.cpuid.noVHVQuestion"] = "Yes"
+          v.vmx["mainMem.useNamedFile"] = "FALSE"
+          v.vmx["mainMemTblMonFree"] = "TRUE"
           v.vmx["mks.enable3d"] = vm_data["accel3d"] ? "TRUE" : "FALSE"
           v.vmx["svga.vramSize"] = ((vm_data["vram_mb"] || 256) * 1024 * 1024).to_s
           v.vmx["isolation.tools.copy.disable"] = "FALSE"
@@ -133,9 +136,9 @@ Vagrant.configure("2") do |config|
 
           libvirt.memory = vm_data["ram_mb"] || 32768
           libvirt.cpus = vm_data["cpus"] || 8
-          libvirt.nested = true
+          libvirt.nested = false
           
-          if vm_data["gui"] || true
+          if vm_data["gui"].nil? ? true : vm_data["gui"]
             libvirt.graphics_type = "spice"
             libvirt.video_type = "qxl"
             libvirt.video_vram = (vm_data["vram_mb"] || 256) * 1024
@@ -195,7 +198,7 @@ Vagrant.configure("2") do |config|
             vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxsvga"]
             vb.customize ["modifyvm", :id, "--audio-driver", "none"]
             vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
-            vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+            vb.customize ["modifyvm", :id, "--nested-hw-virt", "off"]
             vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
             vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
           end
@@ -210,6 +213,8 @@ Vagrant.configure("2") do |config|
             v.vmx["numvcpus"] = (m["cpus"] || 2).to_s
             v.vmx["vhv.enable"] = "FALSE"
             v.vmx["answer.msg.cpuid.noVHVQuestion"] = "Yes"
+            v.vmx["mainMem.useNamedFile"] = "FALSE"
+            v.vmx["mainMemTblMonFree"] = "TRUE"
             v.vmx["isolation.tools.copy.disable"] = "FALSE"
             v.vmx["isolation.tools.paste.disable"] = "FALSE"
             v.vmx["isolation.tools.dnd.disable"] = "FALSE"
@@ -222,7 +227,7 @@ Vagrant.configure("2") do |config|
 
             libvirt.memory = m["ram_mb"] || 2048
             libvirt.cpus = m["cpus"] || 2
-            libvirt.nested = true
+            libvirt.nested = false
             
             if m["gui"]
               libvirt.graphics_type = "spice"
@@ -277,7 +282,7 @@ Vagrant.configure("2") do |config|
         vb.customize ["modifyvm", :id, "--graphicscontroller", "vboxsvga"]
         vb.customize ["modifyvm", :id, "--audio-driver", "none"]
         vb.customize ["modifyvm", :id, "--rtcuseutc", "on"]
-        vb.customize ["modifyvm", :id, "--nested-hw-virt", "on"]
+        vb.customize ["modifyvm", :id, "--nested-hw-virt", "off"]
         vb.customize ["modifyvm", :id, "--clipboard-mode", "bidirectional"]
         vb.customize ["modifyvm", :id, "--draganddrop", "bidirectional"]
         
@@ -300,6 +305,8 @@ Vagrant.configure("2") do |config|
         v.vmx["numvcpus"] = vm_cpus.to_s
         v.vmx["vhv.enable"] = "FALSE"
         v.vmx["answer.msg.cpuid.noVHVQuestion"] = "Yes"
+        v.vmx["mainMem.useNamedFile"] = "FALSE"
+        v.vmx["mainMemTblMonFree"] = "TRUE"
         v.vmx["mks.enable3d"] = vm_accel3d ? "TRUE" : "FALSE"
         v.vmx["svga.vramSize"] = (vm_vram * 1024 * 1024).to_s
         v.vmx["isolation.tools.copy.disable"] = "FALSE"
@@ -319,7 +326,7 @@ Vagrant.configure("2") do |config|
 
         libvirt.memory = vm_ram
         libvirt.cpus = vm_cpus
-        libvirt.nested = true
+        libvirt.nested = false
         
         if gui_enabled
           libvirt.graphics_type = "spice"
