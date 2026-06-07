@@ -281,7 +281,7 @@
           options: [
             {
               id: "adminpc", label: "Admin PC (Ansible)",
-              how: `# add the host to provisioning/inventory/hosts.yml first\nansible-playbook provisioning/site.yml -K -l my_laptop`,
+              how: `# add the host to ansible/inventory/hosts.yml first\nansible-playbook ansible/site.yml -K -l my_laptop`,
               diagram: `flowchart LR
     subgraph admin["Admin PC"]
       P["ansible-playbook<br/>-l my_laptop"]
@@ -343,7 +343,7 @@
             },
             {
               id: "sshkey", label: "SSH key",
-              how: `# provisioning/inventory/host_vars/devbox.yml\ndev_user: bach\ndev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"`,
+              how: `# ansible/inventory/host_vars/devbox.yml\ndev_user: bach\ndev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"`,
               diagram: `flowchart TD
     K["dev_user_ssh_pubkey<br/>in host_vars"] --> T["user role:<br/>authorized_key for bach"]
     T --> L["ssh bach@devbox"]
@@ -376,7 +376,7 @@
             },
             {
               id: "shared", label: "Shared (own repo)",
-              how: `# provisioning/inventory/host_vars/alice_laptop.yml\nchezmoi_init_repo: "https://github.com/alice/dotfiles"`,
+              how: `# ansible/inventory/host_vars/alice_laptop.yml\nchezmoi_init_repo: "https://github.com/alice/dotfiles"`,
               diagram: `flowchart TD
     CFG["chezmoi_init_repo set"] --> AUTH{"URL type?"}
     AUTH -- "https://" --> NA["no auth"]
@@ -417,7 +417,7 @@
         title: "Enable features",
         subtitle: "editor · fpga · xrdp",
         what: `Feature flags are organised in three groups: <span class="${C}">editor</span> (neovim, lazyvim, vscode), <span class="${C}">fpga</span> (vivado, quartus, oss), and <span class="${C}">xrdp</span>. All default to the conservative option — enable only what you need.`,
-        when: `Per host in <span class="${C}">provisioning/inventory/host_vars/&lt;hostname&gt;.yml</span>.`,
+        when: `Per host in <span class="${C}">ansible/inventory/host_vars/&lt;hostname&gt;.yml</span>.`,
         why: `Off by default so a base machine stays lean. Each sub-flag is independent — Quartus-only shops skip Vivado libs; vim users skip VS Code.`,
         links: [{ label: "Host configuration", href: "provisioning/host-configuration.md" }],
         subOptions: {

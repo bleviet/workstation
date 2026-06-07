@@ -2,10 +2,10 @@
 
 ## From an admin PC (Ansible installed)
 
-Add target hosts to `provisioning/inventory/hosts.yml`, then run:
+Add target hosts to `ansible/inventory/hosts.yml`, then run:
 
 ```bash
-ansible-playbook provisioning/site.yml -K -l my_laptop
+ansible-playbook ansible/site.yml -K -l my_laptop
 ```
 
 ## From a controller container (no Ansible on admin PC)

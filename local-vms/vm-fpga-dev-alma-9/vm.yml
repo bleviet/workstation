@@ -1,12 +1,12 @@
 # FPGA Development VM — Vivado (Xilinx/AMD) + Quartus (Intel/Altera)
 # Host: Windows 11, 64 GB RAM
-# Guest: Debian 13 + XFCE4 desktop (installed by Ansible)
+# Guest: AlmaLinux 9 + GNOME desktop (installed by Ansible)
 #
 # Hardware note: all values are thin-provisioned where applicable.
 # Ansible handles software: desktop env, FPGA tools, udev rules, dotfiles.
 
-name: vm-fpga-dev-debian-13
-os: debian13         # references os_box_map in Vagrantfile
+name: vm-fpga-dev-alma-9
+os: alma9            # references os_box_map in Vagrantfile
 hostname: fpga-dev
 
 ram_mb: 32768        # 32 GB — leaves 32 GB for the Windows host
@@ -31,16 +31,3 @@ shared_folders:
     guest: "/opt/fpga-installers"
     create: true
 
-# --- Ansible Provisioning ---
-dev_user: bleviet
-profile: desktop-xfce
-features:
-  editor:
-    neovim: true
-    lazyvim: false
-    vscode: true
-  fpga:
-    vivado: false
-    quartus: false
-    oss: true
-  xrdp: false

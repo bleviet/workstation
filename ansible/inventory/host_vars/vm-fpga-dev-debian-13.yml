@@ -1,0 +1,13 @@
+---
+dev_user: bleviet
+profile: desktop-xfce
+features:
+  editor:
+    neovim: true
+    lazyvim: false
+    vscode: true
+  fpga:
+    vivado: false
+    quartus: false
+    oss: true
+  xrdp: false

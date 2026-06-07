@@ -3,7 +3,7 @@
 ## Environment profiles
 
 Each host has a `profile` variable that controls which desktop environment (if
-any) is installed. Set it in `provisioning/inventory/host_vars/<hostname>.yml`:
+any) is installed. Set it in `ansible/inventory/host_vars/<hostname>.yml`:
 
 | Profile | Description |
 |---|---|
@@ -17,7 +17,7 @@ SSH and X11 forwarding (`X11Forwarding yes`, `AllowAgentForwarding yes`) are
 
 ## Feature flags
 
-Feature flags are set per host in `provisioning/inventory/host_vars/<hostname>.yml`
+Feature flags are set per host in `ansible/inventory/host_vars/<hostname>.yml`
 and organised into three groups. All flags default to the conservative option —
 enable only what you need.
 
@@ -58,7 +58,7 @@ sub-flag is true — they are shared across all tool vendors.
 ## Example host\_vars
 
 ```yaml
-# provisioning/inventory/host_vars/my_laptop.yml
+# ansible/inventory/host_vars/my_laptop.yml
 profile: desktop-xfce
 
 features:
@@ -74,7 +74,7 @@ features:
 ```
 
 ```yaml
-# provisioning/inventory/host_vars/fpga_workstation.yml
+# ansible/inventory/host_vars/fpga_workstation.yml
 # Quartus-only FPGA workstation with VS Code and RDP
 profile: desktop-xfce
 
@@ -91,7 +91,7 @@ features:
 ```
 
 ```yaml
-# provisioning/inventory/host_vars/dev_server.yml
+# ansible/inventory/host_vars/dev_server.yml
 profile: headless
 
 features:
@@ -108,7 +108,7 @@ features:
 
 ## Shared tunables
 
-Defaults live in `provisioning/inventory/group_vars/all.yml` and can be
+Defaults live in `ansible/inventory/group_vars/all.yml` and can be
 overridden per group or host:
 
 | Variable | Description |
@@ -137,7 +137,7 @@ controller/
   Containerfile           # Ansible controller image (Podman/Docker)
   run.sh                  # wrapper: build image + run ansible-playbook remotely
 
-provisioning/
+ansible/
   site.yml                # full provisioning playbook (profile-aware)
   inventory/
     hosts.yml             # workstations + servers groups
@@ -173,7 +173,7 @@ dotfiles/                 # chezmoi source — applied to ~/
       requirements.txt    # base packages for every new project venv
     nvim/                 # LazyVim configuration
 
-vms/
+local-vms/
   vm-fpga-dev-alma-9/     # FPGA dev VM (AlmaLinux 9)
   vm-fpga-dev-alma-10/    # FPGA dev VM (AlmaLinux 10)
   vm-fpga-dev-debian-13/  # FPGA dev VM (Debian 13)

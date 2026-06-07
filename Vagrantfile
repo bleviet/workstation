@@ -49,7 +49,7 @@ Vagrant.configure("2") do |config|
 
   # --- 0. Load Local Settings ---
   settings = {}
-  settings_file = "vms/settings.yml"
+  settings_file = "local-vms/settings.yml"
   if File.exist?(settings_file)
     begin
       settings = YAML.load_file(settings_file) || {}
@@ -71,7 +71,7 @@ Vagrant.configure("2") do |config|
   end
 
   # --- 1. Load FPGA Environments ---
-  Dir.glob("vms/vm-fpga-dev-*/vm.yml").each do |vm_yml_path|
+  Dir.glob("local-vms/vm-fpga-dev-*/vm.yml").each do |vm_yml_path|
     begin
       vm_data = YAML.load_file(vm_yml_path)
       config.vm.define vm_data["name"] do |node|
@@ -170,17 +170,9 @@ Vagrant.configure("2") do |config|
         # Run Ansible locally inside the VM (no WSL needed on the host!)
         node.vm.provision "ansible_local" do |ansible|
           ansible.install = false
-          ansible.playbook = "provisioning/site.yml"
-          ansible.inventory_path = "provisioning/inventory"
-          ansible.limit = "localhost"
-          
-          # Pass consolidated provisioning variables from vm.yml
-          ansible_vars = {
-            "profile" => vm_data["profile"] || "headless",
-            "dev_user" => vm_data["dev_user"] || "vagrant"
-          }
-          ansible_vars["features"] = vm_data["features"] if vm_data["features"]
-          ansible.extra_vars = ansible_vars
+          ansible.playbook = "ansible/site.yml"
+          ansible.inventory_path = "ansible/inventory"
+          ansible.limit = vm_data["name"]
         end
       end
     rescue Exception => e
@@ -253,8 +245,8 @@ Vagrant.configure("2") do |config|
 
           node.vm.provision "ansible_local" do |ansible|
             ansible.install = false
-            ansible.playbook = "provisioning/site.yml"
-            ansible.inventory_path = "provisioning/inventory"
+            ansible.playbook = "ansible/site.yml"
+            ansible.inventory_path = "ansible/inventory"
             ansible.limit = "localhost"
             ansible.extra_vars = { profile: m["profile"] || "headless" }
           end
@@ -359,8 +351,8 @@ Vagrant.configure("2") do |config|
 
       node.vm.provision "ansible_local" do |ansible|
         ansible.install = false
-        ansible.playbook = "provisioning/site.yml"
-        ansible.inventory_path = "provisioning/inventory"
+        ansible.playbook = "ansible/site.yml"
+        ansible.inventory_path = "ansible/inventory"
         ansible.limit = "localhost"
         
         features = {}

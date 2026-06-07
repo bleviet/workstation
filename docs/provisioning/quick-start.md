@@ -13,9 +13,9 @@ cd ~/workspace/workstation
 ```
 
 `bootstrap.sh` installs pip3, uses it to install a modern version of `ansible-core` (>=2.17) in user space, pulls the required collections, and runs
-`provisioning/site.yml`.
+`ansible/site.yml`.
 
-The profile that gets installed depends on `provisioning/inventory/host_vars/<hostname>.yml`.
+The profile that gets installed depends on `ansible/inventory/host_vars/<hostname>.yml`.
 For `localhost` the default is **`desktop-xfce`** (XFCE 4 + LightDM). To change
 it, edit that file before running `bootstrap.sh` — see
 [Host configuration](host-configuration.md) for all available profiles.
@@ -27,5 +27,5 @@ it, edit that file before running `bootstrap.sh` — see
 chezmoi apply
 
 # Full re-provision (safe to run again — skips what is already done)
-ansible-playbook provisioning/site.yml -K
+ansible-playbook ansible/site.yml -K
 ```

@@ -65,4 +65,4 @@ echo "$ANSIBLE_BECOME_PASS" | sudo -S bash -c "echo \"$(whoami) ALL=(ALL) NOPASS
 trap 'sudo rm -f /etc/sudoers.d/99-ansible-nopasswd' EXIT
 
 # Limit to localhost — bootstrap provisions only the machine it runs on.
-ansible-playbook "$ROOT_DIR/provisioning/site.yml" --limit localhost
+ansible-playbook "$ROOT_DIR/ansible/site.yml" --limit localhost

@@ -18,7 +18,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 IMAGE_NAME="workstation-controller"
-PLAYBOOK="${PLAYBOOK:-provisioning/site.yml}"
+PLAYBOOK="${PLAYBOOK:-ansible/site.yml}"
 SSH_DIR="${HOME}/.ssh"
 
 # Prefer podman, fall back to docker
@@ -40,5 +40,5 @@ echo "==> Running: ansible-playbook ${PLAYBOOK} $*"
     --workdir /repo \
     "${IMAGE_NAME}" \
     "${PLAYBOOK}" \
-    --inventory provisioning/inventory/hosts.yml \
+    --inventory ansible/inventory/hosts.yml \
     "$@"

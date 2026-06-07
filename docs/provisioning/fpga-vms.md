@@ -1,14 +1,14 @@
 # FPGA development VMs
 
-Five FPGA development environments are provided under `vms/`. All are managed natively via **Vagrant** supporting VirtualBox, VMware Desktop, and Libvirt/KVM.
+Five FPGA development environments are provided under `local-vms/`. All are managed natively via **Vagrant** supporting VirtualBox, VMware Desktop, and Libvirt/KVM.
 
 | Directory | OS | Desktop | Primary use |
 |---|---|---|---|
-| `vms/vm-fpga-dev-alma-9/` | AlmaLinux 9 | GNOME (Ansible) | RHEL-certified Vivado + Quartus target |
-| `vms/vm-fpga-dev-alma-10/` | AlmaLinux 10 | GNOME (Ansible) | RHEL-certified latest version |
-| `vms/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | XFCE4 (Ansible) | Alternative Ubuntu target |
-| `vms/vm-fpga-dev-ubuntu-2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
-| `vms/vm-fpga-dev-debian-13/` | Debian 13 | XFCE4 (Ansible) | Debian target |
+| `local-vms/vm-fpga-dev-alma-9/` | AlmaLinux 9 | GNOME (Ansible) | RHEL-certified Vivado + Quartus target |
+| `local-vms/vm-fpga-dev-alma-10/` | AlmaLinux 10 | GNOME (Ansible) | RHEL-certified latest version |
+| `local-vms/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | XFCE4 (Ansible) | Alternative Ubuntu target |
+| `local-vms/vm-fpga-dev-ubuntu-2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
+| `local-vms/vm-fpga-dev-debian-13/` | Debian 13 | XFCE4 (Ansible) | Debian target |
 
 The AlmaLinux variants are the primary targets for commercial FPGA toolchains. Vivado and Quartus are officially certified against RHEL, meaning they require fewer library workarounds than Ubuntu.
 
@@ -21,7 +21,7 @@ The AlmaLinux variants are the primary targets for commercial FPGA toolchains. V
 | Vagrant | https://developer.hashicorp.com/vagrant/downloads |
 | Hypervisor | VirtualBox (default), VMware Desktop, or Libvirt/KVM |
 
-Optional: If you want to use custom storage locations for your VM disks to prevent filling up your primary drive, you can configure overrides in `vms/settings.yml`.
+Optional: If you want to use custom storage locations for your VM disks to prevent filling up your primary drive, you can configure overrides in `local-vms/settings.yml`.
 
 ---
 
@@ -30,7 +30,7 @@ Optional: If you want to use custom storage locations for your VM disks to preve
 Each FPGA environment is declared in a `vm.yml` file under its respective folder:
 
 ```yaml
-# vms/vm-fpga-dev-alma-10/vm.yml
+# local-vms/vm-fpga-dev-alma-10/vm.yml
 name: vm-fpga-dev-alma-10
 os: alma10
 hostname: fpga-dev
@@ -79,22 +79,22 @@ All commands are run using Vagrant from the repository root.
 
 ```bash
 # Create, boot, and automatically provision a VM
-vagrant up fpga-dev-alma-10
+vagrant up vm-fpga-dev-alma-10
 
 # Access the VM via SSH
-vagrant ssh fpga-dev-alma-10
+vagrant ssh vm-fpga-dev-alma-10
 
 # Force-run Ansible provisioning inside the VM
-vagrant provision fpga-dev-alma-10
+vagrant provision vm-fpga-dev-alma-10
 
 # Stop the VM
-vagrant halt fpga-dev-alma-10
+vagrant halt vm-fpga-dev-alma-10
 
 # Suspend the VM (saves state)
-vagrant suspend fpga-dev-alma-10
+vagrant suspend vm-fpga-dev-alma-10
 
 # Destroy the VM (deletes disk files)
-vagrant destroy fpga-dev-alma-10
+vagrant destroy vm-fpga-dev-alma-10
 ```
 
 ---
@@ -103,7 +103,7 @@ vagrant destroy fpga-dev-alma-10
 
 **Step 1 — Configure Host Overrides (Optional).**
 
-If you are on Windows and need your VMs to reside on another drive (e.g. `D:\vm`), modify `vms/settings.yml` (do not delete or ignore this file; it is committed to git):
+If you are on Windows and need your VMs to reside on another drive (e.g. `D:\vm`), modify `local-vms/settings.yml` (do not delete or ignore this file; it is committed to git):
 ```yaml
 vbox_base_folder: "D:/vm/vbox"
 vmware_base_folder: "D:/vm/vmware"
@@ -112,7 +112,7 @@ vmware_base_folder: "D:/vm/vmware"
 **Step 2 — Boot the VM.**
 
 ```bash
-vagrant up fpga-dev-alma-10
+vagrant up vm-fpga-dev-alma-10
 ```
 
 Vagrant will automatically:
@@ -125,7 +125,7 @@ Vagrant will automatically:
 
 For a command-line session, run:
 ```bash
-vagrant ssh fpga-dev-alma-10
+vagrant ssh vm-fpga-dev-alma-10
 ```
 For a desktop session, open your hypervisor console (VirtualBox/VMware/Virt-Manager) or connect via RDP on port `3389` if `features.xrdp` is enabled.
 
@@ -133,10 +133,10 @@ For a desktop session, open your hypervisor console (VirtualBox/VMware/Virt-Mana
 
 ## Inventory and host variables
 
-FPGA VMs are declared in the `fpga_vms` group in `provisioning/inventory/hosts.yml`. Profile and feature configurations are managed in `provisioning/inventory/group_vars/fpga_vms.yml` or overridden per host in `provisioning/inventory/host_vars/<hostname>.yml`:
+FPGA VMs are declared in the `fpga_vms` group in `ansible/inventory/hosts.yml`. Profile and feature configurations are managed in `ansible/inventory/group_vars/fpga_vms.yml` or overridden per host in `ansible/inventory/host_vars/<hostname>.yml`:
 
 ```yaml
-# host_vars/fpga-dev-alma-10.yml
+# ansible/inventory/host_vars/vm-fpga-dev-alma-10.yml
 dev_user: bach              # account created inside the VM (different from vagrant)
 dev_user_ssh_pubkey: ""     # SSH key deployed for dev_user (leave empty to skip)
 

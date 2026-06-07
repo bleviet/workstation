@@ -4,9 +4,9 @@
 Cross-platform (Windows / Linux / macOS). Automates the three manual steps in
 docs/custom-user.md:
 
-  1. Write provisioning/inventory/host_vars/<hostname>.yml  (profile, dev_user, features)
-  2. Register the host under ``workstations:`` in provisioning/inventory/hosts.yml
-  3. Run provisioning/site.yml limited to that host (with --run)
+  1. Write ansible/inventory/host_vars/<hostname>.yml  (profile, dev_user, features)
+  2. Register the host under ``workstations:`` in ansible/inventory/hosts.yml
+  3. Run ansible/site.yml limited to that host (with --run)
 
 Steps 1 and 2 are pure file edits and work everywhere, including a Windows host
 with no Ansible installed. Step 3 shells out to ``ansible-playbook`` and so only
@@ -31,8 +31,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-INVENTORY = REPO_ROOT / "provisioning" / "inventory" / "hosts.yml"
-HOST_VARS_DIR = REPO_ROOT / "provisioning" / "inventory" / "host_vars"
+INVENTORY = REPO_ROOT / "ansible" / "inventory" / "hosts.yml"
+HOST_VARS_DIR = REPO_ROOT / "ansible" / "inventory" / "host_vars"
 
 PROFILES = ("headless", "desktop-gnome", "desktop-xfce", "desktop-i3wm")
 
@@ -161,8 +161,8 @@ def run_playbook(args: argparse.Namespace) -> None:
     # -K prompts for the SSH user's become password (needed to create the
     # account and write sudoers). The dev account gets passwordless sudo after.
     cmd = [
-        "ansible-playbook", "provisioning/site.yml",
-        "--inventory", "provisioning/inventory/hosts.yml",
+        "ansible-playbook", "ansible/site.yml",
+        "--inventory", "ansible/inventory/hosts.yml",
         "--limit", args.host,
         "--ask-become-pass",
     ]
@@ -183,7 +183,7 @@ def main(argv: list[str] | None = None) -> None:
     else:
         print()
         print("Scaffolding complete. Review the files, then provision with:")
-        print(f"    ansible-playbook provisioning/site.yml -l {args.host} -K")
+        print(f"    ansible-playbook ansible/site.yml -l {args.host} -K")
 
 
 if __name__ == "__main__":

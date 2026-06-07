@@ -7,7 +7,7 @@ chezmoi role clones the right dotfiles for each user.
 ## Configure per host
 
 ```yaml
-# provisioning/inventory/host_vars/alice_laptop.yml
+# ansible/inventory/host_vars/alice_laptop.yml
 chezmoi_init_repo: "https://github.com/alice/dotfiles"
 ```
 
@@ -34,7 +34,7 @@ handles the passphrase transparently. Load your key once before provisioning:
 
 ```bash
 ssh-add ~/.ssh/id_ed25519
-ansible-playbook provisioning/site.yml
+ansible-playbook ansible/site.yml
 ```
 
 For remote hosts, enable agent forwarding in `~/.ssh/config`:
@@ -69,7 +69,7 @@ cat ~/.ssh/id_ed25519_deploy.pub
 **3. Configure the host**
 
 ```yaml
-# provisioning/inventory/host_vars/ci_runner.yml
+# ansible/inventory/host_vars/ci_runner.yml
 chezmoi_init_repo: "git@github.com:alice/dotfiles"
 chezmoi_ssh_key_file: "~/.ssh/id_ed25519_deploy"
 ```

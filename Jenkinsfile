@@ -45,7 +45,7 @@ pipeline {
                 expression { isUnix() }
             }
             steps {
-                sh 'ansible-playbook provisioning/site.yml --syntax-check'
+                sh 'ansible-playbook ansible/site.yml --syntax-check'
             }
         }
 

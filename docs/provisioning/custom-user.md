@@ -2,13 +2,13 @@
 
 By default the playbook provisions the account it connects as (`vagrant` on a
 Vagrant VM, your own user on `localhost`). Set `dev_user` in
-`provisioning/inventory/host_vars/<hostname>.yml` to create and provision a separate named
+`ansible/inventory/host_vars/<hostname>.yml` to create and provision a separate named
 account instead.
 
 ## Automated setup (recommended)
 
 `scripts/add_dev_host.py` does all three manual steps — writes the `host_vars`
-file, registers the host in `provisioning/inventory/hosts.yml`, and (with `--run`) provisions
+file, registers the host in `ansible/inventory/hosts.yml`, and (with `--run`) provisions
 it. It's a plain Python 3 script (standard library only) so it runs on Windows,
 Linux, and macOS:
 
@@ -55,7 +55,7 @@ All subsequent roles (dev-tools, shell, chezmoi, fonts) then install into
 ## Example — shared team machine
 
 ```yaml
-# provisioning/inventory/host_vars/devbox.yml
+# ansible/inventory/host_vars/devbox.yml
 profile: desktop-xfce
 
 dev_user: bach
@@ -75,7 +75,7 @@ features:
 Provision with:
 
 ```bash
-ansible-playbook provisioning/site.yml -l devbox
+ansible-playbook ansible/site.yml -l devbox
 ```
 
 Ansible connects as its normal SSH user (which must have sudo), the `user`
@@ -86,7 +86,7 @@ environment.
 
 Since Vagrant provisions VMs using Ansible locally, the easiest way to provision a custom user on a Vagrant VM is to define it in the host variables file corresponding to your VM's hostname.
 
-For example, if your VM is named `workstation-test-ubuntu24`, create a file at `provisioning/inventory/host_vars/workstation-test-ubuntu24.yml` and add:
+For example, if your VM is named `workstation-test-ubuntu24`, create a file at `ansible/inventory/host_vars/workstation-test-ubuntu24.yml` and add:
 
 ```yaml
 dev_user: bach
@@ -126,11 +126,11 @@ After setting a password the user can log in via the desktop login screen
 
 ### SSH key login (recommended)
 
-Set `dev_user_ssh_pubkey` in `provisioning/inventory/host_vars/<hostname>.yml` and the
+Set `dev_user_ssh_pubkey` in `ansible/inventory/host_vars/<hostname>.yml` and the
 playbook will install the key during provisioning:
 
 ```yaml
-# provisioning/inventory/host_vars/devbox.yml
+# ansible/inventory/host_vars/devbox.yml
 profile: desktop-xfce
 dev_user: bach
 dev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"
