@@ -478,6 +478,27 @@
     A --> E("Selective Execution:<br/>Only dev-tools & shell config run")
     E --> R(["Provisioned selectively ✔"])
     class B,C,D a; class R done;`
+      },
+      {
+        id: "vagrant_ssh_lifecycle",
+        icon: "🔑",
+        title: "Vagrant SSH & provisioning lifecycle",
+        subtitle: "How keys and users are securely set up",
+        what: `Understand how Vagrant boots VMs and how Ansible installs your personal SSH key without password authentication, especially on newer operating systems that block password login by default.`,
+        when: `You want to know how the VM is initially accessed by Vagrant/Ansible, and at what step your custom developer account and SSH public key are injected.`,
+        why: `Vagrant uses a pre-configured insecure key in the base box, rotates it on boot to a unique key, and uses that for Ansible. Ansible then safely configures your custom user account and injects your personal SSH key.`,
+        how: `# 1. Vagrant boots VM & replaces insecure key with a unique host-generated key\n# 2. Ansible connects using the unique key to run playbooks\n# 3. Ansible creates your custom user and copies 'dev_user_ssh_pubkey' to their authorized_keys\n\n# 4. You connect directly as your user using your personal key:\nssh -i ~/.ssh/id_ed25519 bleviet@fpga-dev`,
+        links: [{ label: "Wiki: Vagrant SSH Lifecycle", href: "wiki/vagrant-provisioning-ssh.md" }, { label: "Custom user setup", href: "provisioning/custom-user.md" }],
+        diagram: `flowchart TD
+    Box("Vagrant Base Box<br/>(Insecure Key)") --> Up("vagrant up")
+    Up --> KeyGen("Vagrant generates new key<br/>and replaces insecure key")
+    KeyGen --> Boot("Machine booted & secure")
+    Boot --> Provision("Ansible provisions via vagrant user")
+    Provision --> RoleUser("Ansible 'user' role runs")
+    RoleUser --> Create("Create dev_user account")
+    Create --> Inject("Inject dev_user_ssh_pubkey")
+    Inject --> SSHDirect("SSH directly as dev_user ✔")
+    class Up,KeyGen,Provision a; class SSHDirect done;`
       }
     ];
 
