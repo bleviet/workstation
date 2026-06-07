@@ -1,14 +1,14 @@
 # FPGA development VMs
 
-Five FPGA development environments are provided under `environments/`. All are managed natively via **Vagrant** supporting VirtualBox, VMware Desktop, and Libvirt/KVM.
+Five FPGA development environments are provided under `vms/`. All are managed natively via **Vagrant** supporting VirtualBox, VMware Desktop, and Libvirt/KVM.
 
 | Directory | OS | Desktop | Primary use |
 |---|---|---|---|
-| `environments/vm-fpga-dev-alma-9/` | AlmaLinux 9 | GNOME (Ansible) | RHEL-certified Vivado + Quartus target |
-| `environments/vm-fpga-dev-alma-10/` | AlmaLinux 10 | GNOME (Ansible) | RHEL-certified latest version |
-| `environments/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | XFCE4 (Ansible) | Alternative Ubuntu target |
-| `environments/vm-fpga-dev-ubuntu-2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
-| `environments/vm-fpga-dev-debian-13/` | Debian 13 | XFCE4 (Ansible) | Debian target |
+| `vms/vm-fpga-dev-alma-9/` | AlmaLinux 9 | GNOME (Ansible) | RHEL-certified Vivado + Quartus target |
+| `vms/vm-fpga-dev-alma-10/` | AlmaLinux 10 | GNOME (Ansible) | RHEL-certified latest version |
+| `vms/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | XFCE4 (Ansible) | Alternative Ubuntu target |
+| `vms/vm-fpga-dev-ubuntu-2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
+| `vms/vm-fpga-dev-debian-13/` | Debian 13 | XFCE4 (Ansible) | Debian target |
 
 The AlmaLinux variants are the primary targets for commercial FPGA toolchains. Vivado and Quartus are officially certified against RHEL, meaning they require fewer library workarounds than Ubuntu.
 
@@ -21,7 +21,7 @@ The AlmaLinux variants are the primary targets for commercial FPGA toolchains. V
 | Vagrant | https://developer.hashicorp.com/vagrant/downloads |
 | Hypervisor | VirtualBox (default), VMware Desktop, or Libvirt/KVM |
 
-Optional: If you want to use custom storage locations for your VM disks to prevent filling up your primary drive, you can configure overrides in `environments/settings.yml`.
+Optional: If you want to use custom storage locations for your VM disks to prevent filling up your primary drive, you can configure overrides in `vms/settings.yml`.
 
 ---
 
@@ -30,7 +30,7 @@ Optional: If you want to use custom storage locations for your VM disks to preve
 Each FPGA environment is declared in a `vm.yml` file under its respective folder:
 
 ```yaml
-# environments/vm-fpga-dev-alma-10/vm.yml
+# vms/vm-fpga-dev-alma-10/vm.yml
 name: vm-fpga-dev-alma-10
 os: alma10
 hostname: fpga-dev
@@ -103,7 +103,7 @@ vagrant destroy fpga-dev-alma-10
 
 **Step 1 — Configure Host Overrides (Optional).**
 
-If you are on Windows and need your VMs to reside on another drive (e.g. `D:\vm`), modify `environments/settings.yml` (do not delete or ignore this file; it is committed to git):
+If you are on Windows and need your VMs to reside on another drive (e.g. `D:\vm`), modify `vms/settings.yml` (do not delete or ignore this file; it is committed to git):
 ```yaml
 vbox_base_folder: "D:/vm/vbox"
 vmware_base_folder: "D:/vm/vmware"

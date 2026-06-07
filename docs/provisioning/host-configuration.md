@@ -173,7 +173,7 @@ dotfiles/                 # chezmoi source — applied to ~/
       requirements.txt    # base packages for every new project venv
     nvim/                 # LazyVim configuration
 
-environments/
+vms/
   vm-fpga-dev-alma-9/     # FPGA dev VM (AlmaLinux 9)
   vm-fpga-dev-alma-10/    # FPGA dev VM (AlmaLinux 10)
   vm-fpga-dev-debian-13/  # FPGA dev VM (Debian 13)

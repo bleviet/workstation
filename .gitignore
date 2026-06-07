@@ -6,10 +6,10 @@
 tests/vagrant/.vagrant/
 
 # Packer build artifacts
-environments/boxes/*/output/
-environments/boxes/*/*.box
-environments/boxes/*/cache/
-environments/boxes/*/build/
+vms/boxes/*/output/
+vms/boxes/*/*.box
+vms/boxes/*/cache/
+vms/boxes/*/build/
 
 # Deploy controller
 deploy/.env
@@ -30,7 +30,7 @@ __pycache__/
 .DS_Store
 
 # VM Build Cache
-environments/.cache/
+vms/.cache/
 
 # Packer / Vagrant Cache
 packer_cache/

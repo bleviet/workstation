@@ -49,7 +49,7 @@ Vagrant.configure("2") do |config|
 
   # --- 0. Load Local Settings ---
   settings = {}
-  settings_file = "environments/settings.yml"
+  settings_file = "vms/settings.yml"
   if File.exist?(settings_file)
     begin
       settings = YAML.load_file(settings_file) || {}
@@ -71,7 +71,7 @@ Vagrant.configure("2") do |config|
   end
 
   # --- 1. Load FPGA Environments ---
-  Dir.glob("environments/vm-fpga-dev-*/vm.yml").each do |vm_yml_path|
+  Dir.glob("vms/vm-fpga-dev-*/vm.yml").each do |vm_yml_path|
     begin
       vm_data = YAML.load_file(vm_yml_path)
       config.vm.define vm_data["name"] do |node|
