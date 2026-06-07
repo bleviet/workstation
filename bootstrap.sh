@@ -61,4 +61,4 @@ read -rsp "Enter your sudo password (for Ansible become): " ANSIBLE_BECOME_PASS
 echo
 export ANSIBLE_BECOME_PASS
 # Limit to localhost — bootstrap provisions only the machine it runs on.
-ansible-playbook "$ROOT_DIR/provisioning/site.yml" --limit localhost
+ansible-playbook "$ROOT_DIR/provisioning/site.yml" --limit localhost -e "ansible_become_password=$ANSIBLE_BECOME_PASS"
