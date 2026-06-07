@@ -4,11 +4,11 @@ Five FPGA development environments are provided under `environments/`. All are m
 
 | Directory | OS | Desktop | Primary use |
 |---|---|---|---|
-| `environments/fpga-alma9/` | AlmaLinux 9 | GNOME (Ansible) | RHEL-certified Vivado + Quartus target |
-| `environments/fpga-alma-10/` | AlmaLinux 10 | GNOME (Ansible) | RHEL-certified latest version |
-| `environments/fpga-ubuntu-2404/` | Ubuntu 24.04 | XFCE4 (Ansible) | Alternative Ubuntu target |
-| `environments/fpga-ubuntu-2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
-| `environments/fpga-debian-13/` | Debian 13 | XFCE4 (Ansible) | Debian target |
+| `environments/vm-fpga-dev-alma-9/` | AlmaLinux 9 | GNOME (Ansible) | RHEL-certified Vivado + Quartus target |
+| `environments/vm-fpga-dev-alma-10/` | AlmaLinux 10 | GNOME (Ansible) | RHEL-certified latest version |
+| `environments/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | XFCE4 (Ansible) | Alternative Ubuntu target |
+| `environments/vm-fpga-dev-ubuntu-2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
+| `environments/vm-fpga-dev-debian-13/` | Debian 13 | XFCE4 (Ansible) | Debian target |
 
 The AlmaLinux variants are the primary targets for commercial FPGA toolchains. Vivado and Quartus are officially certified against RHEL, meaning they require fewer library workarounds than Ubuntu.
 
@@ -30,8 +30,8 @@ Optional: If you want to use custom storage locations for your VM disks to preve
 Each FPGA environment is declared in a `vm.yml` file under its respective folder:
 
 ```yaml
-# environments/fpga-alma-10/vm.yml
-name: fpga-dev-alma-10
+# environments/vm-fpga-dev-alma-10/vm.yml
+name: vm-fpga-dev-alma-10
 os: alma10
 hostname: fpga-dev
 

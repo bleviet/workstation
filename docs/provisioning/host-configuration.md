@@ -174,11 +174,11 @@ dotfiles/                 # chezmoi source — applied to ~/
     nvim/                 # LazyVim configuration
 
 environments/
-  fpga-alma9/             # FPGA dev VM (AlmaLinux 9)
-  fpga-alma-10/           # FPGA dev VM (AlmaLinux 10)
-  fpga-debian-13/         # FPGA dev VM (Debian 13)
-  fpga-ubuntu-2404/       # FPGA dev VM (Ubuntu 24.04)
-  fpga-ubuntu-2604/       # FPGA dev VM (Ubuntu 26.04)
+  vm-fpga-dev-alma-9/     # FPGA dev VM (AlmaLinux 9)
+  vm-fpga-dev-alma-10/    # FPGA dev VM (AlmaLinux 10)
+  vm-fpga-dev-debian-13/  # FPGA dev VM (Debian 13)
+  vm-fpga-dev-ubuntu-2404/ # FPGA dev VM (Ubuntu 24.04)
+  vm-fpga-dev-ubuntu-2604/ # FPGA dev VM (Ubuntu 26.04)
   settings.yml            # Local hypervisor storage settings overrides
 
 tests/

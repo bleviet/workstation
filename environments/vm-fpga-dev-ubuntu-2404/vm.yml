@@ -1,12 +1,12 @@
 # FPGA Development VM — Vivado (Xilinx/AMD) + Quartus (Intel/Altera)
 # Host: Windows 11, 64 GB RAM
-# Guest: AlmaLinux 9 + GNOME desktop (installed by Ansible)
+# Guest: Ubuntu 24.04 LTS + XFCE4 desktop (installed by Ansible)
 #
 # Hardware note: all values are thin-provisioned where applicable.
 # Ansible handles software: desktop env, FPGA tools, udev rules, dotfiles.
 
-name: fpga-dev-alma-9
-os: alma9            # references os_box_map in Vagrantfile
+name: vm-fpga-dev-ubuntu-2404
+os: ubuntu2404       # references os_box_map in Vagrantfile
 hostname: fpga-dev
 
 ram_mb: 32768        # 32 GB — leaves 32 GB for the Windows host

@@ -5,7 +5,7 @@
 # Hardware note: all values are thin-provisioned where applicable.
 # Ansible handles software: desktop env, FPGA tools, udev rules, dotfiles.
 
-name: fpga-dev-alma-10
+name: vm-fpga-dev-alma-10
 os: alma10            # references os_box_map in Vagrantfile
 hostname: fpga-dev
 

@@ -71,7 +71,7 @@ Vagrant.configure("2") do |config|
   end
 
   # --- 1. Load FPGA Environments ---
-  Dir.glob("environments/fpga-*/vm.yml").each do |vm_yml_path|
+  Dir.glob("environments/vm-fpga-dev-*/vm.yml").each do |vm_yml_path|
     begin
       vm_data = YAML.load_file(vm_yml_path)
       config.vm.define vm_data["name"] do |node|

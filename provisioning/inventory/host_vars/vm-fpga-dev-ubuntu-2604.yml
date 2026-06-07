@@ -1,5 +1,5 @@
 ---
-# fpga-dev-ubuntu-2604 — Ubuntu 26.04 FPGA development VM (environments/fpga-ubuntu-2604/).
+# vm-fpga-dev-ubuntu-2604 — Ubuntu 26.04 FPGA development VM (environments/vm-fpga-dev-ubuntu-2604/).
 # The base box already ships a minimal GNOME desktop, so this host overrides the
 # fpga_vms group default (desktop-xfce) with desktop-gnome to avoid stacking a
 # second desktop environment on top.
