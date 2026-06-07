@@ -109,6 +109,7 @@ Vagrant.configure("2") do |config|
         end
 
         node.vm.provider "vmware_desktop" do |v|
+          v.linked_clone = false
           v.gui = vm_data["gui"].nil? ? true : vm_data["gui"]
           if settings["vmware_base_folder"]
             v.clone_directory = File.join(settings["vmware_base_folder"], vm_data["name"])
@@ -208,6 +209,7 @@ Vagrant.configure("2") do |config|
           end
 
           node.vm.provider "vmware_desktop" do |v|
+            v.linked_clone = false
             v.gui = m["gui"] || false
             if settings["vmware_base_folder"]
               v.clone_directory = File.join(settings["vmware_base_folder"], m["name"])
@@ -302,6 +304,7 @@ Vagrant.configure("2") do |config|
       end
 
       node.vm.provider "vmware_desktop" do |v|
+        v.linked_clone = false
         v.gui = false # Force headless under Jenkins to prevent GUI startup failures
         if settings["vmware_base_folder"]
           v.clone_directory = File.join(settings["vmware_base_folder"], vm_name)
