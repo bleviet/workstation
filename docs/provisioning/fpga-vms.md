@@ -19,7 +19,7 @@ The AlmaLinux variants are the primary targets for commercial FPGA toolchains. V
 | Tool | Where to get it |
 |---|---|
 | Vagrant | https://developer.hashicorp.com/vagrant/downloads |
-| Hypervisor | VirtualBox (default), VMware Desktop, or Libvirt/KVM |
+| Hypervisor | VMware Desktop (default), VirtualBox, or Libvirt/KVM |
 
 Optional: If you want to use custom storage locations for your VM disks to prevent filling up your primary drive, you can configure overrides in `local-vms/settings.yml`.
 

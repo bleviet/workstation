@@ -1,5 +1,8 @@
 require 'yaml'
 
+# Set default provider to VMware Desktop (can be overridden by environment variable)
+ENV['VAGRANT_DEFAULT_PROVIDER'] ||= 'vmware_desktop'
+
 Vagrant.configure("2") do |config|
   # Map custom OS names from your old build.py configs to standard Vagrant Cloud boxes
   os_box_map = {

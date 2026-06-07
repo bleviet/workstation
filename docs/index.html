@@ -273,11 +273,11 @@
         id: "try_local_vm",
         icon: "💻",
         title: "Spin up a local VM sandbox",
-        subtitle: "VirtualBox, VMware, & GUI builds",
-        what: `Quickly spin up a local VM sandbox to try out desktop environments (XFCE, GNOME, or i3wm) or development tools. The hypervisor layer is managed via Vagrant, and software is installed by Ansible.`,
+        subtitle: "VMware, VirtualBox, & GUI builds",
+        what: `Quickly spin up a local VM sandbox to try out desktop environments (XFCE, GNOME, or i3wm) or development tools. The hypervisor layer is managed via Vagrant (VMware Desktop by default), and software is installed by Ansible.`,
         when: `You want to test configurations, run FPGA/commercial software in an isolated guest, or run automated test VM suites.`,
         why: `Vagrant automatically handles hypervisor settings, downloads base boxes, and configures folders. Ansible automatically installs development libraries, shell tools, and **automatically includes and applies your dotfiles** via chezmoi.`,
-        how: `# 1. Ensure Vagrant & VirtualBox are installed on your host\n\n# 2. Start the VM (the most efficient CLI way):\nvagrant up vm-fpga-dev-ubuntu-2604\n\n# 3. Access VM:\nvagrant ssh vm-fpga-dev-ubuntu-2604\n# Or open hypervisor GUI (VirtualBox/VMware)\n\n# Interactive GUI alternative:\n.\\scripts\\setup_local_jenkins.ps1`,
+        how: `# 1. Ensure Vagrant & VMware Desktop (default) or VirtualBox are installed on your host\n\n# 2. Start the VM (the most efficient CLI way):\nvagrant up vm-fpga-dev-ubuntu-2604\n\n# 3. Access VM:\nvagrant ssh vm-fpga-dev-ubuntu-2604\n# Or open hypervisor GUI (VMware/VirtualBox)\n\n# Interactive GUI alternative:\n.\\scripts\\setup_local_jenkins.ps1`,
         links: [{ label: "FPGA development VMs", href: "provisioning/fpga-vms.md" }, { label: "Quick start", href: "provisioning/quick-start.md" }],
         diagram: `flowchart TD
     V["vagrant up <vm-name>"] --> B["VM boots"]
