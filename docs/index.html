@@ -190,6 +190,59 @@
     @media (prefers-reduced-motion: reduce) {
       * { transition: none !important; }
     }
+
+    /* Clean, modern styling overrides for Mermaid SVGs */
+    .mermaid {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+    }
+    .mermaid .node rect,
+    .mermaid .node circle,
+    .mermaid .node ellipse,
+    .mermaid .node polygon,
+    .mermaid .node path {
+      stroke-width: 1.5px !important;
+    }
+    .mermaid .cluster rect {
+      fill: var(--bg) !important;
+      stroke: var(--border) !important;
+      stroke-width: 1.5px !important;
+      rx: 12px !important;
+      ry: 12px !important;
+      stroke-dasharray: 4 4 !important;
+    }
+    .mermaid .edgePath .path {
+      stroke: var(--accent) !important;
+      stroke-width: 1.8px !important;
+      opacity: 0.85;
+    }
+    .mermaid .edgePath .path.ls-dashed {
+      stroke-dasharray: 4 4 !important;
+    }
+    .mermaid .edgeLabel {
+      background-color: var(--surface) !important;
+      color: var(--fg-muted) !important;
+      font-size: 0.76rem !important;
+      padding: 2px 6px !important;
+      border-radius: 4px !important;
+      border: 1px solid var(--border) !important;
+    }
+    .mermaid .label {
+      font-family: inherit !important;
+    }
+    .mermaid .marker {
+      fill: var(--accent) !important;
+      stroke: var(--accent) !important;
+    }
+    .mermaid .arrowheadPath {
+      fill: var(--accent) !important;
+    }
+    .mermaid .cluster-label span {
+      color: var(--fg-muted) !important;
+      font-weight: 600 !important;
+      font-size: 0.8rem !important;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
   </style>
 </head>
 <body>
@@ -258,14 +311,14 @@
         links: [{ label: "Dotfiles — owner", href: "dotfiles/owner.md" }, { label: "Dotfiles — shared", href: "dotfiles/shared.md" }],
         diagram: `flowchart TD
     subgraph Env1 ["WSL (Source)"]
-        A["Edit ~/.zshrc"] --> B["chezmoi re-add ~/.zshrc"]
-        B --> C["chezmoi cd & git push"]
+        A("Edit ~/.zshrc") --> B("chezmoi re-add ~/.zshrc")
+        B --> C("chezmoi cd & git push")
     end
-    C --> Repo["Remote Git Repository"]
-    Repo --> D["chezmoi update"]
+    C --> Repo[("Remote Git Repository")]
+    Repo --> D("chezmoi update")
     subgraph Env2 ["Local VM / Remote"]
-        D --> E["Automatically applied"]
-        D -.->|Conflict?| F["chezmoi merge ~/.zshrc"]
+        D --> E("Automatically applied")
+        D -.->|Conflict?| F("chezmoi merge ~/.zshrc")
     end
     class A,B,C a; class E,F done;`
       },
@@ -280,11 +333,11 @@
         how: `# 1. Ensure Vagrant & VMware Desktop (default) or VirtualBox are installed on your host\n\n# 2. Start the VM (the most efficient CLI way):\nvagrant up vm-fpga-dev-ubuntu-2604\n\n# 3. Access VM:\nvagrant ssh vm-fpga-dev-ubuntu-2604\n# Or open hypervisor GUI (VMware/VirtualBox)\n\n# Interactive GUI alternative:\n.\\scripts\\setup_local_jenkins.ps1`,
         links: [{ label: "FPGA development VMs", href: "provisioning/fpga-vms.md" }, { label: "Quick start", href: "provisioning/quick-start.md" }],
         diagram: `flowchart TD
-    V["vagrant up <vm-name>"] --> B["VM boots"]
-    B --> C["bootstrap.sh inside guest"]
-    C --> D["ansible_local guest provisioner"]
-    D --> E["Installs packages & profile (GNOME/XFCE/i3wm)"]
-    D --> F["chezmoi role: Auto-applies dotfiles/"]
+    V("vagrant up <vm-name>") --> B("VM boots")
+    B --> C("bootstrap.sh inside guest")
+    C --> D("ansible_local guest provisioner")
+    D --> E("Installs packages & profile (GNOME/XFCE/i3wm)")
+    D --> F("chezmoi role: Auto-applies dotfiles/")
     E --> R(["Sandbox Ready ✔"])
     F --> R
     class V a; class R done;`
@@ -300,11 +353,11 @@
         how: `# 1. Ensure SSH access to their machine:\nssh colleague@192.168.1.50\n\n# 2. Add them to ansible/inventory/hosts.yml\n# 3. Create host_vars/colleague-pc.yml:\n#    profile: headless\n#    dev_user: colleague\n\n# 4. Provision selectively using tags:\nansible-playbook ansible/site.yml -l colleague-pc -K --tags "dev-tools,shell,chezmoi"`,
         links: [{ label: "Custom developer user", href: "provisioning/custom-user.md" }, { label: "Remote deployment", href: "provisioning/remote-deployment.md" }, { label: "Host configuration", href: "provisioning/host-configuration.md" }],
         diagram: `flowchart TD
-    A["Colleague's Host<br/>(SSH Access)"]
-    B["Add to ansible/inventory/hosts.yml"] --> C["Create host_vars/colleague-pc.yml<br/>(set profile: headless & dev_user)"]
-    C --> D["ansible-playbook -K --tags 'dev-tools,shell'"]
+    A("Colleague's Host<br/>(SSH Access)")
+    B("Add to ansible/inventory/hosts.yml") --> C("Create host_vars/colleague-pc.yml<br/>(set profile: headless & dev_user)")
+    C --> D("ansible-playbook -K --tags 'dev-tools,shell'")
     D -- "SSH" --> A
-    A --> E["Selective Execution:<br/>Only dev-tools & shell config run"]
+    A --> E("Selective Execution:<br/>Only dev-tools & shell config run")
     E --> R(["Provisioned selectively ✔"])
     class B,C,D a; class R done;`
       }
@@ -431,8 +484,12 @@
       htmlEl.setAttribute("data-theme", theme);
       document.getElementById("themeIcon").textContent = theme === "dark" ? "☀️" : "🌙";
       document.getElementById("themeLabel").textContent = theme === "dark" ? "Light" : "Dark";
-      mermaid.initialize({ startOnLoad: false, securityLevel: "loose",
-        theme: theme === "dark" ? "dark" : "default" });
+      mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "loose",
+        theme: theme === "dark" ? "dark" : "default",
+        flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis' }
+      });
       renderPanel();  // re-render diagram with new theme
     }
 
@@ -445,8 +502,12 @@
     // Init
     const saved = localStorage.getItem("ws-theme");
     const initial = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
-    mermaid.initialize({ startOnLoad: false, securityLevel: "loose",
-      theme: initial === "dark" ? "dark" : "default" });
+    mermaid.initialize({
+      startOnLoad: false,
+      securityLevel: "loose",
+      theme: initial === "dark" ? "dark" : "default",
+      flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis' }
+    });
     applyTheme(initial);
   </script>
 </body>
