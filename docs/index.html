@@ -195,6 +195,9 @@
     .mermaid {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     }
+    .mermaid foreignObject {
+      overflow: visible !important;
+    }
     .mermaid .node rect,
     .mermaid .node circle,
     .mermaid .node ellipse,
@@ -488,6 +491,9 @@
         startOnLoad: false,
         securityLevel: "loose",
         theme: theme === "dark" ? "dark" : "default",
+        themeVariables: {
+          fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+        },
         flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis' }
       });
       renderPanel();  // re-render diagram with new theme
@@ -506,6 +512,9 @@
       startOnLoad: false,
       securityLevel: "loose",
       theme: initial === "dark" ? "dark" : "default",
+      themeVariables: {
+        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif'
+      },
       flowchart: { htmlLabels: true, useMaxWidth: true, curve: 'basis' }
     });
     applyTheme(initial);
