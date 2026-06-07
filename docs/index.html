@@ -194,8 +194,13 @@
     /* Clean, modern styling overrides for Mermaid SVGs */
     .mermaid {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+      font-size: 13px !important;
     }
     .mermaid foreignObject {
+      overflow: visible !important;
+    }
+    .mermaid .node foreignObject div {
+      border-radius: 8px !important;
       overflow: visible !important;
     }
     .mermaid .node rect,
@@ -231,6 +236,7 @@
     }
     .mermaid .label {
       font-family: inherit !important;
+      font-size: 13px !important;
     }
     .mermaid .marker {
       fill: var(--accent) !important;
