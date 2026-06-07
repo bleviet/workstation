@@ -59,6 +59,10 @@ echo "Running provisioning playbook..."
 # when Ansible pipes the password to sudo. Pass it via env var instead.
 read -rsp "Enter your sudo password (for Ansible become): " ANSIBLE_BECOME_PASS
 echo
-export ANSIBLE_BECOME_PASS
+# Workaround for Ubuntu 26.04+ where sudo modifies the prompt, breaking Ansible's become plugin.
+# We temporarily grant passwordless sudo and ensure it's removed when the script exits.
+echo "$ANSIBLE_BECOME_PASS" | sudo -S bash -c "echo \"$(whoami) ALL=(ALL) NOPASSWD:ALL\" > /etc/sudoers.d/99-ansible-nopasswd && chmod 0440 /etc/sudoers.d/99-ansible-nopasswd"
+trap 'sudo rm -f /etc/sudoers.d/99-ansible-nopasswd' EXIT
+
 # Limit to localhost — bootstrap provisions only the machine it runs on.
-ansible-playbook "$ROOT_DIR/provisioning/site.yml" --limit localhost -e "ansible_become_password=$ANSIBLE_BECOME_PASS"
+ansible-playbook "$ROOT_DIR/provisioning/site.yml" --limit localhost
