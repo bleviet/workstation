@@ -1,12 +1,18 @@
 ---
 - name: Include OS-specific variables
-  ansible.builtin.include_vars: "{{ ansible_facts['os_family'] }}.yml"
+  ansible.builtin.include_vars: "{{ item }}"
+  with_first_found:
+    - files:
+        - "{{ ansible_facts['os_family'] }}-{{ ansible_facts['distribution_major_version'] }}.yml"
+        - "{{ ansible_facts['os_family'] }}.yml"
+      skip: true
 
 - name: Install XFCE desktop environment
   ansible.builtin.package:
     name: "{{ xfce_packages }}"
     state: present
   become: true
+  when: xfce_packages | length > 0
 
 - name: Enable and start LightDM
   ansible.builtin.service:
@@ -15,6 +21,7 @@
     state: started
   become: true
   failed_when: false
+  when: xfce_packages | length > 0
 
 - name: Ensure /etc/lightdm/lightdm.conf.d exists
   ansible.builtin.file:
@@ -24,7 +31,7 @@
     group: root
     mode: "0755"
   become: true
-  when: xfce_autologin_user | default("") | length > 0
+  when: xfce_packages | length > 0 and (xfce_autologin_user | default("") | length > 0)
 
 - name: Configure LightDM autologin for {{ xfce_autologin_user }}
   ansible.builtin.copy:
@@ -38,4 +45,4 @@
     group: root
     mode: "0644"
   become: true
-  when: xfce_autologin_user | default("") | length > 0
+  when: xfce_packages | length > 0 and (xfce_autologin_user | default("") | length > 0)
