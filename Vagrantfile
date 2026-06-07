@@ -27,6 +27,21 @@ Vagrant.configure("2") do |config|
       fi
     fi
 
+    # Install Ansible collections from requirements.yml
+    req_file=""
+    if [ -f /vagrant/requirements.yml ]; then
+      req_file="/vagrant/requirements.yml"
+    elif [ -f /home/vagrant/workspace/workstation/requirements.yml ]; then
+      req_file="/home/vagrant/workspace/workstation/requirements.yml"
+    fi
+
+    if [ -n "$req_file" ]; then
+      echo "Installing Ansible collections from $req_file..."
+      sudo -u vagrant ansible-galaxy collection install -r "$req_file"
+    else
+      echo "Warning: requirements.yml not found, skipping collections installation."
+    fi
+
     # 2. Fix Ubuntu boot delays and VirtualBox graphics
     if [ -f /etc/debian_version ]; then
       # Mask the network-wait service so it doesn't hang the boot for 2 minutes
