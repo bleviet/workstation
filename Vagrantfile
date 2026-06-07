@@ -259,7 +259,7 @@ Vagrant.configure("2") do |config|
 
       node.vm.provider "virtualbox" do |vb|
         vb.name = vm_name
-        vb.gui = gui_enabled
+        vb.gui = false # Force headless under Jenkins to prevent GUI startup failures
         vb.memory = vm_ram
         vb.cpus = vm_cpus
         
@@ -281,7 +281,7 @@ Vagrant.configure("2") do |config|
       end
 
       node.vm.provider "vmware_desktop" do |v|
-        v.gui = gui_enabled
+        v.gui = false # Force headless under Jenkins to prevent GUI startup failures
         v.vmx["memsize"] = vm_ram.to_s
         v.vmx["numvcpus"] = vm_cpus.to_s
         v.vmx["vhv.enable"] = "TRUE"
