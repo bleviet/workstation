@@ -1,62 +1,74 @@
-# workstation
+# Workstation Provisioning Engine
 
-Personal workstation provisioning for Linux. Ansible handles system setup; chezmoi manages dotfiles.
+Personal workstation provisioning engine for Linux environments. Ansible manages system-level setup, package installation, and roles, while `chezmoi` manages dotfiles and user configurations.
 
-**Ansible** owns all variation — packages, OS-specific shell snippets, git config, tools, and desktop
-environment. **chezmoi** owns common dotfiles — no templates, no conditionals, just `apply`.
+This repository features a clean architectural separation between virtual machine infrastructure and software provisioning configuration.
 
-## Supported platforms
+---
 
-| OS | Package manager |
-|---|---|
-| Debian 13 | apt |
-| Ubuntu 26.04 | apt |
-| AlmaLinux 9 | dnf |
+## 🏗️ Repository Architecture
 
-## Quick start
+- **`local-vms/`**: Contains declarative hardware configurations (CPUs, RAM, storage, USB filters, shared folders) for local Vagrant virtual machines.
+- **`ansible/`**: The complete software configuration engine containing playbooks, roles, inventory, and host/group variables.
 
-### 1. GUI VM Builder (Recommended)
-If you are on Windows, you can use the interactive Jenkins pipeline to easily spin up a VirtualBox, VMware, or Libvirt development VM with a single click.
+---
 
+## ✨ Core Features
+
+- **Supported Platforms**: Debian 13 (apt), Ubuntu 24.04/26.04 (apt), AlmaLinux 9/10 (dnf).
+- **Environment Profiles**: Selectable per-machine profiles including `headless`, `desktop-gnome`, `desktop-xfce`, and `desktop-i3wm`.
+- **Modular Feature Flags**: Toggle selective installs such as VS Code, Neovim/LazyVim, remote desktop access via xRDP, and FPGA development library toolchains (AMD/Xilinx Vivado, Intel/Altera Quartus, and open-source EDA).
+- **Dynamic Host Variables**: Vagrant dynamically aligns guest machines with their matching variables under `ansible/inventory/host_vars/vm-fpga-dev-*.yml` natively using the guest VM name.
+- **Interactive Documentation**: Interactive guides and Mermaid diagrams for common workflows are available in [docs/index.html](file:///docs/index.html).
+
+---
+
+## 🚀 Getting Started
+
+### 1. Interactive GUI VM Builder (Recommended)
+If you are on Windows, you can boot a local Jenkins build server to configure and spin up a VM with a few clicks:
 ```powershell
 # Open a PowerShell terminal and run:
 .\scripts\setup_local_jenkins.ps1
 ```
-Then navigate to **http://localhost:8080/job/workstation-vm-builder/**, log in with `admin/admin`, and click **Build with Parameters** to customize your RAM, CPU, OS, and Desktop environment!
+Open **http://localhost:8080/job/workstation-vm-builder/** (login with `admin` / `admin`), click **Build with Parameters**, and customize your OS, desktop profile, RAM, CPU, and hardware flags!
 
-### 2. Manual Bare-Metal Provisioning
-To provision a bare-metal machine manually using the owner flow:
-
+### 2. Manual CLI VM Startup
+Spin up any of the predefined development VMs using the Vagrant CLI:
 ```bash
-git clone <repo> ~/workspace/workstation
+# Start a specific local VM
+vagrant up vm-fpga-dev-ubuntu-2604
+
+# SSH into the running machine
+vagrant ssh vm-fpga-dev-ubuntu-2604
+```
+
+### 3. Bare-Metal Local Provisioning
+To provision your current bare-metal machine locally:
+```bash
+git clone https://github.com/bleviet/workstation.git ~/workspace/workstation
 cd ~/workspace/workstation
 ./bootstrap.sh
 ```
 
-## Documentation
+---
 
-📊 **[Interactive guide](docs/index.html)** — visual scenario explorer (open in a browser).
+## 📖 Documentation Index
 
-**Provisioning**
+For deeper details, consult the following guides:
 
-| Doc | Scenario |
-|---|---|
-| [Quick start](docs/provisioning/quick-start.md) | Clone repo on this machine and run `bootstrap.sh` (owner flow) |
-| [Host configuration](docs/provisioning/host-configuration.md) | Profiles, feature flags, host\_vars, shared tunables, repo structure |
-| [Remote deployment](docs/provisioning/remote-deployment.md) | Deploy to remote hosts from an admin PC or container |
-| [Custom developer user](docs/provisioning/custom-user.md) | Provision a machine for a user other than the SSH login |
-| [FPGA development VMs](docs/provisioning/fpga-vms.md) | Create and manage local FPGA development VMs with Vagrant |
+### **Provisioning & Infrastructure**
+* 📊 **[Interactive Guide (docs/index.html)](file:///docs/index.html)** — Interactive visual scenarios for syncing dotfiles, VM setup, and selective deployment.
+* 📦 **[Quick Start](file:///docs/provisioning/quick-start.md)** — Guide to local manual installation and daily use.
+* 🛠️ **[Host Configuration](file:///docs/provisioning/host-configuration.md)** — Variable options, features, tags, and profiles.
+* 📡 **[Remote Deployment](file:///docs/provisioning/remote-deployment.md)** — Deploying to remote servers and laptops over SSH from an admin container.
+* 👤 **[Custom Developer User](file:///docs/provisioning/custom-user.md)** — Onboard and create isolated developer accounts with customized environments.
+* 💻 **[FPGA Development VMs](file:///docs/provisioning/fpga-vms.md)** — Hypervisor settings, JTAG USB rules, and resources for local VMs.
 
-**Dotfiles and personal workflow**
+### **Dotfiles & Personal Workflows**
+* 🗂️ **[Dotfiles - Single Owner](file:///docs/dotfiles/owner.md)** — Keeping local dotfiles in this repository.
+* 👥 **[Dotfiles - Shared Repo](file:///docs/dotfiles/shared.md)** — Setting up individual external dotfile repositories and configuring SSH deploy keys.
+* 🐍 **[Python Workflow](file:///docs/dotfiles/python.md)** — Automated project virtual environments using `uv` + `direnv`.
 
-| Doc | Scenario |
-|---|---|
-| [Dotfiles — single owner](docs/dotfiles/owner.md) | One person managing dotfiles in this repo |
-| [Dotfiles — shared repo](docs/dotfiles/shared.md) | Multiple users, each with their own dotfiles repo + SSH auth options |
-| [Python workflow](docs/dotfiles/python.md) | uv + direnv project venvs, `mkvenv`, base packages |
-
-**Contributing**
-
-| Doc | Scenario |
-|---|---|
-| [Testing](docs/testing.md) | Container syntax-check and full VM provisioning tests |
+### **Testing & CI**
+* 🧪 **[Testing System](file:///docs/testing.md)** — How container-based syntax checks, idempotency, and automated VM tests are executed.
