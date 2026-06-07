@@ -1,0 +1,6 @@
+---
+desktop_base_packages:
+  - xorg-x11-xinit
+  - dbus-x11
+  - google-noto-fonts-common
+  - kitty
