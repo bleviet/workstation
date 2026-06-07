@@ -243,246 +243,73 @@
     import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
 
     /* ── Scenario content ──────────────────────────────────────────────────
-       Each scenario answers what/when/why/how and carries a Mermaid diagram.
-       Scenarios with `subOptions` swap the diagram (and optionally the How)
-       per selected option. Content is condensed from the docs/*.md it links to. */
+       Each scenario answers what/when/why/how and carries a Mermaid diagram. */
     const C = "inline-code";
     const SCENARIOS = [
       {
-        id: "local",
-        icon: "💻",
-        title: "Set up my own machine",
-        subtitle: "Owner · local install",
-        what: `Clone this repo onto the machine and run <span class="${C}">bootstrap.sh</span>. It installs Ansible, then runs the full playbook against <span class="${C}">localhost</span>.`,
-        when: `You're configuring the computer you're sitting at — your own laptop or workstation.`,
-        why: `One command, zero prerequisites: bootstrap installs a current ansible-core via pip (the distro package is usually years behind), pulls the Galaxy collections, and provisions everything.`,
-        how: `git clone &lt;repo&gt; ~/workspace/workstation\ncd ~/workspace/workstation\n./bootstrap.sh`,
-        links: [{ label: "Quick start", href: "provisioning/quick-start.md" }, { label: "Host configuration", href: "provisioning/host-configuration.md" }],
-        diagram: `flowchart TD
-    A["git clone + cd"] --> B["./bootstrap.sh"]
-    B --> C["detect OS<br/>(apt / dnf)"]
-    C --> D["install ansible-core via pip"]
-    D --> E["ansible-galaxy<br/>install collections"]
-    E --> F["ansible-playbook<br/>site.yml (localhost)"]
-    F --> G(["provisioned ✔"])
-    class A,B a; class G done;`
-      },
-      {
-        id: "remote",
-        icon: "🛰️",
-        title: "Provision a remote host",
-        subtitle: "Admin PC or container",
-        what: `Run the playbook from an admin machine against a remote host over SSH — either with Ansible installed locally, or from a throwaway controller container.`,
-        when: `You're setting up a server or someone else's workstation that you reach over SSH.`,
-        why: `Keeps the target clean: nothing but SSH is required on it. The container path means the admin PC needs no Ansible install at all — just Podman/Docker.`,
-        links: [{ label: "Remote deployment", href: "provisioning/remote-deployment.md" }],
-        subOptions: {
-          label: "Run from",
-          options: [
-            {
-              id: "adminpc", label: "Admin PC (Ansible)",
-              how: `# add the host to ansible/inventory/hosts.yml first\nansible-playbook ansible/site.yml -K -l my_laptop`,
-              diagram: `flowchart LR
-    subgraph admin["Admin PC"]
-      P["ansible-playbook<br/>-l my_laptop"]
-    end
-    P -- "SSH" --> H["target host"]
-    H --> R(["provisioned ✔"])
-    class P a; class R done;`
-            },
-            {
-              id: "container", label: "Container (run.sh)",
-              how: `# builds the controller image, mounts ~/.ssh read-only\n./controller/run.sh -l my_laptop`,
-              diagram: `flowchart LR
-    subgraph admin["Admin PC (Podman/Docker)"]
-      D["./controller/run.sh"] --> I["controller image"]
-      K["~/.ssh (ro)"] -. mount .-> I
-    end
-    I -- "SSH" --> H["target host"]
-    H --> R(["provisioned ✔"])
-    class D a; class R done;`
-            }
-          ]
-        }
-      },
-      {
-        id: "devuser",
-        icon: "👤",
-        title: "Onboard a developer",
-        subtitle: "Custom dev_user + access",
-        what: `Provision a dedicated developer account (not the SSH login user). The <span class="${C}">user</span> role creates it with passwordless sudo; every later role installs into that account's home.`,
-        when: `A shared box where the person using it differs from the account Ansible connects as (e.g. connect as <span class="${C}">vagrant</span>, provision for <span class="${C}">bach</span>).`,
-        why: `Decouples "who provisions" from "who uses". Tools, dotfiles and shell land in <span class="${C}">/home/&lt;dev_user&gt;</span>, not the SSH user's home.`,
-        links: [{ label: "Custom developer user", href: "provisioning/custom-user.md" }],
-        subOptions: {
-          label: "Account access",
-          options: [
-            {
-              id: "scaffold", label: "Scaffold (add_dev_host.py)",
-              how: `python scripts/add_dev_host.py -H devbox -i 192.168.1.40 \\\n    -u admin -d bach -p desktop-xfce --xrdp --run`,
-              diagram: `flowchart TD
-    S["scripts/add_dev_host.py"] --> V["write host_vars/devbox.yml"]
-    S --> INV["register host in hosts.yml"]
-    V --> PB["ansible-playbook -l devbox"]
-    INV --> PB
-    PB --> U["user role:<br/>create bach + sudo"]
-    U --> REST["dev-tools · shell · chezmoi · fonts<br/>install into /home/bach"]
-    REST --> D(["ready ✔"])
-    class S a; class D done;`
-            },
-            {
-              id: "password", label: "Password login",
-              how: `# account is created with a LOCKED password by default\nvagrant ssh devbox      # or: ssh admin@devbox\nsudo passwd bach        # set one for desktop / RDP login`,
-              diagram: `flowchart TD
-    U["user role creates 'bach'<br/>(password locked)"] --> Q{"need login?"}
-    Q -- "shell now" --> SU["sudo su - bach"]
-    Q -- "desktop / RDP" --> PW["sudo passwd bach"]
-    SU --> D(["access ✔"])
-    PW --> D
-    class U a; class D done;`
-            },
-            {
-              id: "sshkey", label: "SSH key",
-              how: `# ansible/inventory/host_vars/devbox.yml\ndev_user: bach\ndev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"`,
-              diagram: `flowchart TD
-    K["dev_user_ssh_pubkey<br/>in host_vars"] --> T["user role:<br/>authorized_key for bach"]
-    T --> L["ssh bach@devbox"]
-    L --> D(["key login ✔"])
-    class K a; class D done;`
-            }
-          ]
-        }
-      },
-      {
-        id: "dotfiles",
-        icon: "🗂️",
-        title: "Manage dotfiles",
-        subtitle: "Owner vs shared + SSH auth",
-        what: `chezmoi applies dotfiles. Either this repo's <span class="${C}">dotfiles/</span> folder is the source (owner), or each user points <span class="${C}">chezmoi_init_repo</span> at their own repo (shared).`,
-        when: `Owner: one person across their own machines. Shared: several people, each with their own dotfiles repository.`,
-        why: `Owner mode needs no external repo — the workstation repo is the source. Shared mode keeps everyone's dotfiles separate and lets chezmoi commands work on the target after provisioning.`,
+        id: "dotfiles_sync",
+        icon: "🔄",
+        title: "Sync dotfiles across environments",
+        subtitle: "WSL, VMs & remote merging",
+        what: `Maintain shell and editor configs across WSL, local VMs, and bare-metal servers using <span class="${C}">chezmoi</span>. Changes made in one environment (e.g., WSL) are pushed to your remote Git repo, then pulled and merged in others.`,
+        when: `You updated configs in WSL/remote and want to apply those updates to a local VM, or merge new changes without overriding host-specific variables.`,
+        why: `<span class="${C}">chezmoi</span> acts as the local source of truth, tracking dotfiles in a Git repo. Running <span class="${C}">chezmoi update</span> automatically pulls remote changes and lets you merge conflicts interactively.`,
+        how: `# 1. On WSL (where you changed config):\nchezmoi re-add ~/.zshrc    # track changes\nchezmoi cd\ngit add -A && git commit -m "update shell config" && git push\n\n# 2. On your local VM or remote machine:\nchezmoi update            # pull & apply latest changes\n# OR merge manually:\nchezmoi merge ~/.zshrc`,
         links: [{ label: "Dotfiles — owner", href: "dotfiles/owner.md" }, { label: "Dotfiles — shared", href: "dotfiles/shared.md" }],
-        subOptions: {
-          label: "Mode",
-          options: [
-            {
-              id: "owner", label: "Owner (this repo)",
-              how: `# dotfiles/ in this repo is the chezmoi source\nchezmoi apply --source dotfiles`,
-              diagram: `flowchart LR
-    SRC["dotfiles/ in repo"] --> CM["chezmoi apply"]
-    CM --> HOME["~ on target"]
-    HOME --> D(["dotfiles applied ✔"])
-    class SRC a; class D done;`
-            },
-            {
-              id: "shared", label: "Shared (own repo)",
-              how: `# ansible/inventory/host_vars/alice_laptop.yml\nchezmoi_init_repo: "https://github.com/alice/dotfiles"`,
-              diagram: `flowchart TD
-    CFG["chezmoi_init_repo set"] --> AUTH{"URL type?"}
-    AUTH -- "https://" --> NA["no auth"]
-    AUTH -- "git@ (SSH)" --> KEY{"chezmoi_ssh_key_file?"}
-    KEY -- "unset" --> AG["SSH agent<br/>(ssh-add first)"]
-    KEY -- "set" --> DK["deploy key<br/>(GIT_SSH_COMMAND)"]
-    NA --> CL["chezmoi init --apply"]
-    AG --> CL
-    DK --> CL
-    CL --> D(["cloned + applied ✔"])
-    class CFG a; class D done;`
-            }
-          ]
-        }
+        diagram: `flowchart TD
+    subgraph Env1 ["WSL (Source)"]
+        A["Edit ~/.zshrc"] --> B["chezmoi re-add ~/.zshrc"]
+        B --> C["chezmoi cd & git push"]
+    end
+    C --> Repo["Remote Git Repository"]
+    Repo --> D["chezmoi update"]
+    subgraph Env2 ["Local VM / Remote"]
+        D --> E["Automatically applied"]
+        D -.->|Conflict?| F["chezmoi merge ~/.zshrc"]
+    end
+    class A,B,C a; class E,F done;`
       },
       {
-        id: "desktop",
-        icon: "🖥️",
-        title: "Pick a desktop",
-        subtitle: "profile → roles",
-        what: `The <span class="${C}">profile</span> variable selects the desktop environment. SSH + X11 forwarding are always installed regardless of profile.`,
-        when: `Set it per host in <span class="${C}">host_vars/&lt;hostname&gt;.yml</span>. Headless for servers; a desktop profile for workstations.`,
-        why: `One variable drives which roles run. Desktop roles are mutually exclusive — exactly one environment is installed.`,
-        links: [{ label: "Host configuration", href: "provisioning/host-configuration.md" }],
-        subOptions: {
-          label: "Profile",
-          options: [
-            { id: "headless", label: "headless", how: `# host_vars/<hostname>.yml\nprofile: headless`, diagram: dag("none") },
-            { id: "xfce", label: "desktop-xfce", how: `profile: desktop-xfce   # XFCE 4 + LightDM`, diagram: dag("xfce") },
-            { id: "gnome", label: "desktop-gnome", how: `profile: desktop-gnome  # GNOME + GDM`, diagram: dag("gnome") },
-            { id: "i3wm", label: "desktop-i3wm", how: `profile: desktop-i3wm   # i3wm + LightDM`, diagram: dag("i3wm") }
-          ]
-        }
+        id: "try_local_vm",
+        icon: "💻",
+        title: "Spin up a local VM sandbox",
+        subtitle: "VirtualBox, VMware, & GUI builds",
+        what: `Quickly spin up a local VM sandbox to try out desktop environments (XFCE, GNOME, or i3wm) or development tools. The hypervisor layer is managed via Vagrant, and software is installed by Ansible.`,
+        when: `You want to test configurations, run FPGA/commercial software in an isolated guest, or run automated test VM suites.`,
+        why: `Vagrant automatically handles hypervisor settings, downloads base boxes, and configures folders. Ansible automatically installs development libraries, shell tools, and **automatically includes and applies your dotfiles** via chezmoi.`,
+        how: `# 1. Ensure Vagrant & VirtualBox are installed on your host\n\n# 2. Start the VM (the most efficient CLI way):\nvagrant up vm-fpga-dev-ubuntu-2604\n\n# 3. Access VM:\nvagrant ssh vm-fpga-dev-ubuntu-2604\n# Or open hypervisor GUI (VirtualBox/VMware)\n\n# Interactive GUI alternative:\n.\\scripts\\setup_local_jenkins.ps1`,
+        links: [{ label: "FPGA development VMs", href: "provisioning/fpga-vms.md" }, { label: "Quick start", href: "provisioning/quick-start.md" }],
+        diagram: `flowchart TD
+    V["vagrant up <vm-name>"] --> B["VM boots"]
+    B --> C["bootstrap.sh inside guest"]
+    C --> D["ansible_local guest provisioner"]
+    D --> E["Installs packages & profile (GNOME/XFCE/i3wm)"]
+    D --> F["chezmoi role: Auto-applies dotfiles/"]
+    E --> R(["Sandbox Ready ✔"])
+    F --> R
+    class V a; class R done;`
       },
       {
-        id: "features",
-        icon: "🧩",
-        title: "Enable features",
-        subtitle: "editor · fpga · xrdp",
-        what: `Feature flags are organised in three groups: <span class="${C}">editor</span> (neovim, lazyvim, vscode), <span class="${C}">fpga</span> (vivado, quartus, oss), and <span class="${C}">xrdp</span>. All default to the conservative option — enable only what you need.`,
-        when: `Per host in <span class="${C}">ansible/inventory/host_vars/&lt;hostname&gt;.yml</span>.`,
-        why: `Off by default so a base machine stays lean. Each sub-flag is independent — Quartus-only shops skip Vivado libs; vim users skip VS Code.`,
-        links: [{ label: "Host configuration", href: "provisioning/host-configuration.md" }],
-        subOptions: {
-          label: "Feature group",
-          options: [
-            {
-              id: "editor", label: "editor",
-              how: `features:\n  editor:\n    neovim: true    # binary from GitHub releases\n    lazyvim: true   # pre-install plugins (implies neovim)\n    vscode: false   # VS Code via Microsoft repo`,
-              diagram: `flowchart TD
-    F["features.editor.*"] --> NV["neovim binary"]
-    F --> LV["LazyVim plugins\n(post_task after chezmoi)"]
-    F --> VS["VS Code\n(Microsoft apt/dnf repo)"]
-    NV --> D(["editors ready ✔"])
-    LV --> D
-    VS --> D
-    class F a; class D done;`
-            },
-            {
-              id: "fpga", label: "fpga",
-              how: `features:\n  fpga:\n    vivado: true    # AMD/Xilinx runtime libs + udev\n    quartus: false  # Intel/Altera runtime libs + udev\n    oss: true       # iverilog, gtkwave, verilator, ghdl, nvc`,
-              diagram: `flowchart TD
-    F["features.fpga.*"] --> VI["Vivado libs\n+ Xilinx udev"]
-    F --> QU["Quartus libs\n+ USB-Blaster udev"]
-    F --> OS["OSS EDA\n(iverilog, gtkwave…)"]
-    F --> USB["USB/JTAG libs\nhw-access groups"]
-    VI --> D(["FPGA env ready ✔"])
-    QU --> D
-    OS --> D
-    USB --> D
-    class F a; class D done;`
-            },
-            {
-              id: "xrdp", label: "xrdp (RDP)",
-              how: `features:\n  xrdp: true`,
-              diagram: `flowchart TD
-    F["features.xrdp: true"] --> R["xrdp role"]
-    R --> SVC["install + enable xrdp<br/>open port 3389"]
-    SVC --> D(["RDP ready ✔"])
-    class F a; class D done;`
-            }
-          ]
-        }
+        id: "selective_remote",
+        icon: "🤝",
+        title: "Selective software deployment",
+        subtitle: "Share tools with a colleague",
+        what: `Deploy only specific developer tools (like neovim, tmux, shell configs) to a colleague's machine without forcing a full desktop re-installation or creating custom developer accounts.`,
+        when: `Someone wants to adopt your tools, and you need to access their machine remotely to selectively install software using your Ansible script.`,
+        why: `Ansible is modular and profile-aware. By defining their host, choosing a headless profile, and running with targeted tags (e.g., --tags "dev-tools,shell"), you skip the desktop roles and customize the install.`,
+        how: `# 1. Ensure SSH access to their machine:\nssh colleague@192.168.1.50\n\n# 2. Add them to ansible/inventory/hosts.yml\n# 3. Create host_vars/colleague-pc.yml:\n#    profile: headless\n#    dev_user: colleague\n\n# 4. Provision selectively using tags:\nansible-playbook ansible/site.yml -l colleague-pc -K --tags "dev-tools,shell,chezmoi"`,
+        links: [{ label: "Custom developer user", href: "provisioning/custom-user.md" }, { label: "Remote deployment", href: "provisioning/remote-deployment.md" }, { label: "Host configuration", href: "provisioning/host-configuration.md" }],
+        diagram: `flowchart TD
+    A["Colleague's Host<br/>(SSH Access)"]
+    B["Add to ansible/inventory/hosts.yml"] --> C["Create host_vars/colleague-pc.yml<br/>(set profile: headless & dev_user)"]
+    C --> D["ansible-playbook -K --tags 'dev-tools,shell'"]
+    D -- "SSH" --> A
+    A --> E["Selective Execution:<br/>Only dev-tools & shell config run"]
+    E --> R(["Provisioned selectively ✔"])
+    class B,C,D a; class R done;`
       }
     ];
 
-    /* Role-execution DAG, with one desktop node highlighted by `sel`. */
-    function dag(sel) {
-      const mark = {
-        none:  "",
-        xfce:  "class XF hi;",
-        gnome: "class GN hi;",
-        i3wm:  "class I3 hi;"
-      }[sel] || "";
-      return `flowchart TD
-    B["bootstrap.sh"] --> S["site.yml"]
-    S --> U["user"] --> P["packages"] --> DT["dev-tools"] --> SH["shell"]
-    SH --> CH["chezmoi"] --> FO["fonts"] --> SSH["ssh (always)"]
-    SSH --> GN["gnome<br/>(desktop-gnome)"]
-    SSH --> XF["xfce<br/>(desktop-xfce)"]
-    SSH --> I3["i3wm<br/>(desktop-i3wm)"]
-    SSH -.->|features.xrdp| XR["xrdp"]
-    SSH -.->|features.fpga.*| FP["fpga"]
-    class B a;
-    ${mark}`;
-    }
 
     /* ── Rendering ─────────────────────────────────────────────────────────*/
     const nav = document.getElementById("scenarioNav");
