@@ -355,6 +355,9 @@ Vagrant.configure("2") do |config|
         features = {}
         features["fpga"] = { "enabled" => true } if ENV['JENKINS_FPGA'] == 'true'
         features["xrdp"] = true if ENV['JENKINS_XRDP'] == 'true'
+        if ENV['JENKINS_PROFILE'] && ENV['JENKINS_PROFILE'] != 'headless'
+          features["editor"] = { "neovim" => true, "lazyvim" => false, "vscode" => true }
+        end
 
         extra_vars = { 
           "profile" => ENV['JENKINS_PROFILE'] || "headless"
