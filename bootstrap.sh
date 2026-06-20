@@ -17,7 +17,7 @@ detect_os() {
 }
 
 run_as_root() {
-  [ "$EUID" -ne 0 ] && sudo "$@" || "$@"
+  if [ "$EUID" -ne 0 ]; then sudo "$@"; else "$@"; fi
 }
 
 OS_ID="$(detect_os)"
