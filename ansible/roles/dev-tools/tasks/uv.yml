@@ -10,6 +10,7 @@
   environment:
     HOME: "{{ dev_user_home }}"
     UV_INSTALL_DIR: "{{ dev_tools_bin_dir }}"
+    UV_VERSION: "{{ uv_version }}"
   when: not uv_stat.stat.exists
   changed_when: true
 

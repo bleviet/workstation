@@ -9,5 +9,6 @@
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path
   environment:
     HOME: "{{ dev_user_home }}"
+    RUSTUP_VERSION: "{{ rustup_version }}"
   when: not rustup_stat.stat.exists
   changed_when: true

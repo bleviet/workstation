@@ -4,6 +4,14 @@ dev_tools_bin_dir: "{{ dev_user_home }}/.local/bin"
 nvm_version: "0.40.1"
 node_version: "lts"
 
+# rustup — the installer (sh.rustup.rs) honors RUSTUP_VERSION to pin the
+# rustup-init binary, which it verifies against the release checksums.
+rustup_version: "1.29.0"
+
+# uv — the installer (astral.sh/uv/install.sh) honors UV_VERSION and verifies
+# the downloaded binary against the GitHub release SHA256 checksums.
+uv_version: "0.11.23"
+
 # Neovim — installed separately so features.editor.neovim controls it.
 neovim_version: "0.12.2"
 neovim_url: "https://github.com/neovim/neovim/releases/download/v{{ neovim_version }}/nvim-linux-x86_64.tar.gz"
