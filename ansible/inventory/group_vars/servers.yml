@@ -5,5 +5,8 @@
 profile: headless
 
 features:
-  fpga: false
+  fpga:
+    vivado: false
+    quartus: false
+    oss: false
   xrdp: true

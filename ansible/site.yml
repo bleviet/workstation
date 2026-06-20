@@ -89,5 +89,8 @@
         TMUX_PLUGIN_MANAGER_PATH: "{{ dev_user_home }}/.tmux/plugins"
       become: "{{ dev_user != ansible_facts['user_id'] }}"
       become_user: "{{ dev_user }}"
-      changed_when: true
+      register: tmux_plugins
+      # tpm prints "Installing \"<name>\"" when it clones a plugin and
+      # "Already installed \"<name>\"" otherwise — only the former is a change.
+      changed_when: "'Installing \"' in tmux_plugins.stdout"
       ignore_errors: true
