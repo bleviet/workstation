@@ -1,0 +1,50 @@
+---
+- name: Determine Homebrew prefix
+  ansible.builtin.command: brew --prefix
+  register: brew_prefix_cmd
+  changed_when: false
+
+- name: Set Homebrew bin directory fact
+  ansible.builtin.set_fact:
+    brew_bin_dir: "{{ brew_prefix_cmd.stdout }}/bin"
+
+- name: Install developer tools via Homebrew
+  community.general.homebrew:
+    name:
+      - direnv
+      - chezmoi
+      - eza
+      - fd
+      - ripgrep
+      - bat
+      - fzf
+      - lazygit
+      - starship
+      - yazi
+      - zoxide
+      - git-delta
+      - neovim
+    state: present
+
+- name: Symlink Homebrew binaries to dev_tools_bin_dir
+  ansible.builtin.file:
+    src: "{{ brew_bin_dir }}/{{ item.binary }}"
+    dest: "{{ dev_tools_bin_dir }}/{{ item.binary }}"
+    state: link
+    force: yes
+  loop:
+    - { name: "direnv", binary: "direnv" }
+    - { name: "chezmoi", binary: "chezmoi" }
+    - { name: "eza", binary: "eza" }
+    - { name: "fd", binary: "fd" }
+    - { name: "ripgrep", binary: "rg" }
+    - { name: "bat", binary: "bat" }
+    - { name: "fzf", binary: "fzf" }
+    - { name: "lazygit", binary: "lazygit" }
+    - { name: "starship", binary: "starship" }
+    - { name: "yazi", binary: "yazi" }
+    - { name: "zoxide", binary: "zoxide" }
+    - { name: "git-delta", binary: "delta" }
+    - { name: "neovim", binary: "nvim" }
+  loop_control:
+    label: "{{ item.binary }} -> {{ dev_tools_bin_dir }}/{{ item.binary }}"

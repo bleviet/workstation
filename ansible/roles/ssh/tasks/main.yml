@@ -1,12 +1,19 @@
 ---
 - name: Include OS-specific variables
   ansible.builtin.include_vars: "{{ ansible_facts['os_family'] }}.yml"
+  when: ansible_facts['os_family'] != "Darwin"
+
+- name: Skip SSH configuration on macOS
+  ansible.builtin.debug:
+    msg: "SSH role is skipped on macOS (Darwin)"
+  when: ansible_facts['os_family'] == "Darwin"
 
 - name: Install openssh-server and xauth
   ansible.builtin.package:
     name: "{{ ssh_packages }}"
     state: present
   become: true
+  when: ansible_facts['os_family'] != "Darwin"
 
 - name: Deploy sshd hardening + X11 forwarding config
   ansible.builtin.copy:
@@ -21,6 +28,7 @@
     group: root
   become: true
   notify: Restart sshd
+  when: ansible_facts['os_family'] != "Darwin"
 
 - name: Enable and start sshd
   ansible.builtin.service:
@@ -28,5 +36,7 @@
     state: started
     enabled: true
   become: true
-  when: ansible_facts['virtualization_type'] | default('') not in ['docker', 'containerd', 'podman']
+  when:
+    - ansible_facts['os_family'] != "Darwin"
+    - ansible_facts['virtualization_type'] | default('') not in ['docker', 'containerd', 'podman']
   failed_when: false

@@ -10,4 +10,9 @@ alias dnf-install="sudo dnf install -y"
 alias dnf-update="sudo dnf update -y"
 alias dnf-remove="sudo dnf remove -y"
 alias dnf-search="dnf search"
+{% elif ansible_facts['os_family'] == "Darwin" %}
+alias brew-install="brew install"
+alias brew-update="brew update && brew upgrade"
+alias brew-clean="brew cleanup"
+alias brew-search="brew search"
 {% endif %}

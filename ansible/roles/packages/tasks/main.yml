@@ -37,3 +37,10 @@
     state: present
   become: true
   when: ansible_facts['os_family'] == "RedHat"
+
+- name: Install system packages (macOS via Homebrew)
+  community.general.homebrew:
+    name: "{{ (packages.common + packages.homebrew) | difference(['procps']) }}"
+    state: present
+    update_homebrew: true
+  when: ansible_facts['os_family'] == "Darwin"

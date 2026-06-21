@@ -7,6 +7,14 @@
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
+- name: Install macOS specific tools via Homebrew
+  ansible.builtin.include_tasks:
+    file: macos.yml
+    apply:
+      become: "{{ dev_user != ansible_facts['user_id'] }}"
+      become_user: "{{ dev_user }}"
+  when: ansible_facts['os_family'] == "Darwin"
+
 - name: Install GitHub release binaries
   ansible.builtin.include_tasks:
     file: github_binaries.yml
@@ -17,6 +25,7 @@
   loop_control:
     loop_var: tool
     label: "{{ tool.name }} {{ tool.version }}"
+  when: ansible_facts['os_family'] != "Darwin"
 
 - name: Install rustup
   ansible.builtin.include_tasks:
@@ -41,7 +50,9 @@
 
 - name: Install neovim
   ansible.builtin.include_tasks: neovim.yml
-  when: features.editor.neovim | default(true) | bool or features.editor.lazyvim | default(false) | bool
+  when:
+    - ansible_facts['os_family'] != "Darwin"
+    - features.editor.neovim | default(true) | bool or features.editor.lazyvim | default(false) | bool
 
 - name: Install VS Code
   ansible.builtin.include_tasks: vscode.yml

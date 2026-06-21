@@ -51,9 +51,23 @@
         name: code
         state: present
 
+- name: Install VS Code (macOS Cask)
+  community.general.homebrew_cask:
+    name: visual-studio-code
+    state: present
+  when: ansible_facts['os_family'] == 'Darwin'
+
+- name: Symlink VS Code command-line tool (macOS)
+  ansible.builtin.file:
+    src: "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+    dest: "{{ dev_tools_bin_dir }}/code"
+    state: link
+    force: yes
+  when: ansible_facts['os_family'] == 'Darwin'
+
 - name: Install VS Code extensions
   ansible.builtin.command:
-    cmd: "code --install-extension {{ item }}"
+    cmd: "{{ (dev_tools_bin_dir + '/code') if ansible_facts['os_family'] == 'Darwin' else 'code' }} --install-extension {{ item }}"
   loop: "{{ vscode_extensions }}"
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"

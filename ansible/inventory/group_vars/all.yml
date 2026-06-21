@@ -25,6 +25,8 @@ packages:
   dnf:
     - p7zip
     - xclip
+  homebrew:
+    - p7zip
 
 # ── Git ───────────────────────────────────────────────────────────────────────
 # Git identity and settings are managed as a dotfile via chezmoi.
@@ -36,7 +38,7 @@ packages:
 # Set per host in host_vars/<hostname>.yml to provision a different account:
 #   dev_user: bach
 dev_user: "{{ ansible_facts['user_id'] }}"
-dev_user_home: "/home/{{ dev_user }}"
+dev_user_home: "{{ '/Users/' + dev_user if ansible_facts['os_family'] == 'Darwin' else '/home/' + dev_user }}"
 # SSH public key to install for dev_user. Leave empty to skip (password login
 # or manual key setup). Set per host in host_vars/<hostname>.yml, e.g.:
 #   dev_user_ssh_pubkey: "ssh-ed25519 AAAA... bach@laptop"

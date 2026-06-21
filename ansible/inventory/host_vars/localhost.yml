@@ -2,7 +2,9 @@
 # localhost — local provisioning (ansible_connection: local).
 # Inherits workstations group defaults; override profile/features here.
 
-profile: desktop-xfce
+ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+profile: "{{ 'headless' if ansible_facts['os_family'] == 'Darwin' else 'desktop-xfce' }}"
 
 features:
   editor:

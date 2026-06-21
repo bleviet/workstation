@@ -48,19 +48,20 @@
     # ── Optional features ─────────────────────────────────────────────────
     - role: fpga
       when: >-
-        features.fpga.vivado  | default(false) | bool or
-        features.fpga.quartus | default(false) | bool or
-        features.fpga.oss     | default(false) | bool
+        (features.fpga.vivado  | default(false) | bool or
+         features.fpga.quartus | default(false) | bool or
+         features.fpga.oss     | default(false) | bool) and
+        ansible_facts['os_family'] != "Darwin"
     - role: desktop
-      when: "'desktop' in profile"
+      when: "'desktop' in profile and ansible_facts['os_family'] != 'Darwin'"
     - role: gnome
-      when: "profile == 'desktop-gnome'"
+      when: "profile == 'desktop-gnome' and ansible_facts['os_family'] != 'Darwin'"
     - role: xfce
-      when: "profile == 'desktop-xfce'"
+      when: "profile == 'desktop-xfce' and ansible_facts['os_family'] != 'Darwin'"
     - role: i3wm
-      when: "profile == 'desktop-i3wm'"
+      when: "profile == 'desktop-i3wm' and ansible_facts['os_family'] != 'Darwin'"
     - role: xrdp
-      when: "features.xrdp | default(false)"
+      when: "features.xrdp | default(false) and ansible_facts['os_family'] != 'Darwin'"
   # ── Post-provisioning ──────────────────────────────────────────────────────
   # Runs after all roles. Neovim binary and dotfiles (including LazyVim config)
   # must both be in place before plugins can be synced.

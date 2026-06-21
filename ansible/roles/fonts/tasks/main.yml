@@ -1,27 +1,59 @@
 ---
 - name: Install fonts
   block:
-    - name: Ensure font directories exist
+    - name: Ensure font directory exists (Linux)
       ansible.builtin.file:
         path: "{{ dev_user_home }}/.local/share/fonts/JetBrainsMono"
         state: directory
         mode: '0755'
+      when: ansible_facts['os_family'] != "Darwin"
 
-    - name: Check if JetBrainsMono Nerd Font is installed
+    - name: Ensure font directory exists (macOS)
+      ansible.builtin.file:
+        path: "{{ dev_user_home }}/Library/Fonts"
+        state: directory
+        mode: '0755'
+      when: ansible_facts['os_family'] == "Darwin"
+
+    - name: Check if JetBrainsMono Nerd Font is installed (Linux)
       ansible.builtin.stat:
         path: "{{ dev_user_home }}/.local/share/fonts/JetBrainsMono/JetBrainsMonoNerdFont-Regular.ttf"
-      register: jb_font_stat
+      register: jb_font_stat_linux
+      when: ansible_facts['os_family'] != "Darwin"
 
-    - name: Download and extract JetBrainsMono Nerd Font
+    - name: Check if JetBrainsMono Nerd Font is installed (macOS)
+      ansible.builtin.stat:
+        path: "{{ dev_user_home }}/Library/Fonts/JetBrainsMonoNerdFont-Regular.ttf"
+      register: jb_font_stat_macos
+      when: ansible_facts['os_family'] == "Darwin"
+
+    - name: Set font stat fact
+      ansible.builtin.set_fact:
+        jb_font_installed: "{{ jb_font_stat_macos.stat.exists if ansible_facts['os_family'] == 'Darwin' else jb_font_stat_linux.stat.exists }}"
+
+    - name: Download and extract JetBrainsMono Nerd Font (Linux)
       ansible.builtin.unarchive:
         src: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/JetBrainsMono.zip"
         dest: "{{ dev_user_home }}/.local/share/fonts/JetBrainsMono"
         remote_src: yes
-      when: not jb_font_stat.stat.exists
+      when:
+        - ansible_facts['os_family'] != "Darwin"
+        - not jb_font_installed
 
-    - name: Update font cache
+    - name: Download and extract JetBrainsMono Nerd Font (macOS)
+      ansible.builtin.unarchive:
+        src: "https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.1/JetBrainsMono.zip"
+        dest: "{{ dev_user_home }}/Library/Fonts"
+        remote_src: yes
+      when:
+        - ansible_facts['os_family'] == "Darwin"
+        - not jb_font_installed
+
+    - name: Update font cache (Linux only)
       ansible.builtin.command: fc-cache -fv
-      when: not jb_font_stat.stat.exists
+      when:
+        - ansible_facts['os_family'] != "Darwin"
+        - not jb_font_installed
 
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
