@@ -27,7 +27,6 @@ shared_folders:
   - host: "projects"
     guest: "/home/vagrant/projects"
     create: true
-  - host: "installers"
+  - host: "../shared/installers"
     guest: "/opt/fpga-installers"
     create: true
-

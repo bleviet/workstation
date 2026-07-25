@@ -136,11 +136,36 @@ fpga_vivado_libs_rpm:
 
 # ── Quartus Prime runtime dependencies (AlmaLinux 9 / RHEL 9) ────────────────
 fpga_quartus_libs_rpm:
+  - make
+  - libX11.i686
+  - libXau.i686
+  - libXdmcp.i686
+  - libXext.i686
+  - libXft.i686
+  - libXft-devel.i686
+  - libXrender.i686
+  - libXt.i686
+  - libXtst.i686
+  - ncurses-compat-libs
+  - gtk2
   - libpng
   - qt5-qtbase
   - qt5-qtsvg
   - expat
   - expat.i686
+
+# ── Quartus Prime Lite unattended installation ───────────────────────────────
+# Vendor downloads are supplied locally because accepting the Altera EULA is a
+# user action and the download URLs are not suitable for unattended automation.
+fpga_quartus_install_enabled: false
+fpga_quartus_accept_eula: false
+fpga_quartus_version: "25.1std"
+fpga_quartus_source_dir: /opt/fpga-installers/quartus-lite/25.1std
+fpga_quartus_install_dir: "{{ dev_user_home }}/altera_lite/{{ fpga_quartus_version }}"
+fpga_quartus_installer_file: QuartusLiteSetup-25.1std.0.1129-linux.run
+fpga_quartus_installer_sha1: ce0773469eacab5b7035c175484625f4ec3737d1
+fpga_quartus_device_file: cyclonev-25.1std.0.1129.qdz
+fpga_quartus_device_sha1: a7225ec1bd36ccfd6826ea6273df5d21dd95633b
 
 # ── USB / JTAG libraries (AlmaLinux 9 / RHEL 9) ──────────────────────────────
 fpga_usb_libs_rpm:

@@ -1,0 +1,72 @@
+---
+- name: Require explicit acceptance of the Altera EULA
+  ansible.builtin.assert:
+    that:
+      - fpga_quartus_accept_eula | bool
+    fail_msg: >-
+      Review the Altera FPGA software EULA, then set
+      fpga_quartus_accept_eula: true to authorize unattended installation.
+
+- name: Inspect Quartus installation payloads
+  ansible.builtin.stat:
+    path: "{{ fpga_quartus_source_dir }}/{{ item.file }}"
+    checksum_algorithm: sha1
+    get_checksum: true
+  loop:
+    - file: "{{ fpga_quartus_installer_file }}"
+      sha1: "{{ fpga_quartus_installer_sha1 }}"
+    - file: "{{ fpga_quartus_device_file }}"
+      sha1: "{{ fpga_quartus_device_sha1 }}"
+  register: _quartus_payloads
+
+- name: Validate Quartus installation payloads
+  ansible.builtin.assert:
+    that:
+      - item.stat.exists | default(false)
+      - item.stat.isreg | default(false)
+      - item.stat.checksum | default('') == item.item.sha1
+    fail_msg: >-
+      Missing or invalid Quartus payload:
+      {{ fpga_quartus_source_dir }}/{{ item.item.file }}
+  loop: "{{ _quartus_payloads.results }}"
+  loop_control:
+    label: "{{ item.item.file }}"
+
+- name: Install Quartus Prime Lite and Cyclone V device support
+  ansible.builtin.command:
+    argv:
+      - /bin/bash
+      - "{{ fpga_quartus_source_dir }}/{{ fpga_quartus_installer_file }}"
+      - --mode
+      - unattended
+      - --unattendedmodeui
+      - none
+      - --accept_eula
+      - "1"
+      - --installdir
+      - "{{ fpga_quartus_install_dir }}"
+    creates: "{{ fpga_quartus_install_dir }}/quartus/bin/quartus_sh"
+  environment:
+    HOME: "{{ dev_user_home }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
+- name: Verify Quartus Prime installation
+  ansible.builtin.command:
+    argv:
+      - "{{ fpga_quartus_install_dir }}/quartus/bin/quartus_sh"
+      - --version
+  environment:
+    HOME: "{{ dev_user_home }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  changed_when: false
+
+- name: Expose Quartus command-line tools
+  ansible.builtin.template:
+    src: 60-quartus.sh.j2
+    dest: /etc/profile.d/60-quartus.sh
+    owner: root
+    group: root
+    mode: "0644"
+  become: true

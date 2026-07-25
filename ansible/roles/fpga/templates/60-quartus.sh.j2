@@ -1,0 +1,4 @@
+# Quartus Prime Lite {{ fpga_quartus_version }} — managed by Ansible.
+export QUARTUS_ROOTDIR="{{ fpga_quartus_install_dir }}/quartus"
+export QSYS_ROOTDIR="${QUARTUS_ROOTDIR}/sopc_builder/bin"
+export PATH="${QUARTUS_ROOTDIR}/bin:${QSYS_ROOTDIR}:${PATH}"

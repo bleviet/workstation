@@ -23,6 +23,10 @@ The AlmaLinux variants are the primary targets for commercial FPGA toolchains. V
 
 Optional: If you want to use custom storage locations for your VM disks to prevent filling up your primary drive, you can configure overrides in `local-vms/settings.yml`.
 
+Vendor installers shared by multiple FPGA VMs belong under
+`local-vms/shared/installers/`. This directory is ignored by Git and mounted
+as `/opt/fpga-installers` inside every FPGA VM.
+
 ---
 
 ## VM definitions
@@ -52,7 +56,7 @@ shared_folders:
   - host: "projects"
     guest: "/home/vagrant/projects"
     create: true
-  - host: "installers"
+  - host: "../shared/installers"
     guest: "/opt/fpga-installers"
     create: true
 ```
@@ -64,7 +68,7 @@ flowchart LR
     subgraph Host ["Host Filesystem"]
         H1["&lt;repo_root&gt;/ (workspace)"]
         H2["&lt;repo_root&gt;/local-vms/vm-fpga-dev-.../projects/"]
-        H3["&lt;repo_root&gt;/local-vms/vm-fpga-dev-.../installers/"]
+        H3["&lt;repo_root&gt;/local-vms/shared/installers/"]
     end
     subgraph Hypervisor ["VM Shared Folders (HGFS/VirtualBox)"]
         H1 --> SF1["Shared Folder 1"]
@@ -141,6 +145,48 @@ Vagrant will automatically:
 2. Configure provider settings (CPUs, RAM, USB support, graphics controller).
 3. Set up the shared directories.
 4. Run the Ansible local provisioner (`ansible_local`) inside the guest to install your development packages, desktop environment, and configs.
+
+### Quartus Prime Lite for the DE10-Nano
+
+Place the downloaded files in the shared, versioned payload directory:
+
+```text
+local-vms/shared/installers/
+└── quartus-lite/
+    └── 25.1std/
+        ├── QuartusLiteSetup-25.1std.0.1129-linux.run
+        ├── cyclonev-25.1std.0.1129.qdz
+        └── QuestaSetup-25.1std.0.1129-linux.run  # optional
+```
+
+The Quartus and Cyclone V payloads are required for the DE10-Nano. Questa is
+optional and is not installed by the role.
+
+The AlmaLinux 9 host enables the Quartus runtime dependencies and USB-Blaster
+rules. Unattended vendor installation remains explicitly gated because it
+accepts the Altera EULA. After reviewing that agreement, set:
+
+```yaml
+# ansible/inventory/host_vars/vm-fpga-dev-alma-9.yml
+fpga_quartus_install_enabled: true
+fpga_quartus_accept_eula: true
+```
+
+Then provision the VM:
+
+```bash
+vagrant up vm-fpga-dev-alma-9
+# For an existing VM:
+vagrant provision vm-fpga-dev-alma-9
+```
+
+After provisioning, reconnect the DE10-Nano USB cable and start a new login
+session so the new `plugdev` group membership is active. Verify the toolchain:
+
+```bash
+quartus_sh --version
+jtagconfig
+```
 
 **Step 3 — Log in and start working.**
 

@@ -8,6 +8,10 @@ features:
     vscode: true
   fpga:
     vivado: false
-    quartus: false
+    quartus: true
     oss: true
   xrdp: false
+
+# Set both values to true after reviewing the Altera FPGA software EULA.
+fpga_quartus_install_enabled: false
+fpga_quartus_accept_eula: false

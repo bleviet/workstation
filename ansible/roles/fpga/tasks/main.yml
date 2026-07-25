@@ -113,14 +113,23 @@
   when: features.fpga.quartus | default(false) | bool
   notify: Reload udev rules
 
+- name: Install Quartus Prime Lite from local payloads
+  ansible.builtin.include_tasks: quartus_install.yml
+  when:
+    - features.fpga.quartus | default(false) | bool
+    - fpga_quartus_install_enabled | bool
+
 - name: Print Quartus manual installation note
   ansible.builtin.debug:
     msg: >
-      Quartus Prime must be installed manually (license agreement required).
-      Download the Linux installer from Intel and run it as a regular user.
-      Installer path inside the VM: /opt/fpga-installers/
-      https://www.intel.com/content/www/us/en/software/programmable/quartus-prime/download.html
-  when: features.fpga.quartus | default(false) | bool
+      Quartus Prime installation is prepared but unattended installation is
+      disabled. The shared payload directory is {{ fpga_quartus_source_dir }}.
+      Set fpga_quartus_install_enabled and fpga_quartus_accept_eula to true
+      after reviewing the Altera EULA.
+      https://www.altera.com/downloads/fpga-development-tools/quartus-prime-lite-edition-design-software-version-25-1-linux
+  when:
+    - features.fpga.quartus | default(false) | bool
+    - not fpga_quartus_install_enabled | bool
 
 # ── Shared USB/JTAG infrastructure ───────────────────────────────────────────
 # Installed whenever any commercial tool flag is enabled; OSS tools that use
