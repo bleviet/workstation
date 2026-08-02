@@ -29,6 +29,14 @@ vagrant up <machine> && vagrant destroy -f <machine>     # single test/local VM 
 # Local Jenkins GUI VM builder (cross-platform)
 ./scripts/setup_local_jenkins.sh                # Linux/macOS; .\scripts\setup_local_jenkins.ps1 on Windows
 # → http://localhost:8080/job/workstation-vm-builder/  (admin/admin), Build with Parameters
+
+# WSL2 named instances (Windows only — run from elevated PowerShell)
+.\scripts\new_wsl_instance.ps1 -SpecFile local-vms\wsl-fpga-dev\wsl.yml   # create instance from spec
+.\scripts\new_wsl_instance.ps1 -SpecFile local-vms\wsl-dev-ubuntu26\wsl.yml -Provision  # create + provision
+ansible-playbook ansible/site.yml -l wsl-fpga-dev   # re-provision a single WSL instance
+ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instances at once
+.\scripts\attach-jtag-usb.ps1                        # attach JTAG boards (USB-Blaster, Digilent) to wsl-fpga-dev
+.\scripts\attach-jtag-usb.ps1 -Distro wsl-fpga-dev -List  # list all USB devices
 ```
 
 ## Ansible constraints

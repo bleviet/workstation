@@ -1,0 +1,19 @@
+---
+# wsl-fpga-dev — FPGA development environment with Quartus and OSS EDA tools.
+# USB-Blaster and Digilent board access via usbipd-win (see scripts/attach-jtag-usb.ps1).
+# Created with: scripts/new_wsl_instance.ps1 -SpecFile local-vms/wsl-fpga-dev/wsl.yml
+dev_user: bleviet
+features:
+  editor:
+    neovim: true
+    lazyvim: false
+    vscode: true
+  fpga:
+    vivado: false
+    quartus: true
+    oss: true
+  xrdp: false
+
+# Set both to true after reviewing the Altera FPGA software EULA.
+fpga_quartus_install_enabled: false
+fpga_quartus_accept_eula: false

@@ -4,7 +4,16 @@
 
 ansible_python_interpreter: "{{ ansible_playbook_python }}"
 
-profile: "{{ 'headless' if ansible_facts['os_family'] == 'Darwin' else 'desktop-xfce' }}"
+# Profile selection order:
+#   1. macOS            → headless (no Linux display managers)
+#   2. WSL2             → headless (no display manager; GUI via WSLg on the Windows desktop)
+#   3. bare-metal Linux → desktop-xfce
+profile: >-
+  {{
+    'headless' if ansible_facts['os_family'] == 'Darwin' else
+    'headless' if ansible_facts['kernel'] | lower is search('microsoft') else
+    'desktop-xfce'
+  }}
 
 features:
   editor:

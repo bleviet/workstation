@@ -1,0 +1,14 @@
+---
+# wsl-dev-ubuntu26 — general-purpose Ubuntu 26.04 development environment.
+# Created with: scripts/new_wsl_instance.ps1 -SpecFile local-vms/wsl-dev-ubuntu26/wsl.yml
+dev_user: bleviet
+features:
+  editor:
+    neovim: true
+    lazyvim: true
+    vscode: false
+  fpga:
+    vivado: false
+    quartus: false
+    oss: false
+  xrdp: false
