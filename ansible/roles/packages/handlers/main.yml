@@ -1,0 +1,11 @@
+---
+- name: Restart WSL2 instance reminder
+  ansible.builtin.debug:
+    msg: >
+      /etc/wsl.conf was updated to enable systemd.
+      You must restart this WSL2 instance for the change to take effect:
+
+        wsl --terminate {{ ansible_hostname }}
+
+      After restarting, udev will be active and USB devices forwarded via
+      usbipd-win will be recognised by udev rules (USB-Blaster, Digilent JTAG).

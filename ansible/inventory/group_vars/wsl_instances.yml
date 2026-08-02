@@ -1,0 +1,11 @@
+---
+# ── WSL2 instance defaults ───────────────────────────────────────────────────
+# Profile is always headless: WSL2 has no display manager (GDM/LightDM).
+# GUI applications (Vivado, Quartus, GTKWave) open natively as Windows windows
+# via WSLg — no xRDP or VNC required.
+profile: headless
+
+# Tell the packages role to write /etc/wsl.conf with systemd=true.
+# systemd is required for udev to run, which is required for USB device rules
+# (USB-Blaster, Digilent JTAG) forwarded via usbipd-win.
+wsl2_enable_systemd: true

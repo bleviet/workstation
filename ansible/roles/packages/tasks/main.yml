@@ -44,3 +44,7 @@
     state: present
     update_homebrew: true
   when: ansible_facts['os_family'] == "Darwin"
+
+- name: Configure WSL2 environment
+  ansible.builtin.include_tasks: wsl.yml
+  when: ansible_facts['kernel'] | lower is search('microsoft')

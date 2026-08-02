@@ -1,0 +1,14 @@
+# WSL2 Instance — FPGA development environment (Quartus + OSS EDA)
+# USB-Blaster and Digilent JTAG access via usbipd-win.
+# Run scripts/new_wsl_instance.ps1 -SpecFile local-vms/wsl-fpga-dev/wsl.yml
+# to create this instance on Windows.
+#
+# USB setup (each session, after plugging the board):
+#   scripts/attach-jtag-usb.ps1
+# Or manually:
+#   usbipd list                        # find your board's BUSID
+#   usbipd attach --wsl wsl-fpga-dev --busid <BUSID>
+
+name: wsl-fpga-dev
+os: ubuntu2604           # must match a key in os_wsl_map in new_wsl_instance.ps1
+install_location: "D:/WSL/wsl-fpga-dev"

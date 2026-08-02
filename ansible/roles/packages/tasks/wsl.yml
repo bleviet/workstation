@@ -1,0 +1,31 @@
+---
+# Ensure systemd is enabled inside WSL2.
+#
+# Why: WSL2 defaults to a minimal init (not systemd). Without systemd, udevd
+# does not run, meaning udev rules (USB-Blaster, Digilent JTAG) are never
+# applied and plugdev group membership has no effect. USB devices forwarded
+# via usbipd-win will not be recognised.
+#
+# How: Write /etc/wsl.conf with [boot] systemd=true. WSL reads this file on
+# instance startup. A restart of the WSL instance is required after first
+# provisioning: `wsl --terminate <name>` then re-open.
+#
+# Detection: WSL2 kernels report a version string containing "microsoft"
+# (e.g. 5.15.153.1-microsoft-standard-WSL2). This is the canonical check.
+
+- name: Ensure /etc/wsl.conf exists with systemd enabled
+  ansible.builtin.blockinfile:
+    path: /etc/wsl.conf
+    create: true
+    owner: root
+    group: root
+    mode: "0644"
+    marker: "# {mark} ANSIBLE MANAGED — WSL2 systemd"
+    block: |
+      [boot]
+      systemd=true
+  become: true
+  when:
+    - wsl2_enable_systemd | default(false) | bool
+    - ansible_facts['kernel'] | lower is search('microsoft')
+  notify: Restart WSL2 instance reminder
