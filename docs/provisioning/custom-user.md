@@ -63,7 +63,7 @@ flowchart TD
 The `user` role runs first and:
 
 1. Creates the account (shell: `/bin/zsh`, home directory auto-created).
-2. Adds it to `sudo` (Debian/Ubuntu) or `wheel` (AlmaLinux/RHEL).
+2. Adds it to `sudo` (Debian/Ubuntu) or `wheel` (macOS).
 3. Drops a `NOPASSWD` entry in `/etc/sudoers.d/<dev_user>` so the account can
    install packages without a password prompt.
 

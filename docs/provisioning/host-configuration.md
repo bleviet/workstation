@@ -27,7 +27,7 @@ enable only what you need.
 |---|---|---|
 | `features.editor.neovim` | `true` | Install neovim binary (GitHub release) |
 | `features.editor.lazyvim` | `false` | Pre-install LazyVim plugins after dotfiles are applied — first launch is instant rather than downloading on entry (implies neovim) |
-| `features.editor.vscode` | `false` | Install VS Code via the Microsoft apt/dnf repository |
+| `features.editor.vscode` | `false` | Install VS Code via the Microsoft apt repository (Homebrew cask on macOS) |
 
 `neovim` defaults to `true` because the shell dotfiles set `$EDITOR=nvim`. Set
 it `false` only if you will install a different editor by hand.
@@ -148,7 +148,7 @@ ansible/
       localhost.yml       # local machine overrides
   roles/
     user/                 # create dev_user account + passwordless sudo
-    packages/             # apt / dnf system packages (incl. direnv)
+    packages/             # apt / Homebrew system packages (incl. direnv)
     dev-tools/            # base CLI tools + rustup + nvm + uv + optional editors
     shell/                # oh-my-zsh + OS-specific shell snippet
     chezmoi/              # configure chezmoi source, apply dotfiles
@@ -212,8 +212,6 @@ dotfiles/                 # chezmoi source — applied to ~/
     nvim/                 # LazyVim configuration
 
 local-vms/
-  vm-fpga-dev-alma-9/     # FPGA dev VM (AlmaLinux 9)
-  vm-fpga-dev-alma-10/    # FPGA dev VM (AlmaLinux 10)
   vm-fpga-dev-debian-13/  # FPGA dev VM (Debian 13)
   vm-fpga-dev-ubuntu-2404/ # FPGA dev VM (Ubuntu 24.04)
   vm-fpga-dev-ubuntu-2604/ # FPGA dev VM (Ubuntu 26.04)
@@ -221,7 +219,7 @@ local-vms/
 
 tests/
   container/
-    Dockerfile.{debian,ubuntu,almalinux}
+    Dockerfile.{debian,ubuntu}
   vm/
     machines.yml          # Declarative test machine definitions
   run_container_tests.sh

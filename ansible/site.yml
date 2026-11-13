@@ -27,7 +27,7 @@
             (ansible_version.major == 2 and ansible_version.minor >= 15)
         fail_msg: |
           ansible-core >= 2.15 is required (found {{ ansible_version.full }}).
-          The system apt/dnf package is usually too old — install via pip:
+          The system apt package is usually too old — install via pip:
 
             pip3 install --user "ansible-core>=2.17"
             export PATH="$HOME/.local/bin:$PATH"   # or open a new terminal

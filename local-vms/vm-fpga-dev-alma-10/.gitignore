@@ -1,8 +1,0 @@
-# Vagrant runtime state
-.vagrant/
-
-# Per-VM project folder created by Vagrantfile
-projects/
-
-# Admin SSH public key (drop your public key here; read by Vagrantfile)
-admin.pub

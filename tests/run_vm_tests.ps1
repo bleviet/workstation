@@ -20,15 +20,11 @@ $HeadlessMachines = @(
     "workstation-test-debian"
     "workstation-test-ubuntu24"
     "workstation-test-ubuntu26"
-    "workstation-test-alma9"
-    "workstation-test-alma10"
 )
 $DesktopMachines = @(
     "workstation-test-debian-i3wm"
     "workstation-test-ubuntu24-i3wm"
     "workstation-test-ubuntu26-i3wm"
-    "workstation-test-alma9-i3wm"
-    "workstation-test-alma10-i3wm"
 )
 
 if ($All) {

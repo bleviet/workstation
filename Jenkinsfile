@@ -8,7 +8,7 @@ pipeline {
     }
 
     parameters {
-        choice(name: 'OS', choices: ['debian13', 'ubuntu2404', 'ubuntu2604', 'alma9', 'alma10'], description: 'Select the OS variant')
+        choice(name: 'OS', choices: ['debian13', 'ubuntu2404', 'ubuntu2604'], description: 'Select the OS variant')
         choice(name: 'PROFILE', choices: ['headless', 'desktop-gnome', 'desktop-xfce', 'desktop-i3wm'], description: 'Select the environment profile')
         choice(name: 'PROVIDER', choices: ['virtualbox', 'libvirt', 'vmware_desktop'], description: 'Select Vagrant provider')
         choice(name: 'RAM_MB', choices: ['4096', '8192', '16384', '32768'], description: 'Memory (RAM) in MB. FPGA development requires 32768.')

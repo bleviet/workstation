@@ -18,7 +18,7 @@ ansible-playbook ansible/site.yml -l <host>     # a host from ansible/inventory/
 ansible-playbook ansible/site.yml --syntax-check   # fast first check; run before any role change
 
 # Tests
-./tests/run_container_tests.sh                 # Podman, parallel: debian+ubuntu+almalinux. Logs: /tmp/workstation-test-<os>.log
+./tests/run_container_tests.sh                 # Podman, parallel: debian+ubuntu. Logs: /tmp/workstation-test-<os>.log
 ./tests/run_vm_tests.sh                         # Vagrant, headless test VMs.  Logs: /tmp/workstation-vm-<machine>.log
 ./tests/run_vm_tests.sh --desktop | --all | <name> ...
 vagrant up <machine> && vagrant destroy -f <machine>     # single test/local VM lifecycle
@@ -45,7 +45,7 @@ ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instance
 ## Ansible constraints
 
 - **ansible-core >= 2.15 is asserted** by a pre_task in `ansible/site.yml`.
-  System apt/dnf packages are too old — `bootstrap.sh` installs `>=2.17` via
+  System apt packages are too old — `bootstrap.sh` installs `>=2.17` via
   pip, with a `--break-system-packages` fallback for PEP 668 hosts, and patches
   `~/.bashrc` PATH. If `ansible` is not found, that PATH is the usual cause.
 - **Role order in `site.yml` is load-bearing** (`user → packages → dev-tools →

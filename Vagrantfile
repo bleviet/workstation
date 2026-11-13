@@ -8,9 +8,7 @@ Vagrant.configure("2") do |config|
   os_box_map = {
     "debian13"   => "bento/debian-13", # bento for VBox/VMware, libvirt overrides to debian/trixie64
     "ubuntu2404" => "bento/ubuntu-24.04",
-    "ubuntu2604" => "bento/ubuntu-26.04",
-    "alma9"      => "almalinux/9",
-    "alma10"     => "almalinux/10"
+    "ubuntu2604" => "bento/ubuntu-26.04"
   }
 
   pre_provision_script = <<-SHELL
@@ -21,9 +19,6 @@ Vagrant.configure("2") do |config|
       if [ -f /etc/debian_version ]; then
         apt-get update -qq
         apt-get install -y -qq ansible-core
-      elif [ -f /etc/redhat-release ]; then
-        dnf install -y epel-release
-        dnf install -y ansible-core
       fi
     fi
 

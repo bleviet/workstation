@@ -19,15 +19,11 @@ HEADLESS_MACHINES=(
   workstation-test-debian
   workstation-test-ubuntu24
   workstation-test-ubuntu26
-  workstation-test-alma9
-  workstation-test-alma10
 )
 DESKTOP_MACHINES=(
   workstation-test-debian-i3wm
   workstation-test-ubuntu24-i3wm
   workstation-test-ubuntu26-i3wm
-  workstation-test-alma9-i3wm
-  workstation-test-alma10-i3wm
 )
 
 SHOW_LOG=0

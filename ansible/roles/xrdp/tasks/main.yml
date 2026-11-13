@@ -7,13 +7,6 @@
   become: true
   when: ansible_facts['os_family'] == "Debian"
 
-- name: Install xrdp (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name: xrdp
-    state: present
-  become: true
-  when: ansible_facts['os_family'] == "RedHat"
-
 - name: Add xrdp user to ssl-cert group (Debian/Ubuntu)
   ansible.builtin.user:
     name: xrdp
@@ -30,17 +23,6 @@
   become: true
   when:
     - ansible_facts['os_family'] == "Debian"
-    - xrdp_configure_firewall
-
-- name: Allow xrdp port through firewalld (RedHat/AlmaLinux)
-  ansible.posix.firewalld:
-    port: "3389/tcp"
-    state: enabled
-    permanent: true
-    immediate: true
-  become: true
-  when:
-    - ansible_facts['os_family'] == "RedHat"
     - xrdp_configure_firewall
 
 - name: Enable and start xrdp service

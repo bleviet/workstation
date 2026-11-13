@@ -41,16 +41,6 @@
       ansible.builtin.command: ldconfig
       changed_when: false
 
-- name: Install Vivado runtime libraries (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name: "{{ fpga_vivado_libs_rpm }}"
-    state: present
-    update_cache: true
-  become: true
-  when:
-    - features.fpga.vivado | default(false) | bool
-    - ansible_facts['os_family'] == "RedHat"
-
 - name: Deploy Xilinx/Digilent udev rules
   when: features.fpga.vivado | default(false) | bool
   become: true
@@ -92,15 +82,6 @@
   when:
     - features.fpga.quartus | default(false) | bool
     - ansible_facts['os_family'] == "Debian"
-
-- name: Install Quartus runtime libraries (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name: "{{ fpga_quartus_libs_rpm }}"
-    state: present
-  become: true
-  when:
-    - features.fpga.quartus | default(false) | bool
-    - ansible_facts['os_family'] == "RedHat"
 
 - name: Deploy Intel USB-Blaster udev rules
   ansible.builtin.copy:
@@ -144,24 +125,6 @@
     - features.fpga.vivado | default(false) | bool or features.fpga.quartus | default(false) | bool or features.fpga.oss | default(false) | bool
     - ansible_facts['os_family'] == "Debian"
 
-- name: Install USB and JTAG libraries (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name: "{{ fpga_usb_libs_rpm }}"
-    state: present
-  become: true
-  when:
-    - features.fpga.vivado | default(false) | bool or features.fpga.quartus | default(false) | bool or features.fpga.oss | default(false) | bool
-    - ansible_facts['os_family'] == "RedHat"
-
-- name: Ensure plugdev group exists (RedHat — not created by default)
-  ansible.builtin.group:
-    name: plugdev
-    state: present
-  become: true
-  when:
-    - ansible_facts['os_family'] == "RedHat"
-    - features.fpga.vivado | default(false) | bool or features.fpga.quartus | default(false) | bool or features.fpga.oss | default(false) | bool
-
 - name: Add {{ dev_user }} to hardware access groups
   ansible.builtin.user:
     name: "{{ dev_user }}"
@@ -188,27 +151,6 @@
     - features.fpga.oss | default(false) | bool
     - ansible_facts['os_family'] == "Debian"
     - ansible_facts['distribution'] == "Ubuntu"
-
-- name: Install open-source simulation / waveform tools (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name: "{{ fpga_oss_tools_rpm }}"
-    state: present
-  become: true
-  when:
-    - features.fpga.oss | default(false) | bool
-    - ansible_facts['os_family'] == "RedHat"
-
-- name: Install ghdl (RedHat/AlmaLinux — not in EPEL, use pre-built binary)
-  ansible.builtin.include_tasks: ghdl_rhel.yml
-  when:
-    - features.fpga.oss | default(false) | bool
-    - ansible_facts['os_family'] == "RedHat"
-
-- name: Install nvc (RedHat/AlmaLinux — not in EPEL, build from source)
-  ansible.builtin.include_tasks: nvc_rhel.yml
-  when:
-    - features.fpga.oss | default(false) | bool
-    - ansible_facts['os_family'] == "RedHat"
 
 # ── FPGA environment variable stubs ──────────────────────────────────────────
 # Only written when a commercial tool is requested; OSS tools need no stubs.

@@ -1,16 +1,14 @@
 # FPGA development VMs
 
-Five FPGA development environments are provided under `local-vms/`. All are managed natively via **Vagrant** supporting VirtualBox, VMware Desktop, and Libvirt/KVM.
+Three FPGA development environments are provided under `local-vms/`. All are managed natively via **Vagrant** supporting VirtualBox, VMware Desktop, and Libvirt/KVM.
 
 | Directory | OS | Desktop | Primary use |
 |---|---|---|---|
-| `local-vms/vm-fpga-dev-alma-9/` | AlmaLinux 9 | GNOME (Ansible) | RHEL-certified Vivado + Quartus target |
-| `local-vms/vm-fpga-dev-alma-10/` | AlmaLinux 10 | GNOME (Ansible) | RHEL-certified latest version |
-| `local-vms/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | GNOME (Ansible) | Alternative Ubuntu target |
+| `local-vms/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | GNOME (Ansible) | Primary Vivado + Quartus target |
 | `local-vms/vm-fpga-dev-ubuntu-2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
 | `local-vms/vm-fpga-dev-debian-13/` | Debian 13 | XFCE4 (Ansible) | Debian target |
 
-The AlmaLinux variants are the primary targets for commercial FPGA toolchains. Vivado and Quartus are officially certified against RHEL, meaning they require fewer library workarounds than Ubuntu.
+Ubuntu 24.04 is the primary target for commercial FPGA toolchains: the Vivado and Quartus runtime library lists in the `fpga` role are tuned for it. Only Debian and Ubuntu guests are supported.
 
 ---
 
@@ -34,9 +32,9 @@ as `/opt/fpga-installers` inside every FPGA VM.
 Each FPGA environment is declared in a `vm.yml` file under its respective folder:
 
 ```yaml
-# local-vms/vm-fpga-dev-alma-10/vm.yml
-name: vm-fpga-dev-alma-10
-os: alma10
+# local-vms/vm-fpga-dev-ubuntu-2404/vm.yml
+name: vm-fpga-dev-ubuntu-2404
+os: ubuntu2404
 hostname: fpga-dev
 
 ram_mb: 32768        # 32 GB — leaves sufficient RAM for host
@@ -75,7 +73,7 @@ flowchart LR
         H2 --> SF2["Shared Folder 2"]
         H3 --> SF3["Shared Folder 3"]
     end
-    subgraph Guest ["Guest OS Filesystem (Ubuntu/AlmaLinux)"]
+    subgraph Guest ["Guest OS Filesystem (Ubuntu/Debian)"]
         SF1 --> G1["/home/vagrant/workspace/workstation"]
         SF2 --> G2["/home/vagrant/projects"]
         SF3 --> G3["/opt/fpga-installers"]
@@ -104,22 +102,22 @@ All commands are run using Vagrant from the repository root.
 
 ```bash
 # Create, boot, and automatically provision a VM
-vagrant up vm-fpga-dev-alma-10
+vagrant up vm-fpga-dev-ubuntu-2404
 
 # Access the VM via SSH
-vagrant ssh vm-fpga-dev-alma-10
+vagrant ssh vm-fpga-dev-ubuntu-2404
 
 # Force-run Ansible provisioning inside the VM
-vagrant provision vm-fpga-dev-alma-10
+vagrant provision vm-fpga-dev-ubuntu-2404
 
 # Stop the VM
-vagrant halt vm-fpga-dev-alma-10
+vagrant halt vm-fpga-dev-ubuntu-2404
 
 # Suspend the VM (saves state)
-vagrant suspend vm-fpga-dev-alma-10
+vagrant suspend vm-fpga-dev-ubuntu-2404
 
 # Destroy the VM (deletes disk files)
-vagrant destroy vm-fpga-dev-alma-10
+vagrant destroy vm-fpga-dev-ubuntu-2404
 ```
 
 ---
@@ -137,7 +135,7 @@ vmware_base_folder: "D:/vm/vmware"
 **Step 2 — Boot the VM.**
 
 ```bash
-vagrant up vm-fpga-dev-alma-10
+vagrant up vm-fpga-dev-ubuntu-2404
 ```
 
 Vagrant will automatically:
@@ -162,12 +160,16 @@ local-vms/shared/installers/
 The Quartus and Cyclone V payloads are required for the DE10-Nano. Questa is
 optional and is not installed by the role.
 
-The AlmaLinux 9 host enables the Quartus runtime dependencies and USB-Blaster
-rules. Unattended vendor installation remains explicitly gated because it
-accepts the Altera EULA. After reviewing that agreement, set:
+Set `features.fpga.quartus: true` on the VM you use to install the Quartus
+runtime dependencies and USB-Blaster rules. Unattended vendor installation
+stays explicitly gated because it accepts the Altera EULA. After reviewing that
+agreement, set:
 
 ```yaml
-# ansible/inventory/host_vars/vm-fpga-dev-alma-9.yml
+# ansible/inventory/host_vars/vm-fpga-dev-ubuntu-2404.yml
+features:
+  fpga:
+    quartus: true
 fpga_quartus_install_enabled: true
 fpga_quartus_accept_eula: true
 ```
@@ -175,9 +177,9 @@ fpga_quartus_accept_eula: true
 Then provision the VM:
 
 ```bash
-vagrant up vm-fpga-dev-alma-9
+vagrant up vm-fpga-dev-ubuntu-2404
 # For an existing VM:
-vagrant provision vm-fpga-dev-alma-9
+vagrant provision vm-fpga-dev-ubuntu-2404
 ```
 
 After provisioning, reconnect the DE10-Nano USB cable and start a new login
@@ -192,7 +194,7 @@ jtagconfig
 
 For a command-line session, run:
 ```bash
-vagrant ssh vm-fpga-dev-alma-10
+vagrant ssh vm-fpga-dev-ubuntu-2404
 ```
 For a desktop session, open your hypervisor console (VirtualBox/VMware/Virt-Manager) or connect via RDP on port `3389` if `features.xrdp` is enabled.
 
@@ -203,7 +205,7 @@ For a desktop session, open your hypervisor console (VirtualBox/VMware/Virt-Mana
 FPGA VMs are declared in the `fpga_vms` group in `ansible/inventory/hosts.yml`. Profile and feature configurations are managed in `ansible/inventory/group_vars/fpga_vms.yml` or overridden per host in `ansible/inventory/host_vars/<hostname>.yml`:
 
 ```yaml
-# ansible/inventory/host_vars/vm-fpga-dev-alma-10.yml
+# ansible/inventory/host_vars/vm-fpga-dev-ubuntu-2404.yml
 dev_user: bach              # account created inside the VM (different from vagrant)
 dev_user_ssh_pubkey: ""     # SSH key deployed for dev_user (leave empty to skip)
 

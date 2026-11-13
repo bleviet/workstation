@@ -31,8 +31,6 @@ Vagrant natively supports multiple providers including VirtualBox, VMware Deskto
 | `workstation-test-debian` | Debian 13 | headless |
 | `workstation-test-ubuntu24` | Ubuntu 24.04 | headless |
 | `workstation-test-ubuntu26` | Ubuntu 26.04 | headless |
-| `workstation-test-alma9` | AlmaLinux 9 | headless |
-| `workstation-test-alma10` | AlmaLinux 10 | headless |
 | `workstation-test-*-i3wm` | *OS matched* | desktop-i3wm |
 | `workstation-test-*-xfce` | *OS matched* | desktop-xfce |
 | `workstation-test-*-gnome` | *OS matched* | desktop-gnome |

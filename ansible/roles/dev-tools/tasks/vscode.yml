@@ -28,29 +28,6 @@
         state: present
         update_cache: true
 
-- name: Install VS Code (AlmaLinux/RHEL)
-  when: ansible_facts['os_family'] == 'RedHat'
-  become: true
-  block:
-    - name: Import Microsoft GPG key
-      ansible.builtin.rpm_key:
-        key: https://packages.microsoft.com/keys/microsoft.asc
-        state: present
-
-    - name: Add VS Code dnf repository
-      ansible.builtin.yum_repository:
-        name: code
-        description: Visual Studio Code
-        baseurl: https://packages.microsoft.com/yumrepos/vscode
-        enabled: true
-        gpgcheck: true
-        gpgkey: https://packages.microsoft.com/keys/microsoft.asc
-
-    - name: Install code
-      ansible.builtin.dnf:
-        name: code
-        state: present
-
 - name: Install VS Code (macOS Cask)
   community.general.homebrew_cask:
     name: visual-studio-code

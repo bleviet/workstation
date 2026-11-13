@@ -1,9 +1,0 @@
----
-xfce_packages:
-  - xfce4-session
-  - xfwm4
-  - xfce4-panel
-  - Thunar
-  - xfce4-terminal
-  - lightdm
-  - lightdm-gtk

@@ -27,7 +27,7 @@ build_and_test() {
 }
 
 # Launch all builds in parallel
-for os in debian ubuntu almalinux; do
+for os in debian ubuntu; do
   build_and_test "$os" "$TESTS_DIR/container/Dockerfile.${os}" &
   PIDS+=($!)
   NAMES+=("$os")

@@ -82,78 +82,6 @@ fpga_oss_tools_apt:
   - ghdl        # VHDL simulator (supports VHDL-2008)
   # nvc is not in Ubuntu apt repos — installed separately via nvc_debian.yml
 
-# ── Vivado runtime dependencies (AlmaLinux 9 / RHEL 9) ───────────────────────
-# Covers Vivado 2025.2. Both x86_64 and i686 variants where available.
-# EPEL + CRB are assumed enabled (done by the packages role).
-# ncurses-compat-libs ships libtinfo.so.5 + libncurses.so.5 natively on RHEL —
-# no symlinks required.
-fpga_vivado_libs_rpm:
-  - libX11
-  - libX11.i686
-  - libXrender
-  - libXrender.i686
-  - libXtst
-  - libXtst.i686
-  - libXi
-  - libXi.i686
-  - libXcursor
-  - libXcursor.i686
-  - libXrandr
-  - libXrandr.i686
-  - libXft
-  - libXft.i686
-  - libXext
-  - libXext.i686
-  - libXfixes
-  - libXfixes.i686
-  - freetype
-  - freetype.i686
-  - fontconfig
-  - fontconfig.i686
-  - glib2
-  - glib2.i686
-  - gtk3                     # GTK3 — hard dep in Vivado 2025.x
-  - libSM
-  - libSM.i686
-  - libICE
-  - libICE.i686
-  - glibc.i686
-  - libstdc++
-  - libstdc++.i686
-  - libgcc
-  - libgcc.i686
-  - zlib
-  - zlib.i686
-  - openssl-libs
-  - ncurses-libs
-  - ncurses-libs.i686
-  - ncurses-compat-libs      # provides libtinfo.so.5 + libncurses.so.5
-  - libgomp
-  - libgomp.i686
-  - cpio                     # Vivado 2025.x installer/post-processing
-  - xorg-x11-utils           # provides xlsclients — checked by Vivado at startup
-  - libxcrypt-compat         # provides libcrypt.so.1 for internal Vivado tools
-
-# ── Quartus Prime runtime dependencies (AlmaLinux 9 / RHEL 9) ────────────────
-fpga_quartus_libs_rpm:
-  - make
-  - libX11.i686
-  - libXau.i686
-  - libXdmcp.i686
-  - libXext.i686
-  - libXft.i686
-  - libXft-devel.i686
-  - libXrender.i686
-  - libXt.i686
-  - libXtst.i686
-  - ncurses-compat-libs
-  - gtk2
-  - libpng
-  - qt5-qtbase
-  - qt5-qtsvg
-  - expat
-  - expat.i686
-
 # ── Quartus Prime Lite unattended installation ───────────────────────────────
 # Vendor downloads are supplied locally because accepting the Altera EULA is a
 # user action and the download URLs are not suitable for unattended automation.
@@ -167,31 +95,8 @@ fpga_quartus_installer_sha1: ce0773469eacab5b7035c175484625f4ec3737d1
 fpga_quartus_device_file: cyclonev-25.1std.0.1129.qdz
 fpga_quartus_device_sha1: a7225ec1bd36ccfd6826ea6273df5d21dd95633b
 
-# ── USB / JTAG libraries (AlmaLinux 9 / RHEL 9) ──────────────────────────────
-fpga_usb_libs_rpm:
-  - libusb1                  # libusb 1.0 (libusbx in older RHEL)
-  - libusb1-devel
-  - usbutils
-  - fxload                   # EPEL
-
-# ── Simulation / waveform tools (AlmaLinux 9 / RHEL 9 via EPEL) ──────────────
-# ghdl and nvc are not in EPEL 9 — installed separately via dedicated tasks.
-fpga_oss_tools_rpm:
-  - iverilog
-  - gtkwave
-  - verilator
-
-# ── ghdl (RHEL only — installed from GitHub pre-built release) ───────────────
-# Uses the Ubuntu 20.04 mcode build (glibc 2.31) which is compatible with
-# AlmaLinux 9 / RHEL 9 (glibc 2.34). Building from source is not feasible
-# on RHEL 9 because gcc-gnat is absent from standard and EPEL repos.
-# v6.0.0+ only ships Ubuntu 24.04 binaries (glibc 2.39 — incompatible).
-ghdl_version: "4.1.0"
-ghdl_rhel_url: "https://github.com/ghdl/ghdl/releases/download/v{{ ghdl_version }}/ghdl-gha-ubuntu-20.04-mcode.tgz"
-
-# ── nvc (not in apt or EPEL — installed from GitHub) ─────────────────────────
-# Debian/Ubuntu: pre-built .deb packages per Ubuntu release.
-# RHEL/AlmaLinux: built from source (no RPM available).
+# ── nvc (not in apt — installed from GitHub) ─────────────────────────────────
+# Pre-built .deb packages per Ubuntu release; source tarball otherwise.
 nvc_version: "1.21.0"
 nvc_source_url: "https://github.com/nickg/nvc/releases/download/r{{ nvc_version }}/nvc-{{ nvc_version }}.tar.gz"
 # Map Ubuntu distribution version to the matching .deb asset name.

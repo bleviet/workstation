@@ -1,6 +1,6 @@
 # Vagrant SSH & Provisioning Lifecycle
 
-Modern operating systems (such as Ubuntu 26.04 and AlmaLinux 10) disable password-based SSH authentication by default for security. This article explains how Vagrant and Ansible bypass password requirements during VM initialization, how keys are rotated, and how your personal SSH key is securely injected.
+Modern operating systems (such as Ubuntu 26.04) disable password-based SSH authentication by default for security. This article explains how Vagrant and Ansible bypass password requirements during VM initialization, how keys are rotated, and how your personal SSH key is securely injected.
 
 ---
 
@@ -41,7 +41,7 @@ sequenceDiagram
 ## Detailed Phases
 
 ### Phase 1: The Base Box & The Insecure Key
-When you initialize a VM using a public box (like `bento/ubuntu-26.04` or `almalinux/10`), the guest OS starts from a pre-configured image. 
+When you initialize a VM using a public box (like `bento/ubuntu-26.04`), the guest OS starts from a pre-configured image. 
 - These images contain a default account named `vagrant`.
 - To allow initial automation, the base image contains a well-known, public SSH key called the **Vagrant insecure public key** in `/home/vagrant/.ssh/authorized_keys`.
 - Password authentication is **not** used or required for this connection.

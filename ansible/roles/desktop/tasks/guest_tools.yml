@@ -15,23 +15,9 @@
     - ansible_facts['virtualization_type'] == 'vmware'
     - ansible_facts['os_family'] == 'Debian'
 
-- name: Install open-vm-tools for VMware guests (RedHat/AlmaLinux)
-  become: true
-  ansible.builtin.dnf:
-    name:
-      - open-vm-tools
-      - open-vm-tools-desktop
-    state: present
-  when:
-    - ansible_facts['virtualization_role'] == 'guest'
-    - ansible_facts['virtualization_type'] == 'vmware'
-    - ansible_facts['os_family'] == 'RedHat'
-
 # ── VirtualBox ────────────────────────────────────────────────────────────
 # On Debian, guest packages live in the contrib component.
 # On Ubuntu, they are in universe (enabled by default in bento boxes).
-# On AlmaLinux, bento boxes ship with Guest Additions pre-built; there is
-# no clean distro package, so we only ensure the service is started.
 - name: Enable Debian contrib component for VirtualBox guest packages
   become: true
   ansible.builtin.deb822_repository:
@@ -69,18 +55,6 @@
     - ansible_facts['os_family'] == 'Debian'
   ignore_errors: true
 
-- name: Ensure VirtualBox guest service is running (RedHat/AlmaLinux)
-  become: true
-  ansible.builtin.service:
-    name: vboxadd-service
-    enabled: true
-    state: started
-  when:
-    - ansible_facts['virtualization_role'] == 'guest'
-    - ansible_facts['virtualization_type'] == 'virtualbox'
-    - ansible_facts['os_family'] == 'RedHat'
-  ignore_errors: true
-
 # ── KVM / libvirt ─────────────────────────────────────────────────────────
 # qemu-guest-agent: enables host↔guest communication (snapshot, freeze fs).
 # spice-vdagent:    clipboard sync and auto-resize in SPICE display sessions.
@@ -96,15 +70,3 @@
     - ansible_facts['virtualization_role'] == 'guest'
     - ansible_facts['virtualization_type'] == 'kvm'
     - ansible_facts['os_family'] == 'Debian'
-
-- name: Install KVM guest agent and SPICE agent (RedHat/AlmaLinux)
-  become: true
-  ansible.builtin.dnf:
-    name:
-      - qemu-guest-agent
-      - spice-vdagent
-    state: present
-  when:
-    - ansible_facts['virtualization_role'] == 'guest'
-    - ansible_facts['virtualization_type'] == 'kvm'
-    - ansible_facts['os_family'] == 'RedHat'

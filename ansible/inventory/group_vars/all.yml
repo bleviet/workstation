@@ -4,7 +4,7 @@
 ansible_python_interpreter: /usr/bin/python3
 
 
-# "common" names are identical across apt and dnf.
+# "common" names are identical across apt and Homebrew.
 
 packages:
   common:
@@ -21,9 +21,6 @@ packages:
   apt:
     - acl        # required for Ansible become_user with unprivileged accounts
     - p7zip-full
-    - xclip
-  dnf:
-    - p7zip
     - xclip
   homebrew:
     - p7zip
@@ -57,7 +54,7 @@ profile: headless
 #   neovim  — install the neovim binary; dotfiles supply the config via chezmoi
 #   lazyvim — pre-install LazyVim plugins during provisioning (implies neovim)
 #             so the first launch is instant rather than downloading on first open
-#   vscode  — install VS Code via the Microsoft apt/dnf repository
+#   vscode  — install VS Code via the Microsoft apt repository (Homebrew cask on macOS)
 #
 # fpga:
 #   vivado  — AMD/Xilinx runtime libs + Xilinx/Digilent udev rules

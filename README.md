@@ -15,7 +15,7 @@ This repository features a clean architectural separation between virtual machin
 
 ## ✨ Core Features
 
-- **Supported Platforms**: Debian 13 (apt), Ubuntu 24.04/26.04 (apt), AlmaLinux 9/10 (dnf).
+- **Supported Platforms**: Debian 13 (apt), Ubuntu 24.04/26.04 (apt).
 - **Environment Profiles**: Selectable per-machine profiles including `headless`, `desktop-gnome`, `desktop-xfce`, and `desktop-i3wm`.
 - **Modular Feature Flags**: Toggle selective installs such as VS Code, Neovim/LazyVim, remote desktop access via xRDP, and FPGA development library toolchains (AMD/Xilinx Vivado, Intel/Altera Quartus, and open-source EDA).
 - **Dynamic Host Variables**: Vagrant dynamically aligns guest machines with their matching variables under `ansible/inventory/host_vars/vm-fpga-dev-*.yml` natively using the guest VM name.

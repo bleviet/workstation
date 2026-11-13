@@ -1,17 +1,4 @@
 ---
-- name: Enable EPEL repository (RedHat family)
-  ansible.builtin.dnf:
-    name: epel-release
-    state: present
-  become: true
-  when: ansible_facts['os_family'] == "RedHat"
-
-- name: Enable CRB repository (required for EPEL dependencies on RedHat family)
-  ansible.builtin.command:
-    cmd: dnf config-manager --set-enabled crb
-  become: true
-  when: ansible_facts['os_family'] == "RedHat"
-  changed_when: false
 
 - name: Remove legacy VS Code apt source (conflicts with deb822 entry)
   ansible.builtin.file:
@@ -30,13 +17,6 @@
     update_cache: true
   become: true
   when: ansible_facts['os_family'] == "Debian"
-
-- name: Install system packages (RedHat/AlmaLinux)
-  ansible.builtin.dnf:
-    name: "{{ packages.common + packages.dnf }}"
-    state: present
-  become: true
-  when: ansible_facts['os_family'] == "RedHat"
 
 - name: Install system packages (macOS via Homebrew)
   community.general.homebrew:

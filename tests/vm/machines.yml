@@ -30,21 +30,6 @@ machines:
     cpus:    2
     gui:     false
 
-  - name:    workstation-test-alma9
-    os:      alma9
-    profile: headless
-    ram_mb:  2048
-    cpus:    2
-    gui:     false
-
-  - name:    workstation-test-alma10
-    os:      alma10
-    profile: headless
-    ram_mb:  2048
-    cpus:    2
-    gui:     false
-
-  # ── Desktop — i3wm ────────────────────────────────────────────────────────
   - name:    workstation-test-debian-i3wm
     os:      debian13
     profile: desktop-i3wm
@@ -66,21 +51,6 @@ machines:
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-alma9-i3wm
-    os:      alma9
-    profile: desktop-i3wm
-    ram_mb:  4096
-    cpus:    2
-    gui:     true
-
-  - name:    workstation-test-alma10-i3wm
-    os:      alma10
-    profile: desktop-i3wm
-    ram_mb:  4096
-    cpus:    2
-    gui:     true
-
-  # ── Desktop — xfce ────────────────────────────────────────────────────────
   - name:    workstation-test-debian-xfce
     os:      debian13
     profile: desktop-xfce
@@ -102,21 +72,6 @@ machines:
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-alma9-xfce
-    os:      alma9
-    profile: desktop-xfce
-    ram_mb:  4096
-    cpus:    2
-    gui:     true
-
-  - name:    workstation-test-alma10-xfce
-    os:      alma10
-    profile: desktop-xfce
-    ram_mb:  4096
-    cpus:    2
-    gui:     true
-
-  # ── Desktop — gnome ───────────────────────────────────────────────────────
   - name:    workstation-test-debian-gnome
     os:      debian13
     profile: desktop-gnome
@@ -138,16 +93,3 @@ machines:
     cpus:    2
     gui:     true
 
-  - name:    workstation-test-alma9-gnome
-    os:      alma9
-    profile: desktop-gnome
-    ram_mb:  4096
-    cpus:    2
-    gui:     true
-
-  - name:    workstation-test-alma10-gnome
-    os:      alma10
-    profile: desktop-gnome
-    ram_mb:  4096
-    cpus:    2
-    gui:     true
