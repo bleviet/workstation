@@ -36,6 +36,11 @@ alias gfa='git fetch --all --prune'
 
 # gitk is a GUI tool — only define if available
 if command -v gitk >/dev/null 2>&1; then
+  # libXft < 2.3.5 crashes Tk (BadLength / RenderAddGlyphs) on color emoji
+  # glyphs; hide color fonts from gitk only (covers gk, gka, gkf).
+  if [ -f "$HOME/.config/fontconfig/no-color-emoji.conf" ]; then
+    gitk() { FONTCONFIG_FILE="$HOME/.config/fontconfig/no-color-emoji.conf" command gitk "$@"; }
+  fi
   alias gk='gitk'
   alias gka='gitk --all'
 fi
