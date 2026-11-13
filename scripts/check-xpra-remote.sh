@@ -2,7 +2,7 @@
 # scripts/check-xpra-remote.sh — verify the Xpra-over-SSH server setup on this
 # Linux/WSL2 host (what the ssh + xpra roles and the Windows scripts configure).
 # Read-only. On WSL2 it also checks the Windows side via interop: portproxy
-# target, firewall rule, and LSO/RSC on the LAN adapter.
+# target, firewall rule, and that no Wi-Fi-only network bridge is in the path.
 #
 # Usage: ./scripts/check-xpra-remote.sh [display] [wsl_ssh_port]
 set -uo pipefail
@@ -97,18 +97,20 @@ if $is_wsl; then
     fi
     fw="$("$PS" -NoProfile -Command "@(Get-NetFirewallRule -Enabled True -Direction Inbound -Action Allow -ErrorAction SilentlyContinue | Get-NetFirewallPortFilter | ? LocalPort -eq '$SSH_PORT').Count" 2>/dev/null | tr -d '\r')"
     [ "${fw:-0}" -gt 0 ] && ok "firewall allows inbound :$SSH_PORT" || fail "no inbound firewall rule for :$SSH_PORT"
-    # Same default-route adapter selection as scripts/optimize-windows-network.ps1.
-    offload="$("$PS" -NoProfile -Command '
-      $r = Get-NetRoute -AddressFamily IPv4 -DestinationPrefix 0.0.0.0/0 | ? InterfaceAlias -notlike "vEthernet*" | Sort-Object RouteMetric | Select -First 1
-      $n = $r.InterfaceAlias
-      $l = Get-NetAdapterLso -Name $n -ErrorAction SilentlyContinue
-      $c = Get-NetAdapterRsc -Name $n -ErrorAction SilentlyContinue
-      "{0}|{1}|{2}" -f $n, [bool]($l.IPv4Enabled -or $l.IPv6Enabled), [bool]($c.IPv4Enabled -or $c.IPv6Enabled)' 2>/dev/null | tr -d '\r')"
-    IFS='|' read -r adapter lso rsc <<<"$offload"
-    if [ "$lso" = "False" ] && [ "$rsc" = "False" ]; then
-      ok "LSOv2/RSC disabled on LAN adapter '$adapter'"
+    # A Windows bridge around only Wi-Fi (or a single adapter) stalls inbound TCP:
+    # downloads, SMB and Xpra. Same detection as scripts/optimize-windows-network.ps1.
+    bridge="$("$PS" -NoProfile -Command '
+      $m = @(netsh bridge show adapter | % { if ($_ -match "^\s*(\d+)\s+\{[0-9A-Fa-f-]{36}\}\s+(.+?)\s+(Yes|Ja)\s+(Yes|No|Ja|Nein)\s+") {
+        $a = Get-NetAdapter -InterfaceIndex ([int]$Matches[1]) -ErrorAction SilentlyContinue
+        [pscustomobject]@{ Name = $Matches[2].Trim(); Wifi = [bool]($a -and ($a.PhysicalMediaType -match "802\.11|Wireless" -or $a.InterfaceDescription -match "Wi-?Fi|Wireless|WLAN")) } } })
+      "{0}|{1}|{2}" -f $m.Count, @($m | ? Wifi).Count, (($m | % Name) -join ", ")' 2>/dev/null | tr -d '\r')"
+    IFS='|' read -r members wifi names <<<"$bridge"
+    if [ "${members:-0}" -eq 0 ]; then
+      ok "no Windows network bridge"
+    elif [ "$members" -eq 1 ] || [ "$members" -eq "${wifi:-0}" ]; then
+      fail "Windows bridge wraps only Wi-Fi/one adapter ($names) — stalls downloads/SMB/Xpra; run scripts/optimize-windows-network.ps1 -FixBridge"
     else
-      warn "LSOv2=$lso RSC=$rsc on '$adapter' — run scripts/optimize-windows-network.ps1 if Xpra stalls"
+      warn "Windows network bridge present ($names); fine if it really joins wired networks"
     fi
   fi
 fi

@@ -54,6 +54,6 @@ To allow teammates on the local network to SSH into both a Windows host (port `2
    ```
    Re-run `setup-windows-ssh.ps1` after a Windows reboot or `wsl --shutdown` if WSL2's internal IP changes (skipped automatically in WSL mirrored networking mode).
 
-For remote GUI apps over this SSH path (Xpra → MacBook), the Windows LSO/RSC
-network fix, and `scripts/check-xpra-remote.sh`, see
+For remote GUI apps over this SSH path (Xpra → MacBook), the Wi-Fi-only
+network bridge fix, and `scripts/check-xpra-remote.sh`, see
 [Remote GUI apps with Xpra](xpra-remote-gui.md).

@@ -20,7 +20,7 @@ No extra ports are opened. Xpra tunnels through the existing sshd from the `ssh`
 | WSL2 / Linux | `~/.config/shell/xpra.sh`: in SSH sessions, `DISPLAY=:100` so GUI apps appear in Xpra | `xpra` role |
 | WSL2 | sshd on `:2222` (avoids Windows OpenSSH on `:22`) | `ssh` role (`wsl2_ssh_enabled`) |
 | Windows | OpenSSH, firewall, portproxy `:2222 → WSL2` | `scripts/setup-windows-ssh.ps1` |
-| Windows | LSOv2 + RSC **off** on the LAN adapter | `scripts/optimize-windows-network.ps1` |
+| Windows | No Wi-Fi-only network bridge in the path (see [Troubleshooting](#troubleshooting-slow-or-stalling-transfers)) | `scripts/optimize-windows-network.ps1` |
 | macOS | Xpra.app, low-latency `~/Library/Application Support/Xpra/xpra.conf` block | `xpra` role |
 | macOS | `~/.config/shell/xpra_ssh.sh`: `ssh <alias>` auto-attaches Xpra and detaches on exit | `xpra` role (`xpra_client_hosts`) |
 
@@ -43,13 +43,13 @@ WSL2 (server) and macOS (client), but not in containers.
 
    ```powershell
    .\scripts\setup-windows-ssh.ps1            # sshd, firewall, portproxy :2222 -> WSL2
-   .\scripts\optimize-windows-network.ps1     # LSOv2/RSC off on the default-route adapter
+   .\scripts\optimize-windows-network.ps1     # report; add -FixBridge if it flags a Wi-Fi-only bridge
    ```
 
 3. **Verify (inside WSL2)**:
 
    ```bash
-   ./scripts/check-xpra-remote.sh             # sshd, xpra session, portproxy target, LSO/RSC
+   ./scripts/check-xpra-remote.sh             # sshd, xpra session, portproxy target, network bridge
    ```
 
 4. **MacBook**: run the playbook there too (bootstrap), or by hand: install
@@ -68,10 +68,9 @@ WSL2 (server) and macOS (client), but not in containers.
 
 ## Why these settings
 
-- **LSOv2/RSC off on the Windows LAN adapter.** With them on (the Windows
-  network bridge "Netzwerkbrücke" on desktop-ryzen5950x), WSL2 → LAN TCP
-  collapsed to 0.05–0.08 MB/s with heavy retransmits. Xpra showed this as
-  "server is not responding" stalls. With them off: ~19 MB/s.
+- **No Windows network bridge around Wi-Fi.** The PC should reach the LAN
+  through its Wi-Fi or Ethernet adapter directly. See
+  [Troubleshooting](#troubleshooting-slow-or-stalling-transfers).
 - **Client `ssh = ssh -o ControlMaster=no -o Compression=no …`.** Native
   OpenSSH avoids Paramiko stalls and hangs on exit. SSH compression would
   double-compress frames that Xpra already compresses.
@@ -98,3 +97,40 @@ a reminder instead.
   `setup-windows-ssh.ps1`, or use mirrored networking (no portproxy needed).
 - **Mac shows an existing hand-written `xpra_ssh.sh`.** The role overwrites it
   but keeps a timestamped backup next to it.
+
+## Troubleshooting: slow or stalling transfers
+
+**Symptoms** (seen on desktop-ryzen5950x, 2026-11-13):
+- Xpra stalls with "server is not responding".
+- WSL2 → LAN drops to 0.05 MB/s, and internet downloads crawl at under 1 KB/s.
+- SMB reads from the NAS fail with "Unerwarteter Netzwerkfehler", so KeePass
+  can't open its database over the share.
+
+All of this happens while ping, Wi-Fi signal and other machines on the LAN look
+perfect.
+
+**Cause:** a Windows network bridge ("Netzwerkbrücke") whose only member was
+the Wi-Fi adapter.
+- A bridge joins two networks; with one member it bridges nothing.
+- Windows still moves TCP/IP and the SMB client from the Wi-Fi adapter onto
+  the bridge.
+- Bridging over Wi-Fi needs MAC translation for every frame, and that path
+  stalled inbound bulk TCP.
+
+Disabling LSOv2/RSC on the bridge only masked the outbound direction for a
+while; it wasn't the fix.
+
+**Fix:** remove the bridge (elevated PowerShell):
+
+```powershell
+.\scripts\optimize-windows-network.ps1            # reports a Wi-Fi-only bridge, changes nothing
+.\scripts\optimize-windows-network.ps1 -FixBridge # removes it, restores WLAN bindings, keeps the profile
+```
+
+The Wi-Fi adapter usually keeps the same LAN IP, because DHCP is keyed to its
+MAC. If the IP does change, update the Mac's `HostName`. After the fix: 65 MB/s
+internet, 28 MB/s SMB from the NAS, 57 MB/s WSL2 → LAN, and Xpra is responsive.
+`check-xpra-remote.sh` fails if such a bridge comes back.
+
+`-DisableOffloads` / `-EnableOffloads` (LSOv2/RSC) remain as a last resort for
+NIC driver problems. They aren't needed for the bridge case.

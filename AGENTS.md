@@ -39,9 +39,9 @@ ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instance
 .\scripts\attach-jtag-usb.ps1 -Distro wsl-fpga-dev -List  # list all USB devices
 .\scripts\setup-windows-ssh.ps1                      # expose Windows (:22) + WSL2 (:2222) SSH on LAN
 .\scripts\setup-windows-ssh.ps1 -WslDistro wsl-fpga-dev   # target a specific WSL2 instance
-.\scripts\optimize-windows-network.ps1               # LSOv2/RSC off on LAN adapter (fixes Xpra stalls)
+.\scripts\optimize-windows-network.ps1 [-FixBridge]   # report / remove a Wi-Fi-only network bridge (stalled downloads, SMB, Xpra)
 ./scripts/setup-wsl-ssh.sh                           # standalone WSL2 sshd setup on port 2222 (automated for wsl_instances)
-./scripts/check-xpra-remote.sh                       # verify sshd/xpra session/portproxy/LSO from inside WSL2
+./scripts/check-xpra-remote.sh                       # verify sshd/xpra session/portproxy/no Wi-Fi bridge from inside WSL2
 ```
 
 ## Ansible constraints
