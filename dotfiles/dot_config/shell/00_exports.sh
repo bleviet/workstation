@@ -27,3 +27,26 @@ export EDITOR=nvim
 ## PATH
 ###############################################################################
 export PATH="$HOME/.local/bin:$PATH"
+
+if [ -d "$HOME/.opencode/bin" ]; then
+  export PATH="$HOME/.opencode/bin:$PATH"
+fi
+
+###############################################################################
+## Quartus Lite (Intel/Altera) — $HOME/tools/altera_lite
+###############################################################################
+_ALTERA_ROOT="$HOME/tools/altera_lite/25.1std"
+if [ -d "$_ALTERA_ROOT" ]; then
+  export QUARTUS_ROOTDIR="$_ALTERA_ROOT/quartus"
+  export PATH="$_ALTERA_ROOT/quartus/bin:$PATH"
+  export PATH="$_ALTERA_ROOT/questa_fse/bin:$PATH"
+  export PATH="$_ALTERA_ROOT/nios2eds/bin:$PATH"
+fi
+unset _ALTERA_ROOT
+
+###############################################################################
+## Vivado (AMD/Xilinx) — $HOME/tools/Xilinx/Vivado
+###############################################################################
+if [ -f "$HOME/tools/Xilinx/Vivado/2024.2/settings64.sh" ]; then
+  . "$HOME/tools/Xilinx/Vivado/2024.2/settings64.sh"
+fi
