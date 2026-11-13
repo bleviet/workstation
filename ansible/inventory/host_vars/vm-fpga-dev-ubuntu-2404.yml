@@ -1,6 +1,6 @@
 ---
 dev_user: bleviet
-profile: desktop-xfce
+profile: desktop-gnome
 features:
   editor:
     neovim: true

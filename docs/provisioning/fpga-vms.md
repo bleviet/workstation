@@ -6,7 +6,7 @@ Five FPGA development environments are provided under `local-vms/`. All are mana
 |---|---|---|---|
 | `local-vms/vm-fpga-dev-alma-9/` | AlmaLinux 9 | GNOME (Ansible) | RHEL-certified Vivado + Quartus target |
 | `local-vms/vm-fpga-dev-alma-10/` | AlmaLinux 10 | GNOME (Ansible) | RHEL-certified latest version |
-| `local-vms/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | XFCE4 (Ansible) | Alternative Ubuntu target |
+| `local-vms/vm-fpga-dev-ubuntu-2404/` | Ubuntu 24.04 | GNOME (Ansible) | Alternative Ubuntu target |
 | `local-vms/vm-fpga-dev-ubuntu-2604/` | Ubuntu 26.04 | GNOME (Ansible) | Latest Ubuntu LTS |
 | `local-vms/vm-fpga-dev-debian-13/` | Debian 13 | XFCE4 (Ansible) | Debian target |
 
