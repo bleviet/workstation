@@ -153,7 +153,7 @@ ansible/
     shell/                # oh-my-zsh + OS-specific shell snippet
     chezmoi/              # configure chezmoi source, apply dotfiles
     fonts/                # Nerd Fonts
-    ssh/                  # openssh-server + X11 forwarding (always on)
+    ssh/                  # openssh-server + X11 forwarding (always on; WSL2 LAN port 2222 when wsl2_ssh_enabled)
     desktop/              # Xorg base + kitty (when profile contains 'desktop')
     gnome/                # GNOME Shell + GDM (desktop-gnome)
     xfce/                 # XFCE 4 + LightDM (desktop-xfce)

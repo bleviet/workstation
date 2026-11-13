@@ -1,3 +1,9 @@
 ---
 # sshd service name differs across distributions
 ssh_service_name: "{{ 'ssh' if ansible_facts['os_family'] == 'Debian' else 'sshd' }}"
+
+# WSL2 LAN SSH configuration (off by default; enabled for wsl_instances).
+# Avoids colliding with Windows OpenSSH Server on port 22 and pairs with
+# scripts/setup-windows-ssh.ps1 on the Windows host.
+wsl2_ssh_enabled: false
+wsl2_ssh_port: 2222

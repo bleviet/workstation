@@ -1,0 +1,86 @@
+---
+# Configure OpenSSH Server inside WSL2 for LAN access on wsl2_ssh_port (default 2222).
+# Mirrors scripts/setup-wsl-ssh.sh and pairs with scripts/setup-windows-ssh.ps1.
+
+- name: Ensure SSH host keys exist (WSL2)
+  ansible.builtin.command:
+    cmd: ssh-keygen -A
+    creates: /etc/ssh/ssh_host_ed25519_key
+  become: true
+
+- name: Ensure /etc/ssh/sshd_config.d directory exists (WSL2)
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_config.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Remove Debian/Ubuntu sshd_not_to_be_run flag if present
+  ansible.builtin.file:
+    path: /etc/ssh/sshd_not_to_be_run
+    state: absent
+  become: true
+
+- name: Deploy WSL2 LAN sshd drop-in config
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/50-wsl-lan.conf
+    content: |
+      # Managed by Ansible (ssh role) — LAN SSH access for WSL2 on port {{ wsl2_ssh_port }}
+      Port {{ wsl2_ssh_port }}
+      ListenAddress 0.0.0.0
+      ListenAddress ::
+      PubkeyAuthentication yes
+      PasswordAuthentication yes
+      PermitEmptyPasswords no
+      PermitRootLogin no
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+  notify: Restart sshd
+
+- name: Validate sshd configuration (WSL2)
+  ansible.builtin.command:
+    cmd: sshd -t
+  become: true
+  changed_when: false
+
+- name: Check if ssh.socket unit exists (Ubuntu 22.04+ systemd)
+  ansible.builtin.command:
+    cmd: systemctl list-unit-files ssh.socket
+  become: true
+  register: wsl_ssh_socket_unit
+  changed_when: false
+  failed_when: false
+  when: ansible_facts['service_mgr'] == 'systemd'
+
+- name: Disable and stop ssh.socket so ssh.service binds configured port
+  ansible.builtin.systemd_service:
+    name: ssh.socket
+    state: stopped
+    enabled: false
+  become: true
+  when:
+    - ansible_facts['service_mgr'] == 'systemd'
+    - wsl_ssh_socket_unit.rc | default(1) == 0
+    - "'ssh.socket' in (wsl_ssh_socket_unit.stdout | default(''))"
+  notify: Restart sshd
+
+- name: Ensure developer ~/.ssh directory exists (WSL2)
+  ansible.builtin.file:
+    path: "{{ dev_user_home }}/.ssh"
+    state: directory
+    mode: "0700"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
+- name: Ensure developer ~/.ssh/authorized_keys exists (WSL2)
+  ansible.builtin.copy:
+    dest: "{{ dev_user_home }}/.ssh/authorized_keys"
+    content: ""
+    force: false
+    mode: "0600"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"

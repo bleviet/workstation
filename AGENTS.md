@@ -37,6 +37,9 @@ ansible-playbook ansible/site.yml -l wsl-fpga-dev   # re-provision a single WSL 
 ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instances at once
 .\scripts\attach-jtag-usb.ps1                        # attach JTAG boards (USB-Blaster, Digilent) to wsl-fpga-dev
 .\scripts\attach-jtag-usb.ps1 -Distro wsl-fpga-dev -List  # list all USB devices
+.\scripts\setup-windows-ssh.ps1                      # expose Windows (:22) + WSL2 (:2222) SSH on LAN
+.\scripts\setup-windows-ssh.ps1 -WslDistro wsl-fpga-dev   # target a specific WSL2 instance
+./scripts/setup-wsl-ssh.sh                           # standalone WSL2 sshd setup on port 2222 (automated for wsl_instances)
 ```
 
 ## Ansible constraints

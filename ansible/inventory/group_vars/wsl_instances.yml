@@ -9,3 +9,7 @@ profile: headless
 # systemd is required for udev to run, which is required for USB device rules
 # (USB-Blaster, Digilent JTAG) forwarded via usbipd-win.
 wsl2_enable_systemd: true
+
+# Configure OpenSSH inside WSL2 on port 2222 for LAN access (avoids colliding
+# with Windows OpenSSH Server on port 22; pairs with scripts/setup-windows-ssh.ps1).
+wsl2_ssh_enabled: true

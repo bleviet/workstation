@@ -30,6 +30,14 @@
   notify: Restart sshd
   when: ansible_facts['os_family'] != "Darwin"
 
+- name: Configure WSL2 LAN SSH access
+  ansible.builtin.include_tasks: wsl.yml
+  when:
+    - wsl2_ssh_enabled | default(false) | bool
+    - ansible_facts['os_family'] != "Darwin"
+    - ansible_facts['kernel'] | lower is search('microsoft')
+    - ansible_facts['virtualization_type'] | default('') not in ['docker', 'containerd', 'podman']
+
 - name: Enable and start sshd
   ansible.builtin.service:
     name: "{{ ssh_service_name }}"
