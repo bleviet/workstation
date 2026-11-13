@@ -1,0 +1,160 @@
+---
+# Xpra server: upstream packages + persistent headless session on :xpra_display,
+# reached by clients over the existing sshd (ssh role). No extra ports are opened.
+
+# ── Packages ────────────────────────────────────────────────────────────────
+- name: Install xpra.org apt signing key
+  ansible.builtin.get_url:
+    url: https://xpra.org/xpra.asc
+    dest: /usr/share/keyrings/xpra.asc
+    mode: "0644"
+  become: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Add xpra.org apt repository
+  ansible.builtin.copy:
+    dest: /etc/apt/sources.list.d/xpra.sources
+    content: |
+      # Managed by Ansible (xpra role) — mirrors Xpra-org/xpra packaging/repos/<suite>/xpra.sources
+      Types: deb
+      URIs: https://xpra.org{{ '' if xpra_channel == 'stable' else '/' + xpra_channel }}
+      Suites: {{ ansible_facts['distribution_release'] }}
+      Components: main
+      Signed-By: /usr/share/keyrings/xpra.asc
+    mode: "0644"
+    owner: root
+    group: root
+  become: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Install xpra (Debian/Ubuntu)
+  ansible.builtin.apt:
+    name:
+      - xpra
+      - xpra-x11
+      - xpra-codecs-extras
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  become: true
+  when: ansible_facts['os_family'] == 'Debian'
+
+# ── Per-user session ────────────────────────────────────────────────────────
+- name: Look up dev_user uid
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ dev_user }}"
+
+- name: Read the interpreter /usr/bin/xpra runs under
+  ansible.builtin.slurp:
+    src: /usr/bin/xpra
+  register: xpra_launcher
+  when: xpra_wm_unmap_patch | bool
+
+- name: Set Xpra facts
+  ansible.builtin.set_fact:
+    xpra_uid: "{{ ansible_facts['getent_passwd'][dev_user][1] }}"
+    xpra_unit: "xpra-{{ xpra_display }}.service"
+    # The wrapper imports xpra's Python modules, so it must use the same
+    # interpreter as the packaged launcher.
+    xpra_python: >-
+      {{ (xpra_launcher.content | b64decode).splitlines()[0] | regex_replace('^#!\s*', '')
+         if xpra_wm_unmap_patch | bool else '' }}
+    xpra_in_container: "{{ ansible_facts['virtualization_type'] | default('') in ['docker', 'containerd', 'podman'] }}"
+
+- name: Ensure Xpra user directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ dev_user_home }}/.local/bin"
+    - "{{ dev_user_home }}/.config/shell"
+    - "{{ dev_user_home }}/.config/systemd/user/default.target.wants"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
+- name: Install xpra-wm-server wrapper (ICCCM synthetic UnmapNotify fix)
+  ansible.builtin.template:
+    src: xpra-wm-server.j2
+    dest: "{{ dev_user_home }}/.local/bin/xpra-wm-server"
+    mode: "0755"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  when: xpra_wm_unmap_patch | bool
+
+- name: Install Xpra systemd user unit
+  ansible.builtin.template:
+    src: xpra.service.j2
+    dest: "{{ dev_user_home }}/.config/systemd/user/{{ xpra_unit }}"
+    mode: "0644"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  register: xpra_unit_file
+
+- name: Enable Xpra user unit at login (default.target.wants)
+  ansible.builtin.file:
+    src: "{{ dev_user_home }}/.config/systemd/user/{{ xpra_unit }}"
+    dest: "{{ dev_user_home }}/.config/systemd/user/default.target.wants/{{ xpra_unit }}"
+    state: link
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
+- name: Point SSH-session GUI apps at the Xpra display
+  ansible.builtin.template:
+    src: xpra.sh.j2
+    dest: "{{ dev_user_home }}/.config/shell/xpra.sh"
+    mode: "0644"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  when: xpra_ssh_session_display | bool
+
+- name: Remove SSH-session DISPLAY hook when disabled
+  ansible.builtin.file:
+    path: "{{ dev_user_home }}/.config/shell/xpra.sh"
+    state: absent
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  when: not xpra_ssh_session_display | bool
+
+# Linger keeps the user manager (and the Xpra session with its apps) alive
+# without a login, so it is up at boot / WSL start and survives detaches.
+- name: Enable systemd linger for dev_user
+  ansible.builtin.command:
+    cmd: loginctl enable-linger {{ dev_user }}
+    creates: /var/lib/systemd/linger/{{ dev_user }}
+  become: true
+  when:
+    - ansible_facts['service_mgr'] == 'systemd'
+    - not xpra_in_container | bool
+
+- name: Wait for the dev_user systemd manager
+  ansible.builtin.wait_for:
+    path: /run/user/{{ xpra_uid }}/bus
+    timeout: 30
+  when:
+    - ansible_facts['service_mgr'] == 'systemd'
+    - not xpra_in_container | bool
+
+- name: Start Xpra session
+  ansible.builtin.systemd_service:
+    name: "{{ xpra_unit }}"
+    scope: user
+    state: started
+    daemon_reload: true
+  environment:
+    XDG_RUNTIME_DIR: /run/user/{{ xpra_uid }}
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  when:
+    - ansible_facts['service_mgr'] == 'systemd'
+    - not xpra_in_container | bool
+
+# Deliberately no automatic restart: that would kill every GUI app running in
+# the session. Apply unit changes when convenient.
+- name: Note pending Xpra unit change
+  ansible.builtin.debug:
+    msg: >-
+      {{ xpra_unit }} changed. Running apps were left alone — apply with
+      `systemctl --user restart {{ xpra_unit }}` when convenient.
+  when: xpra_unit_file is changed

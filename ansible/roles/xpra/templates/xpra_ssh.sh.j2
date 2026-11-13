@@ -1,0 +1,90 @@
+# Managed by Ansible (xpra role)
+# Interactive `ssh <alias>` to a configured Xpra server also attaches the Xpra
+# client in the background, and detaches it when the SSH session ends. The
+# server-side session (and its apps) keeps running. Anything else — extra
+# arguments, a remote command, non-interactive use — is plain ssh.
+#
+# Hosts: alias:display pairs. Override with XPRA_SSH_HOSTS="alias:100 other:101".
+: "${XPRA_SSH_HOSTS:={% for h in xpra_client_hosts %}{{ h.alias }}:{{ h.display | default(xpra_display) }}{{ ' ' if not loop.last }}{% endfor %}}"
+
+# Xpra.app does not put `xpra` on PATH.
+if ! command -v xpra >/dev/null 2>&1 && [ -x /Applications/Xpra.app/Contents/MacOS/Xpra ]; then
+  alias xpra=/Applications/Xpra.app/Contents/MacOS/Xpra
+fi
+
+_xpra_bin() {
+  local p
+  if [ -x /Applications/Xpra.app/Contents/MacOS/Xpra ]; then
+    echo /Applications/Xpra.app/Contents/MacOS/Xpra
+    return
+  fi
+  # `command -v` prints alias text for aliases; only accept a real path.
+  p="$(command -v xpra 2>/dev/null)"
+  case "$p" in /*) echo "$p" ;; esac
+}
+
+ssh() {
+  # Only a bare `ssh <alias>` from an interactive terminal is wrapped.
+  if [ "$#" -ne 1 ] || [ ! -t 0 ] || [ ! -t 1 ] || [ -n "${XPRA_SSH_DISABLE:-}" ]; then
+    command ssh "$@"
+    return
+  fi
+
+  local host="$1" display="" padded xpra_bin log xpra_pid rc i
+  # Pattern match instead of a for-loop: zsh does not word-split $VAR.
+  padded=" $XPRA_SSH_HOSTS "
+  case "$padded" in
+    *" $host:"*)
+      display="${padded#*" $host:"}"
+      display="${display%% *}"
+      ;;
+  esac
+  xpra_bin="$(_xpra_bin)"
+  if [ -z "$display" ] || [ -z "$xpra_bin" ]; then
+    command ssh "$@"
+    return
+  fi
+
+  # zsh: no job-control chatter for the background client.
+  if [ -n "${ZSH_VERSION:-}" ]; then
+    setopt localoptions nomonitor nonotify
+  fi
+
+  log="/tmp/xpra-${host}.log"
+
+  # Make sure the server session is up (no-op when already active).
+  command ssh -o BatchMode=yes -o ConnectTimeout=10 "$host" \
+    "systemctl --user start xpra-${display}.service" >/dev/null 2>&1 || true
+
+  : >"$log"
+  "$xpra_bin" attach "ssh://${host}/${display}" \
+    --ssh="{{ xpra_client_ssh_command }}" \
+    --min-speed={{ xpra_client_min_speed }} \
+    --min-quality={{ xpra_client_min_quality }} \
+    --auto-refresh-delay={{ xpra_client_auto_refresh_delay }} \
+    --audio=no --printing=no --webcam=no --mdns=no --notifications=no \
+    >"$log" 2>&1 &
+  xpra_pid=$!
+
+  # Wait (max ~20s) for the attach so the first GUI app has somewhere to go.
+  i=0
+  while [ "$i" -lt 40 ]; do
+    grep -q "Attached to xpra server" "$log" 2>/dev/null && break
+    kill -0 "$xpra_pid" 2>/dev/null || break
+    sleep 0.5
+    i=$((i + 1))
+  done
+  if ! grep -q "Attached to xpra server" "$log" 2>/dev/null; then
+    echo "xpra: not attached yet (see $log); continuing with ssh" >&2
+  fi
+
+  command ssh "$host"
+  rc=$?
+
+  # Detach the client; the server session stays alive.
+  if kill -0 "$xpra_pid" 2>/dev/null; then
+    kill "$xpra_pid" 2>/dev/null
+    wait "$xpra_pid" 2>/dev/null
+  fi
+  return "$rc"
+}

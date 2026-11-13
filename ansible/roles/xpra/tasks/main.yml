@@ -1,0 +1,9 @@
+---
+# Server: Debian/Ubuntu only (xpra.org apt repo).
+- name: Configure Xpra server (Debian/Ubuntu)
+  ansible.builtin.include_tasks: server.yml
+  when: ansible_facts['os_family'] == 'Debian'
+
+- name: Configure Xpra client (macOS)
+  ansible.builtin.include_tasks: client_macos.yml
+  when: ansible_facts['os_family'] == 'Darwin'

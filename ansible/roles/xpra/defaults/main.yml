@@ -1,0 +1,56 @@
+---
+# ── Xpra remote GUI (features.xpra) ──────────────────────────────────────────
+# Debian/Ubuntu hosts get the *server* side: a persistent headless X11 session on
+# :{{ xpra_display }} that SSH clients attach to (`xpra attach ssh://host/100`).
+# macOS hosts get the *client* side: Xpra.app, a tuned xpra.conf and an `ssh`
+# wrapper that auto-attaches when you `ssh <alias>` into a configured server.
+
+# Upstream repo channel: stable | beta. Distro packages (e.g. Ubuntu 22.04's
+# xpra 3.1) are too old and incompatible with current macOS clients.
+xpra_channel: stable
+
+# X11 display number of the persistent session (systemd user unit xpra-<N>).
+xpra_display: 100
+
+# Server-side subsystems that are disabled to cut attach time and avoid
+# GStreamer/CUPS hangs. --audio=no is required; --speaker/--microphone=off
+# still initialise audio capture.
+xpra_server_args:
+  - --daemon=no
+  - --exit-with-children=no
+  - --start-via-proxy=no
+  - --audio=no
+  - --pulseaudio=no
+  - --printing=no
+  - --webcam=no
+  - --mdns=no
+  - --notifications=no
+
+# Install the `xpra-wm-server` wrapper, which makes xpra's window manager honour
+# ICCCM synthetic UnmapNotify (fixes Quartus' withdrawn "Node Finder" transient
+# staying as a black box). Set false to run plain /usr/bin/xpra.
+xpra_wm_unmap_patch: true
+
+# Export DISPLAY=:<xpra_display> in SSH sessions (and start the unit if needed)
+# so GUI apps launched from an SSH shell appear in the attached Xpra client.
+xpra_ssh_session_display: true
+
+# ── Client (macOS) ───────────────────────────────────────────────────────────
+# Servers the `ssh` wrapper auto-attaches to. `alias` must resolve via
+# ~/.ssh/config. Add hostname (+ optional port/user) to have Ansible write the
+# Host block for you.
+#   xpra_client_hosts:
+#     - alias: desktop-ryzen5950x-wsl
+#       hostname: 192.168.178.40
+#       port: 2222
+#       user: balevision
+#       display: 100
+xpra_client_hosts: []
+
+# Low-latency LAN tuning used by the client config and the auto-attach wrapper.
+xpra_client_min_speed: 80
+xpra_client_min_quality: 50
+xpra_client_auto_refresh_delay: 0.25
+# Native OpenSSH instead of Paramiko (stalls / hangs on exit); no SSH
+# compression because Xpra already compresses frames.
+xpra_client_ssh_command: ssh -o ControlMaster=no -o ConnectTimeout=20 -o Compression=no

@@ -1,0 +1,14 @@
+# Managed by Ansible (xpra role)
+[Unit]
+Description=Xpra headless X11 server on display :{{ xpra_display }}
+After=default.target
+
+[Service]
+Type=simple
+ExecStart={{ (dev_user_home + '/.local/bin/xpra-wm-server') if xpra_wm_unmap_patch | bool else '/usr/bin/xpra' }} start :{{ xpra_display }} {{ xpra_server_args | join(' ') }}
+ExecStop=/usr/bin/xpra stop :{{ xpra_display }}
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

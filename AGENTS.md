@@ -39,7 +39,9 @@ ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instance
 .\scripts\attach-jtag-usb.ps1 -Distro wsl-fpga-dev -List  # list all USB devices
 .\scripts\setup-windows-ssh.ps1                      # expose Windows (:22) + WSL2 (:2222) SSH on LAN
 .\scripts\setup-windows-ssh.ps1 -WslDistro wsl-fpga-dev   # target a specific WSL2 instance
+.\scripts\optimize-windows-network.ps1               # LSOv2/RSC off on LAN adapter (fixes Xpra stalls)
 ./scripts/setup-wsl-ssh.sh                           # standalone WSL2 sshd setup on port 2222 (automated for wsl_instances)
+./scripts/check-xpra-remote.sh                       # verify sshd/xpra session/portproxy/LSO from inside WSL2
 ```
 
 ## Ansible constraints
@@ -49,7 +51,7 @@ ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instance
   pip, with a `--break-system-packages` fallback for PEP 668 hosts, and patches
   `~/.bashrc` PATH. If `ansible` is not found, that PATH is the usual cause.
 - **Role order in `site.yml` is load-bearing** (`user → packages → dev-tools →
-  shell → chezmoi → fonts → ssh → optional fpga → desktop roles`). Respect it
+  shell → chezmoi → fonts → ssh → optional fpga → desktop roles → xrdp → xpra`). Respect it
   when reordering or adding roles.
 - **Idempotency is enforced by the container tests**: `tests/container/Dockerfile.*`
   run the playbook twice and assert `changed=0.*failed=0`. Any role change must
@@ -68,7 +70,10 @@ ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instance
 - `profile` ∈ `headless | desktop-gnome | desktop-xfce | desktop-i3wm` — set per
   host in `ansible/inventory/host_vars/<hostname>.yml`. `desktop*` profiles gate
   the `desktop`/`gnome`/`xfce`/`i3wm` roles in `site.yml`.
-- `features.{editor,fpga,xrdp}` are conservative-by-default; enable per host.
+- `features.{editor,fpga,xrdp,xpra}` are conservative-by-default; enable per host
+  (`localhost` auto-enables `xpra` on WSL2 + macOS). `xpra` is server-side on
+  Debian/Ubuntu only, client-side on macOS; it never restarts a running session (that kills
+  GUI apps). See `docs/provisioning/xpra-remote-gui.md`.
   Any `features.fpga.*` sub-flag pulls shared USB/JTAG libs + groups. `features.fpga`
   must be a dict (`vivado`/`quartus`/`oss`), not a scalar — the `when` in `site.yml`
   relies on attribute access.

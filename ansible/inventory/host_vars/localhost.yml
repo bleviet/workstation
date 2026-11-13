@@ -25,3 +25,23 @@ features:
     quartus: false
     oss: false
   xrdp: false
+  # Xpra: server on a WSL2 dev PC, client on the MacBook (not in containers).
+  xpra: >-
+    {{
+      ansible_facts['os_family'] == 'Darwin' or
+      (ansible_facts['kernel'] | lower is search('microsoft') and
+       ansible_facts['virtualization_type'] | default('') not in ['docker', 'containerd', 'podman'])
+    }}
+
+# WSL2: sshd on :2222 for LAN access via the Windows portproxy (the ssh role
+# applies this only on WSL2 kernels outside containers). Needed by Xpra clients.
+wsl2_ssh_enabled: true
+
+# Xpra client (macOS): servers that `ssh <alias>` auto-attaches to. The alias
+# must exist in ~/.ssh/config; add hostname/port/user to have Ansible write it.
+xpra_client_hosts:
+  - alias: desktop-ryzen5950x-wsl
+    display: 100
+    # hostname: 192.168.178.40   # Windows LAN IP (portproxy :2222 -> WSL2)
+    # port: 2222
+    # user: balevision

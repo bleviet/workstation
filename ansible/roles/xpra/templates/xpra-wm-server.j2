@@ -1,0 +1,66 @@
+#!{{ xpra_python }}
+# Managed by Ansible (xpra role)
+"""Xpra server wrapper that routes ICCCM 4.1.4 synthetic UnmapNotify on root to WindowModel.
+
+Apps that withdraw a window by sending a synthetic UnmapNotify to the root
+window (e.g. Quartus' "Node Finder" transient) otherwise stay mapped in the
+client as a solid black box. If xpra's internals change and the patch cannot
+be applied, the server still starts unpatched and logs a warning.
+"""
+
+import builtins
+import sys
+from xpra.platform import init, set_default_name
+
+set_default_name("Xpra")
+init()
+
+_orig_import = builtins.__import__
+
+
+def _apply_patch(wm_mod):
+    from xpra.os_util import gi_import
+
+    GObject = gi_import("GObject")
+    GObject.signal_new(
+        "x11-child-unmap-event",
+        wm_mod.Wm,
+        GObject.SignalFlags.RUN_LAST,
+        GObject.TYPE_NONE,
+        (GObject.TYPE_PYOBJECT,),
+    )
+
+    def _on_child_unmap(self, event):
+        if event.send_event:
+            model = self._windows.get(event.window)
+            if model is not None:
+                model.do_x11_unmap_event(event)
+
+    _orig_init = wm_mod.Wm.__init__
+
+    def _patched_init(self, *args, **kwargs):
+        _orig_init(self, *args, **kwargs)
+        self.connect("x11-child-unmap-event", _on_child_unmap)
+
+    wm_mod.Wm.__init__ = _patched_init
+
+
+def _patched_import(name, globals=None, locals=None, fromlist=(), level=0):
+    mod = _orig_import(name, globals, locals, fromlist, level)
+    if name == "xpra.x11.wm":
+        wm_mod = sys.modules.get("xpra.x11.wm")
+        if wm_mod is not None and not getattr(wm_mod, "_patched_unmap", False):
+            wm_mod._patched_unmap = True
+            builtins.__import__ = _orig_import
+            try:
+                _apply_patch(wm_mod)
+            except Exception as e:  # keep the server usable on xpra API changes
+                print(f"xpra-wm-server: unmap patch not applied: {e!r}", file=sys.stderr)
+    return mod
+
+
+builtins.__import__ = _patched_import
+
+from xpra.scripts.main import main
+
+sys.exit(main("/usr/bin/xpra", sys.argv))

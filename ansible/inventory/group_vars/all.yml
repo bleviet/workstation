@@ -64,6 +64,10 @@ profile: headless
 #   sub-flag is true; they are shared across all commercial and OSS tools.
 #
 # xrdp — install xrdp for Windows Remote Desktop access (port 3389)
+#
+# xpra — remote GUI apps over SSH (see docs/provisioning/xpra-remote-gui.md)
+#   Debian/Ubuntu: xpra.org packages + persistent session on :100 (systemd user unit)
+#   macOS: Xpra.app + low-latency client config + `ssh` auto-attach wrapper
 
 features:
   editor:
@@ -75,3 +79,4 @@ features:
     quartus: false
     oss: false
   xrdp: false
+  xpra: false

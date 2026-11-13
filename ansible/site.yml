@@ -7,6 +7,7 @@
 # Optional features (skipped unless the matching flag is set):
 #   fpga   — features.fpga: true
 #   xrdp   — features.xrdp: true
+#   xpra   — features.xpra: true (server on Debian/Ubuntu, client on macOS)
 #
 # Desktop roles (applied based on the host's `profile` variable):
 #   headless      — SSH only, no GUI
@@ -62,6 +63,9 @@
       when: "profile == 'desktop-i3wm' and ansible_facts['os_family'] != 'Darwin'"
     - role: xrdp
       when: "features.xrdp | default(false) and ansible_facts['os_family'] != 'Darwin'"
+    # Server on Debian/Ubuntu (after ssh — clients attach over sshd), client on macOS.
+    - role: xpra
+      when: features.xpra | default(false) | bool
   # ── Post-provisioning ──────────────────────────────────────────────────────
   # Runs after all roles. Neovim binary and dotfiles (including LazyVim config)
   # must both be in place before plugins can be synced.

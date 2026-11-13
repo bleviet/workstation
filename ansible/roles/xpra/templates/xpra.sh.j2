@@ -1,0 +1,9 @@
+# Managed by Ansible (xpra role)
+# In SSH sessions, point GUI apps to the Xpra :{{ xpra_display }} X11 server
+if [ -n "${SSH_CONNECTION:-}" ] && command -v xpra >/dev/null 2>&1; then
+  if command -v systemctl >/dev/null 2>&1 && ! systemctl --user is-active --quiet xpra-{{ xpra_display }}.service; then
+    systemctl --user start xpra-{{ xpra_display }}.service >/dev/null 2>&1 || true
+  fi
+  export DISPLAY=:{{ xpra_display }}
+  unset WAYLAND_DISPLAY
+fi

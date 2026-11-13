@@ -1,0 +1,67 @@
+---
+# Xpra client on macOS: Xpra.app + low-latency client config + `ssh` wrapper
+# that auto-attaches to the server session when you `ssh <alias>`.
+
+- name: Install Xpra.app (Homebrew cask)
+  community.general.homebrew_cask:
+    name: xpra
+    state: present
+
+- name: Ensure Xpra client config directory exists
+  ansible.builtin.file:
+    path: "{{ dev_user_home }}/Library/Application Support/Xpra"
+    state: directory
+    mode: "0755"
+
+# blockinfile (not a full template) so hand edits elsewhere in xpra.conf survive.
+- name: Tune Xpra client for low-latency LAN use
+  ansible.builtin.blockinfile:
+    path: "{{ dev_user_home }}/Library/Application Support/Xpra/xpra.conf"
+    create: true
+    mode: "0644"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK (xpra role)"
+    block: |
+      # Native OpenSSH (Paramiko stalls / hangs on exit); no SSH compression —
+      # Xpra already compresses frames.
+      ssh = {{ xpra_client_ssh_command }}
+      min-speed = {{ xpra_client_min_speed }}
+      # Subsystems that slow attach or hang shutdown (GStreamer, CUPS polling).
+      audio = no
+      printing = no
+      webcam = no
+      mdns = no
+      notifications = no
+
+- name: Add SSH host aliases for Xpra servers
+  ansible.builtin.blockinfile:
+    path: "{{ dev_user_home }}/.ssh/config"
+    create: true
+    mode: "0600"
+    marker: "# {mark} ANSIBLE MANAGED BLOCK (xpra role)"
+    block: |
+      {% for h in xpra_client_hosts if h.hostname is defined %}
+      Host {{ h.alias }}
+        HostName {{ h.hostname }}
+      {% if h.port is defined %}
+        Port {{ h.port }}
+      {% endif %}
+      {% if h.user is defined %}
+        User {{ h.user }}
+      {% endif %}
+        ServerAliveInterval 30
+      {% endfor %}
+  when: xpra_client_hosts | selectattr('hostname', 'defined') | list | length > 0
+
+- name: Ensure ~/.config/shell exists
+  ansible.builtin.file:
+    path: "{{ dev_user_home }}/.config/shell"
+    state: directory
+    mode: "0755"
+
+- name: Install ssh auto-attach wrapper
+  ansible.builtin.template:
+    src: xpra_ssh.sh.j2
+    dest: "{{ dev_user_home }}/.config/shell/xpra_ssh.sh"
+    mode: "0644"
+    backup: true  # keep a hand-written wrapper recoverable on first run
+  when: xpra_client_hosts | length > 0
