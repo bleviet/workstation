@@ -64,6 +64,11 @@ case "$OS_ID" in
     ;;
 esac
 
+# Repo git hooks (.githooks): reject emojis in commit messages and added lines.
+if [ -d "$ROOT_DIR/.git" ] && command -v git >/dev/null 2>&1; then
+  git -C "$ROOT_DIR" config core.hooksPath .githooks
+fi
+
 echo "Installing Ansible collections..."
 ansible-galaxy collection install -r "$ROOT_DIR/requirements.yml"
 

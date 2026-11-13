@@ -1,0 +1,5 @@
+#!/bin/sh
+# Reject emojis in lines added by this commit (existing lines are not checked).
+# Enabled by: git config core.hooksPath .githooks
+git diff --cached --no-color --no-ext-diff -U0 --diff-filter=ACMR |
+  perl "$(git rev-parse --show-toplevel)/.githooks/emoji-check.pl" diff

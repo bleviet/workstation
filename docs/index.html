@@ -372,7 +372,7 @@
       <span class="spacer"></span>
       <a class="ghost-link" href="../README.md">README</a>
       <button class="toggle" id="themeToggle" type="button" aria-label="Toggle dark mode">
-        <span id="themeIcon">🌙</span><span id="themeLabel">Dark</span>
+        <span id="themeLabel">Dark</span>
       </button>
     </div>
   </header>
@@ -419,7 +419,7 @@
     const SCENARIOS = [
       {
         id: "dotfiles_sync",
-        icon: "🔄",
+        icon: "1",
         title: "Sync dotfiles across environments",
         subtitle: "WSL, VMs & remote merging",
         what: `Maintain shell and editor configs across WSL, local VMs, and bare-metal servers using <span class="${C}">chezmoi</span>. Changes made in one environment (e.g., WSL) are pushed to your remote Git repo, then pulled and merged in others.`,
@@ -442,7 +442,7 @@
       },
       {
         id: "try_local_vm",
-        icon: "💻",
+        icon: "2",
         title: "Spin up a local VM sandbox",
         subtitle: "VMware, VirtualBox, & GUI builds",
         what: `Quickly spin up a local VM sandbox to try out desktop environments (XFCE, GNOME, or i3wm) or development tools. The hypervisor layer is managed via Vagrant (VMware Desktop by default), and software is installed by Ansible.`,
@@ -456,13 +456,13 @@
     C --> D("ansible_local guest provisioner")
     D --> E("Installs packages & profile (GNOME/XFCE/i3wm)")
     D --> F("chezmoi role: Auto-applies dotfiles/")
-    E --> R(["Sandbox Ready ✔"])
+    E --> R(["Sandbox Ready"])
     F --> R
     class V a; class R done;`
       },
       {
         id: "selective_remote",
-        icon: "🤝",
+        icon: "3",
         title: "Selective software deployment",
         subtitle: "Share tools with a colleague",
         what: `Deploy only specific developer tools (like neovim, tmux, shell configs) to a colleague's machine without forcing a full desktop re-installation or creating custom developer accounts.`,
@@ -476,12 +476,12 @@
     C --> D("ansible-playbook -K --tags 'dev-tools,shell'")
     D -- "SSH" --> A
     A --> E("Selective Execution:<br/>Only dev-tools & shell config run")
-    E --> R(["Provisioned selectively ✔"])
+    E --> R(["Provisioned selectively"])
     class B,C,D a; class R done;`
       },
       {
         id: "vagrant_ssh_lifecycle",
-        icon: "🔑",
+        icon: "4",
         title: "Vagrant SSH & provisioning lifecycle",
         subtitle: "How keys and users are securely set up",
         what: `Understand how Vagrant boots VMs and how Ansible installs your personal SSH key without password authentication, especially on newer operating systems that block password login by default.`,
@@ -497,7 +497,7 @@
     Provision --> RoleUser("Ansible 'user' role runs")
     RoleUser --> Create("Create dev_user account")
     Create --> Inject("Inject dev_user_ssh_pubkey")
-    Inject --> SSHDirect("SSH directly as dev_user ✔")
+    Inject --> SSHDirect("SSH directly as dev_user")
     class Up,KeyGen,Provision a; class SSHDirect done;`
       }
     ];
@@ -621,7 +621,6 @@
 
     function applyTheme(theme) {
       htmlEl.setAttribute("data-theme", theme);
-      document.getElementById("themeIcon").textContent = theme === "dark" ? "☀️" : "🌙";
       document.getElementById("themeLabel").textContent = theme === "dark" ? "Light" : "Dark";
       mermaid.initialize({
         startOnLoad: false,

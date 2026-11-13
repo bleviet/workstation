@@ -1,0 +1,3 @@
+#!/bin/sh
+# Reject emojis in commit messages. Enabled by: git config core.hooksPath .githooks
+exec perl "$(git rev-parse --show-toplevel)/.githooks/emoji-check.pl" msg "$1"

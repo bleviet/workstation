@@ -57,7 +57,7 @@ flowchart TD
         CreateUser --> SetSudo["Add passwordless sudo entry in /etc/sudoers.d/"]
         SetSudo --> DeploySSH["Deploy SSH key (if dev_user_ssh_pubkey set)"]
     end
-    DeploySSH --> Done([User created & configured ✔])
+    DeploySSH --> Done([User created & configured])
 ```
 
 The `user` role runs first and:

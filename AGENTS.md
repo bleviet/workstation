@@ -101,6 +101,12 @@ ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instance
 
 ## Style
 
+- **No emojis** in commit messages, code, comments, docs or generated files
+  (plain text, e.g. `Done`, not `Done` plus a check-mark emoji). Tk/libXft < 2.3.5 crashes gitk on
+  color emoji glyphs, and the repo style is plain text. Enforced by
+  `.githooks/` (commit-msg + pre-commit; `bootstrap.sh` sets
+  `git config core.hooksPath .githooks`, or run it manually after cloning).
+  Box drawing (`──`), arrows (`→`) and the starship chevrons are fine.
 - `.editorconfig`: 2-space indent for `yml/yaml/toml/json/sh`; LF everywhere
   (enforced via `.gitattributes`); trim trailing whitespace. YAML roles follow
   this — don't introduce tabs or CRLF.

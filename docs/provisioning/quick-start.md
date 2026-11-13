@@ -14,7 +14,7 @@ flowchart TD
         RunPlaybook --> ReadHostVars["Read host_vars/localhost.yml"]
         ReadHostVars --> ExecRoles["Execute Roles (Packages, Dev Tools, Shell, chezmoi)"]
     end
-    ExecRoles --> Done([Machine Bootstrapped ✔])
+    ExecRoles --> Done([Machine Bootstrapped])
 ```
 
 Bootstrap this machine by cloning the repo locally and running the

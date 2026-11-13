@@ -195,7 +195,7 @@ flowchart TD
     
     CheckXrdp{"features.xrdp true?"}
     CheckXrdp -- "Yes" --> RoleXrdp["11. xrdp role (Remote Desktop server)"]
-    CheckXrdp -- "No" --> End([Provisioning Complete ✔])
+    CheckXrdp -- "No" --> End([Provisioning Complete])
     RoleXrdp --> End
 ```
 

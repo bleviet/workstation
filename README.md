@@ -6,14 +6,14 @@ This repository features a clean architectural separation between virtual machin
 
 ---
 
-## 🏗️ Repository Architecture
+## Repository Architecture
 
 - **`local-vms/`**: Contains declarative hardware configurations (CPUs, RAM, storage, USB filters, shared folders) for local Vagrant virtual machines.
 - **`ansible/`**: The complete software configuration engine containing playbooks, roles, inventory, and host/group variables.
 
 ---
 
-## ✨ Core Features
+## Core Features
 
 - **Supported Platforms**: Debian 13 (apt), Ubuntu 24.04/26.04 (apt).
 - **Environment Profiles**: Selectable per-machine profiles including `headless`, `desktop-gnome`, `desktop-xfce`, and `desktop-i3wm`.
@@ -23,7 +23,7 @@ This repository features a clean architectural separation between virtual machin
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Interactive GUI VM Builder (Recommended)
 If you are on Windows, you can boot a local Jenkins build server to configure and spin up a VM with a few clicks:
@@ -53,22 +53,22 @@ cd ~/workspace/workstation
 
 ---
 
-## 📖 Documentation Index
+## Documentation Index
 
 For deeper details, consult the following guides:
 
 ### **Provisioning & Infrastructure**
-* 📊 **[Interactive Guide (docs/index.html)](file:///docs/index.html)** — Interactive visual scenarios for syncing dotfiles, VM setup, and selective deployment.
-* 📦 **[Quick Start](file:///docs/provisioning/quick-start.md)** — Guide to local manual installation and daily use.
-* 🛠️ **[Host Configuration](file:///docs/provisioning/host-configuration.md)** — Variable options, features, tags, and profiles.
-* 📡 **[Remote Deployment](file:///docs/provisioning/remote-deployment.md)** — Deploying to remote servers and laptops over SSH from an admin container.
-* 👤 **[Custom Developer User](file:///docs/provisioning/custom-user.md)** — Onboard and create isolated developer accounts with customized environments.
-* 💻 **[FPGA Development VMs](file:///docs/provisioning/fpga-vms.md)** — Hypervisor settings, JTAG USB rules, and resources for local VMs.
+* **[Interactive Guide (docs/index.html)](file:///docs/index.html)** — Interactive visual scenarios for syncing dotfiles, VM setup, and selective deployment.
+* **[Quick Start](file:///docs/provisioning/quick-start.md)** — Guide to local manual installation and daily use.
+* **[Host Configuration](file:///docs/provisioning/host-configuration.md)** — Variable options, features, tags, and profiles.
+* **[Remote Deployment](file:///docs/provisioning/remote-deployment.md)** — Deploying to remote servers and laptops over SSH from an admin container.
+* **[Custom Developer User](file:///docs/provisioning/custom-user.md)** — Onboard and create isolated developer accounts with customized environments.
+* **[FPGA Development VMs](file:///docs/provisioning/fpga-vms.md)** — Hypervisor settings, JTAG USB rules, and resources for local VMs.
 
 ### **Dotfiles & Personal Workflows**
-* 🗂️ **[Dotfiles - Single Owner](file:///docs/dotfiles/owner.md)** — Keeping local dotfiles in this repository.
-* 👥 **[Dotfiles - Shared Repo](file:///docs/dotfiles/shared.md)** — Setting up individual external dotfile repositories and configuring SSH deploy keys.
-* 🐍 **[Python Workflow](file:///docs/dotfiles/python.md)** — Automated project virtual environments using `uv` + `direnv`.
+* **[Dotfiles - Single Owner](file:///docs/dotfiles/owner.md)** — Keeping local dotfiles in this repository.
+* **[Dotfiles - Shared Repo](file:///docs/dotfiles/shared.md)** — Setting up individual external dotfile repositories and configuring SSH deploy keys.
+* **[Python Workflow](file:///docs/dotfiles/python.md)** — Automated project virtual environments using `uv` + `direnv`.
 
 ### **Testing & CI**
-* 🧪 **[Testing System](file:///docs/testing.md)** — How container-based syntax checks, idempotency, and automated VM tests are executed.
+* **[Testing System](file:///docs/testing.md)** — How container-based syntax checks, idempotency, and automated VM tests are executed.
