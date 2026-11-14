@@ -1,0 +1,21 @@
+---
+# Mount a NAS share (SMB/CIFS) at ~/<name> on Linux with systemd automount:
+# mounted on first access, unmounted after idle time, never blocks boot.
+# Disabled by default; enable and fill in per host in your private inventory.
+nas_mount_enabled: false
+
+# //server/share, e.g. //192.168.1.20/home (an IP avoids needing mDNS).
+nas_mount_source: ""
+nas_mount_point: "{{ dev_user_home }}/synology"
+nas_mount_username: ""
+
+# Root-only file with the SMB login (username=, password=). Written once when
+# it does not exist; later runs leave it alone.
+nas_mount_credentials_file: /etc/samba/cred-nas
+
+# Password for the credentials file. Leave empty to be asked once (hidden
+# input) when the file is missing; or pass it from ansible-vault.
+nas_mount_password: ""
+
+nas_mount_options: "vers=3.0,iocharset=utf8"
+nas_mount_idle_timeout: 600

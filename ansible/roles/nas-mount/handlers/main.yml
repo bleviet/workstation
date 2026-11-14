@@ -1,0 +1,7 @@
+---
+- name: Reload systemd and restart the NAS automount
+  ansible.builtin.systemd:
+    daemon_reload: true
+    name: "{{ nas_mount_unit }}"
+    state: restarted
+  become: true

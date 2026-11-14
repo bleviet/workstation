@@ -1,0 +1,95 @@
+---
+# Linux with systemd only (not macOS; not WSL without systemd).
+- name: Skip the NAS mount where it does not apply
+  ansible.builtin.meta: end_role
+  when: >-
+    not (nas_mount_enabled | bool)
+    or ansible_facts['os_family'] != 'Debian'
+    or ansible_facts['service_mgr'] != 'systemd'
+
+- name: Require NAS mount settings
+  ansible.builtin.assert:
+    that:
+      - nas_mount_source | length > 0
+      - nas_mount_username | length > 0
+    fail_msg: "Set nas_mount_source and nas_mount_username (e.g. in host_vars)."
+    quiet: true
+
+- name: Install cifs-utils
+  ansible.builtin.apt:
+    name: cifs-utils
+    state: present
+  become: true
+
+- name: Check for the credentials file
+  ansible.builtin.stat:
+    path: "{{ nas_mount_credentials_file }}"
+  register: nas_mount_cred
+  become: true
+
+- name: Ask for the NAS password (only when no credentials file exists yet)
+  ansible.builtin.pause:
+    prompt: "SMB password for {{ nas_mount_username }} on {{ nas_mount_source }}"
+    echo: false
+  register: nas_mount_prompt
+  when:
+    - not nas_mount_cred.stat.exists
+    - nas_mount_password | length == 0
+
+# /etc/samba only exists when Samba itself is installed.
+- name: Create the folder for the credentials file
+  ansible.builtin.file:
+    path: "{{ nas_mount_credentials_file | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  become: true
+
+- name: Write the credentials file (root only)
+  ansible.builtin.copy:
+    dest: "{{ nas_mount_credentials_file }}"
+    content: |
+      username={{ nas_mount_username }}
+      password={{ nas_mount_password if nas_mount_password | length > 0 else nas_mount_prompt.user_input }}
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  become: true
+  when: not nas_mount_cred.stat.exists
+
+- name: Look up the owner of the mount point
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ dev_user }}"
+
+- name: Derive the automount unit name
+  ansible.builtin.command: systemd-escape --path --suffix=automount "{{ nas_mount_point }}"
+  register: nas_mount_escape
+  changed_when: false
+
+- name: Remember the unit name
+  ansible.builtin.set_fact:
+    nas_mount_unit: "{{ nas_mount_escape.stdout }}"
+    nas_mount_uid: "{{ ansible_facts['getent_passwd'][dev_user][1] }}"
+    nas_mount_gid: "{{ ansible_facts['getent_passwd'][dev_user][2] }}"
+
+# mkdir only when missing: a stat on an existing automount point would mount it.
+- name: Create the mount point
+  ansible.builtin.command: mkdir -m 0700 "{{ nas_mount_point }}"
+  args:
+    creates: "{{ nas_mount_point }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
+- name: Add the automount to /etc/fstab
+  ansible.posix.mount:
+    path: "{{ nas_mount_point }}"
+    src: "{{ nas_mount_source }}"
+    fstype: cifs
+    opts: >-
+      credentials={{ nas_mount_credentials_file }},uid={{ nas_mount_uid }},gid={{ nas_mount_gid }},file_mode=0600,dir_mode=0700,{{ nas_mount_options }},_netdev,nofail,noauto,x-systemd.automount,x-systemd.idle-timeout={{ nas_mount_idle_timeout }},x-systemd.mount-timeout=20
+    state: present
+  become: true
+  notify: Reload systemd and restart the NAS automount

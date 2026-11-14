@@ -46,6 +46,8 @@
     - chezmoi
     - fonts
     - ssh
+    # NAS share at ~/synology via systemd automount (off unless enabled)
+    - nas-mount
     # ~/workspace layout + clone missing repos (list in the inventory)
     - workspace
     # ── Optional features ─────────────────────────────────────────────────

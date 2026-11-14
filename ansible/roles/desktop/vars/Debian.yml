@@ -6,3 +6,5 @@ desktop_base_packages:
   - fonts-noto
   - fonts-noto-color-emoji
   - kitty
+  # Password manager and SSH agent (keys live only in KeePassXC).
+  - keepassxc
