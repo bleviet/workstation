@@ -90,9 +90,10 @@
       uptime_days: "{{ (ansible_facts['uptime_seconds'] / 86400) | round(1) }}"
       mem_used_pct: "{{ ((1 - ansible_facts['memory_mb']['nocache']['free'] / ansible_facts['memtotal_mb']) * 100) | round | int }}"
       disks: "{{ maintenance_disks | default([]) }}"
+      # cache_updated is false when nothing new was published, so it says
+      # nothing about errors; a real failure always carries msg.
       apt_update_error: >-
-        {{ '' if (maintenance_apt_update is skipped or maintenance_apt_update.cache_updated | default(false))
-           else (maintenance_apt_update.msg | default('apt update failed')) }}
+        {{ '' if maintenance_apt_update is skipped else (maintenance_apt_update.msg | default('')) }}
       upgraded: >-
         {{ '-' if maintenance_apt_upgrade is skipped
            else ((maintenance_apt_upgrade.stdout | default('') | regex_search('(\d+) upgraded', '\1')) or ['0']) | first }}
