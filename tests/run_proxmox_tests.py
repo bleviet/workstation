@@ -12,6 +12,7 @@ Usage:
   tests/run_proxmox_tests.py --keep ...            # leave VMs running afterwards
   tests/run_proxmox_tests.py --destroy [names]     # delete test VMs (all if no names)
   tests/run_proxmox_tests.py --templates           # one-time template build (SSH root@host)
+  tests/run_proxmox_tests.py --templates --rebuild debian13   # rebuild after changing an image URL
   tests/run_proxmox_tests.py --list                # show machines, VMIDs and IPs
 
 Each run creates the VMs, runs ansible/site.yml twice (second run must report
@@ -125,11 +126,16 @@ def main() -> int:
     ap.add_argument("--keep", action="store_true", help="do not destroy VMs after the run")
     ap.add_argument("--destroy", action="store_true", help="only destroy test VMs")
     ap.add_argument("--templates", action="store_true", help="build cloud-init templates (SSH as root)")
+    ap.add_argument("--rebuild", nargs="+", metavar="OS", default=[],
+                    help="with --templates: destroy and rebuild these templates (OS keys, e.g. debian13)")
     ap.add_argument("--list", action="store_true", help="list machines, VMIDs and IPs")
     args = ap.parse_args()
 
     table = machine_table()
     by_name = {m["name"]: m for m in table}
+
+    if args.rebuild and not args.templates:
+        ap.error("--rebuild only works together with --templates")
 
     if args.list:
         for m in table:
@@ -139,7 +145,8 @@ def main() -> int:
     if args.templates:
         host = load_yaml(PVE_DIR / "settings.yml")["proxmox_api_host"]
         log = LOG_DIR / "workstation-proxmox-templates.log"
-        rc = run(["ansible-playbook", str(PVE_DIR / "templates.yml"), "-i", f"{host},", "-u", "root"], log)
+        rc = run(["ansible-playbook", str(PVE_DIR / "templates.yml"), "-i", f"{host},", "-u", "root",
+                  "-e", json.dumps({"proxmox_rebuild_templates": args.rebuild})], log)
         print("templates: OK" if rc == 0 else f"templates: FAILED (rc={rc}), see {log}")
         return rc
 

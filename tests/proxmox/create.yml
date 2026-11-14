@@ -129,6 +129,7 @@
         ansible_host: "{{ item.ip }}"
         ansible_user: "{{ proxmox_test_user }}"
         ansible_ssh_common_args: "-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null"
+        proxmox_gui: "{{ item.gui | default(false) | bool }}"
       loop: "{{ proxmox_selected }}"
       loop_control:
         label: "{{ item.hostname }}"
@@ -161,3 +162,51 @@
         - unattended-upgrades.service
       become: true
       failed_when: false
+
+# Desktop-profile machines must have a display device, like a real desktop.
+# The VM has a std VGA adapter; the guest also needs a DRM driver for it
+# (bochs). Debian's generic image ships it; Ubuntu cloud kernels keep it in
+# linux-modules-extra-<kernel>, which this installs (udev autoloads it on later
+# boots). Fails if there is still no /sys/class/drm/card*.
+- name: Provide a display device on desktop test VMs
+  hosts: proxmox_tests
+  gather_facts: false
+  tasks:
+    - name: Desktop VMs only
+      ansible.builtin.meta: end_host
+      when: not proxmox_gui | bool
+
+    - name: Look for a DRM display device
+      ansible.builtin.find:
+        paths: /sys/class/drm
+        patterns: "card[0-9]*"
+        file_type: any
+      register: drm_before
+
+    - name: Install the display driver and load it
+      when: drm_before.matched == 0
+      block:
+        - name: Gather minimal facts
+          ansible.builtin.setup:
+            gather_subset: [min]
+
+        - name: Install linux-modules-extra for the running kernel (Ubuntu)
+          ansible.builtin.apt:
+            name: "linux-modules-extra-{{ ansible_facts['kernel'] }}"
+            state: present
+            update_cache: true
+          become: true
+          when: ansible_facts['distribution'] == 'Ubuntu'
+
+        - name: Load the QEMU std-VGA DRM driver
+          ansible.builtin.shell: modprobe bochs || modprobe bochs-drm
+          become: true
+          changed_when: true
+
+    - name: Confirm the display device
+      ansible.builtin.find:
+        paths: /sys/class/drm
+        patterns: "card[0-9]*"
+        file_type: any
+      register: drm_after
+      failed_when: drm_after.matched == 0

@@ -2,17 +2,40 @@
 # One-time: build cloud-init templates on the Proxmox host (runs over SSH as root,
 # because importing a disk image needs `qm` on the host).
 #   ansible-playbook tests/proxmox/templates.yml -i 192.168.178.46, -u root
-# Normally run via: tests/run_proxmox_tests.py --templates
-# Existing templates are left untouched; delete one (qm destroy <vmid>) to rebuild it.
+# Normally run via: tests/run_proxmox_tests.py --templates [--rebuild debian13 ...]
+# Existing templates are left untouched unless listed in proxmox_rebuild_templates
+# (OS keys from settings.yml), e.g. after changing an image URL.
 - name: Build Proxmox cloud-init templates
   hosts: all
   gather_facts: false
   vars:
     image_dir: /var/lib/vz/template/workstation-cloudimg
+    proxmox_rebuild_templates: []
   tasks:
     - name: Load Proxmox test settings
       ansible.builtin.include_vars:
         file: "{{ playbook_dir }}/settings.yml"
+
+    - name: Require known OS keys for rebuild
+      ansible.builtin.assert:
+        that: proxmox_rebuild_templates | difference(proxmox_templates.keys() | list) | length == 0
+        fail_msg: "Unknown OS key(s) {{ proxmox_rebuild_templates | difference(proxmox_templates.keys() | list) }}; valid: {{ proxmox_templates.keys() | list }}"
+        quiet: true
+
+    # Safety: only destroys our own templates (tagged workstation-template and
+    # marked as template). Fails if test VMs still use them as a linked-clone base.
+    - name: Destroy templates selected for rebuild
+      ansible.builtin.shell: |
+        set -e
+        id={{ proxmox_templates[item].vmid }}
+        [ -f /etc/pve/qemu-server/$id.conf ] || exit 0
+        qm config $id | grep -Eq '^tags:.*workstation-template' || { echo "VM $id is not a workstation template; refusing"; exit 1; }
+        qm config $id | grep -q '^template: 1' || { echo "VM $id is not a template; refusing"; exit 1; }
+        qm destroy $id --purge
+        echo destroyed
+      register: template_destroy
+      changed_when: "'destroyed' in template_destroy.stdout"
+      loop: "{{ proxmox_rebuild_templates }}"
 
     - name: Ensure image cache directory exists
       ansible.builtin.file:
@@ -28,10 +51,12 @@
         label: "{{ item.key }} ({{ item.value.vmid }})"
       register: template_conf
 
+    # Cached under the image's own file name, so changing a URL in settings.yml
+    # downloads the new image instead of reusing the old one.
     - name: Download cloud images
       ansible.builtin.get_url:
         url: "{{ item.item.value.url }}"
-        dest: "{{ image_dir }}/{{ item.item.key }}.qcow2"
+        dest: "{{ image_dir }}/{{ item.item.value.url | basename }}"
         mode: "0644"
       loop: "{{ template_conf.results | rejectattr('stat.exists') | list }}"
       loop_control:
@@ -43,11 +68,12 @@
         qm create {{ item.item.value.vmid }} \
           --name tmpl-workstation-{{ item.item.key }} \
           --tags workstation-template \
+          --description "Source image: {{ item.item.value.url }}" \
           --ostype l26 --memory 2048 --cores 2 \
           --net0 virtio,bridge={{ proxmox_bridge }} \
           --scsihw virtio-scsi-single \
           --serial0 socket --vga serial0
-        qm set {{ item.item.value.vmid }} --scsi0 {{ proxmox_storage }}:0,import-from={{ image_dir }}/{{ item.item.key }}.qcow2,discard=on
+        qm set {{ item.item.value.vmid }} --scsi0 {{ proxmox_storage }}:0,import-from={{ image_dir }}/{{ item.item.value.url | basename }},discard=on
         qm set {{ item.item.value.vmid }} --ide2 {{ proxmox_storage }}:cloudinit --boot order=scsi0
         qm template {{ item.item.value.vmid }}
       args:
