@@ -70,18 +70,30 @@
   # Runs after all roles. Neovim binary and dotfiles (including LazyVim config)
   # must both be in place before plugins can be synced.
   post_tasks:
+    # `restore` installs exactly the versions in the chezmoi-managed
+    # lazy-lock.json (sync would update past it and drift from the repo).
+    # Reports changed only when a plugin's checked-out commit changed.
     - name: Pre-install LazyVim plugins
-      ansible.builtin.command:
-        argv:
-          - "{{ dev_tools_bin_dir }}/nvim"
-          - "--headless"
-          - "+Lazy! sync"
-          - "+qa"
+      ansible.builtin.shell: |
+        set -e
+        dir="$HOME/.local/share/nvim/lazy"
+        state() {
+          for d in "$dir"/*/; do
+            [ -d "$d" ] && printf '%s %s\n' "$d" "$(git -C "$d" rev-parse HEAD 2>/dev/null || echo none)"
+          done | cksum
+        }
+        before=$(state)
+        "{{ dev_tools_bin_dir }}/nvim" --headless "+Lazy! restore" +qa
+        after=$(state)
+        [ "$before" = "$after" ] || echo "LAZYVIM_CHANGED"
+      args:
+        executable: /bin/bash
       environment:
         HOME: "{{ dev_user_home }}"
       become: "{{ dev_user != ansible_facts['user_id'] }}"
       become_user: "{{ dev_user }}"
-      changed_when: true
+      register: lazyvim_restore
+      changed_when: "'LAZYVIM_CHANGED' in lazyvim_restore.stdout"
       when: features.editor.lazyvim | default(false) | bool
 
     - name: Pre-install Tmux plugins
