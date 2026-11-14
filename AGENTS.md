@@ -21,6 +21,7 @@ ansible-playbook ansible/site.yml --syntax-check   # fast first check; run befor
 ./tests/run_container_tests.sh                 # Podman, parallel: debian+ubuntu. Logs: /tmp/workstation-test-<os>.log
 ./tests/run_vm_tests.sh                         # Vagrant, headless test VMs.  Logs: /tmp/workstation-vm-<machine>.log
 ./tests/run_vm_tests.sh --desktop | --all | <name> ...
+./tests/run_proxmox_tests.py [--desktop|--all|<name>] [--keep]   # throwaway linked-clone VMs on Proxmox (needs PROXMOX_TOKEN_ID/SECRET); --templates once, --destroy, --list
 vagrant up <machine> && vagrant destroy -f <machine>     # single test/local VM lifecycle
 
 # Remote deployment without installing Ansible locally (Podman/Docker, mounts ~/.ssh RO)

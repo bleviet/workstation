@@ -1,0 +1,42 @@
+---
+# Stop and delete one test VM. Var: vm (needs vmid, name).
+# Safety: only VMs inside the test VMID range that are either tagged
+# workstation-test, or half-created clones that still carry the tag inherited
+# from our templates (workstation-template) plus the expected machine name.
+- name: "Read config of VM {{ vm.vmid }}"
+  ansible.builtin.uri:
+    url: "{{ proxmox_api_url }}/nodes/{{ proxmox_node }}/qemu/{{ vm.vmid }}/config"
+    headers:
+      Authorization: "{{ proxmox_auth_header }}"
+    validate_certs: "{{ proxmox_validate_certs }}"
+    status_code: [200, 500]   # 500 = VM does not exist
+  register: vm_config
+
+- name: "Delete test VM {{ vm.vmid }}"
+  when: vm_config.status == 200
+  block:
+    - name: "Refuse to delete VM {{ vm.vmid }} unless it is a test VM"
+      ansible.builtin.assert:
+        that:
+          - >-
+            'workstation-test' in (vm_config.json.data.tags | default('')).split(';')
+            or (vm_config.json.data.name | default('') == vm.name
+                and 'workstation-template' in (vm_config.json.data.tags | default('')).split(';'))
+          - vm.vmid | int >= proxmox_test_vmid_base | int
+          - vm.vmid | int < proxmox_test_vmid_base | int + 100
+          - not vm_config.json.data.template | default(0) | bool
+        fail_msg: "VM {{ vm.vmid }} ({{ vm_config.json.data.name | default('?') }}) is not a workstation test VM; not deleting it."
+        quiet: true
+
+    - name: "Stop VM {{ vm.vmid }}"
+      ansible.builtin.include_tasks: api.yml
+      vars:
+        api_method: POST
+        api_path: "/nodes/{{ proxmox_node }}/qemu/{{ vm.vmid }}/status/stop"
+        api_status: [200, 500]   # 500 = already stopped
+
+    - name: "Purge VM {{ vm.vmid }}"
+      ansible.builtin.include_tasks: api.yml
+      vars:
+        api_method: DELETE
+        api_path: "/nodes/{{ proxmox_node }}/qemu/{{ vm.vmid }}?purge=1&destroy-unreferenced-disks=1"

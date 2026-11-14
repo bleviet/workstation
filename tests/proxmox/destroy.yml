@@ -1,0 +1,44 @@
+---
+# Destroy Proxmox test VMs (only ones tagged workstation-test in the test VMID range).
+#   ansible-playbook tests/proxmox/destroy.yml -e '{"proxmox_machines": ["workstation-test-debian"]}'
+#   ansible-playbook tests/proxmox/destroy.yml -e proxmox_destroy_all=true
+- name: Destroy Proxmox test VMs
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    proxmox_machines: []
+    proxmox_destroy_all: false
+  tasks:
+    - name: Connect to Proxmox
+      ansible.builtin.include_tasks: tasks/connect.yml
+
+    - name: List existing VMs
+      ansible.builtin.uri:
+        url: "{{ proxmox_api_url }}/cluster/resources?type=vm"
+        headers:
+          Authorization: "{{ proxmox_auth_header }}"
+        validate_certs: "{{ proxmox_validate_certs }}"
+      register: proxmox_vms
+
+    - name: Select VMs to destroy
+      ansible.builtin.set_fact:
+        proxmox_doomed: >-
+          {{ proxmox_machine_table
+             | selectattr('vmid', 'in', proxmox_vms.json.data | map(attribute='vmid') | list)
+             | selectattr('name', 'in', proxmox_machine_table | map(attribute='name') | list
+                          if proxmox_destroy_all | bool else proxmox_machines)
+             | list }}
+
+    - name: Destroy test VMs
+      ansible.builtin.include_tasks: tasks/destroy_vm.yml
+      loop: "{{ proxmox_doomed }}"
+      loop_control:
+        loop_var: vm
+        label: "{{ vm.name }} ({{ vm.vmid }})"
+
+    - name: Remove generated inventory
+      ansible.builtin.file:
+        path: "{{ proxmox_state_dir | expanduser }}/inventory.yml"
+        state: absent
+      when: proxmox_destroy_all | bool or proxmox_doomed | length > 0

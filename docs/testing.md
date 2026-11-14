@@ -109,6 +109,75 @@ All `features.fpga.*` and `features.xrdp` flags default to `false` in test
 VMs. `features.editor.neovim` defaults to `true`. Override via `--extra-vars`
 if needed.
 
+## Proxmox test VMs (no local disk)
+
+Same machines as the VM tests (`tests/vm/machines.yml`), but they run as
+throwaway **linked clones on a Proxmox VE host** instead of local Vagrant VMs or
+containers. Each run creates the VMs, runs `ansible/site.yml` twice (the second
+run must report `changed=0 failed=0` per host), then destroys them. Unlike
+container tests, this covers systemd, sshd, linger and the Xpra session.
+
+Settings (API host, storage, bridge, VMID and static-IP ranges, template
+images) live in `tests/proxmox/settings.yml`. Machine *N* in `machines.yml`
+gets VMID `9100+N` and IP `192.168.178.(230+N)`. See `--list`.
+
+### One-time setup
+
+1. **Root access to the PVE host.** The web UI's `root@pam` login is the host's
+   Linux root password. If it's forgotten, reset it at the host console:
+   - In the GRUB menu, press `e` and append `init=/bin/bash` to the `linux`
+     line, then boot with `Ctrl+X`.
+   - `mount -o remount,rw /` → `passwd root` → `sync` → `reboot -f`.
+
+   While there, add your SSH key to `/root/.ssh/authorized_keys`. The template
+   build needs it.
+2. **API token** (on the PVE host shell, or Datacenter → Permissions in the UI):
+
+   ```bash
+   pveum user add ansible@pve --comment "workstation test VMs"
+   pveum aclmod /vms     -user ansible@pve -role PVEVMAdmin
+   pveum aclmod /storage -user ansible@pve -role PVEDatastoreUser
+   pveum aclmod /sdn     -user ansible@pve -role PVESDNUser   # PVE 8+
+   pveum aclmod /nodes   -user ansible@pve -role PVEAuditor
+   pveum user token add ansible@pve workstation-tests --privsep 0
+   ```
+
+   Export the token for the shell that runs the tests, or store it once in
+   `~/.config/workstation-proxmox/token.env` (mode 600, `KEY=VALUE` lines),
+   which the runner reads when the variables aren't set. The secret is shown
+   once, and it never goes in the repo:
+
+   ```bash
+   export PROXMOX_TOKEN_ID='ansible@pve!workstation-tests'
+   export PROXMOX_TOKEN_SECRET='<secret from the command above>'
+   ```
+
+3. **Templates.** These are cloud-init templates 9000–9002 for Debian 13 and
+   Ubuntu 24.04/26.04, built from the official cloud images over SSH as root:
+
+   ```bash
+   ./tests/run_proxmox_tests.py --templates
+   ```
+
+### Running
+
+```bash
+./tests/run_proxmox_tests.py                      # headless machines (default)
+./tests/run_proxmox_tests.py --desktop            # desktop-profile machines
+./tests/run_proxmox_tests.py --all                # all machines
+./tests/run_proxmox_tests.py workstation-test-debian   # by name
+./tests/run_proxmox_tests.py --keep workstation-test-debian   # keep VM for debugging
+./tests/run_proxmox_tests.py --destroy            # remove all test VMs
+./tests/run_proxmox_tests.py --list               # machines, VMIDs, IPs
+```
+
+Logs go to `/tmp/workstation-proxmox-{create,run1,run2,destroy}.log`. With
+`--keep`, connect via `ssh tester@192.168.178.230`, or reuse the generated
+inventory at `~/.cache/workstation-proxmox/inventory.yml`.
+
+The test harness only deletes VMs tagged `workstation-test` inside the test VMID
+range. It refuses to reuse or delete anything else.
+
 ## Continuous Integration (Jenkins)
 
 The repository includes a `Jenkinsfile` at the root, defining a declarative, cross-platform CI pipeline.

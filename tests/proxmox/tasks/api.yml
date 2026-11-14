@@ -1,0 +1,34 @@
+---
+# One Proxmox API call; waits for the task when the call returns a UPID.
+# Vars: api_method, api_path (below /api2/json), api_body (optional dict),
+#       api_status (optional list of accepted HTTP codes)
+- name: "API {{ api_method }} {{ api_path }}"
+  ansible.builtin.uri:
+    url: "{{ proxmox_api_url }}{{ api_path }}"
+    method: "{{ api_method }}"
+    headers:
+      Authorization: "{{ proxmox_auth_header }}"
+    body: "{{ api_body | default(omit) }}"
+    body_format: "{{ 'form-urlencoded' if api_body is defined else omit }}"
+    validate_certs: "{{ proxmox_validate_certs }}"
+    status_code: "{{ api_status | default([200]) }}"
+  register: api_result
+  no_log: "{{ api_no_log | default(false) }}"
+
+- name: Wait for Proxmox task
+  ansible.builtin.uri:
+    url: "{{ proxmox_api_url }}/nodes/{{ proxmox_node }}/tasks/{{ api_result.json.data | urlencode }}/status"
+    headers:
+      Authorization: "{{ proxmox_auth_header }}"
+    validate_certs: "{{ proxmox_validate_certs }}"
+  register: api_task
+  until: api_task.json.data.status == 'stopped'
+  retries: 180
+  delay: 2
+  failed_when: >-
+    api_task.json.data.status == 'stopped' and
+    api_task.json.data.exitstatus | default('') != 'OK'
+  when:
+    - api_result.json is defined
+    - api_result.json.data is string
+    - api_result.json.data is match('UPID:')

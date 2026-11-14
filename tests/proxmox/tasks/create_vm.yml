@@ -1,0 +1,57 @@
+---
+# Linked clone of the OS template, sized from tests/vm/machines.yml. Var: vm
+- name: "Clone template → {{ vm.name }}"
+  ansible.builtin.include_tasks: api.yml
+  vars:
+    api_method: POST
+    api_path: "/nodes/{{ proxmox_node }}/qemu/{{ proxmox_templates[vm.os].vmid }}/clone"
+    api_body:
+      newid: "{{ vm.vmid }}"
+      name: "{{ vm.name }}"
+      full: 0
+
+# Tag first, on its own, so a failure in the next step still leaves a VM the
+# destroy fence recognises.
+- name: "Tag {{ vm.name }} as a test VM"
+  ansible.builtin.include_tasks: api.yml
+  vars:
+    api_method: PUT
+    api_path: "/nodes/{{ proxmox_node }}/qemu/{{ vm.vmid }}/config"
+    api_body:
+      tags: workstation-test
+
+- name: "Configure {{ vm.name }}"
+  ansible.builtin.include_tasks: api.yml
+  vars:
+    api_method: PUT
+    api_path: "/nodes/{{ proxmox_node }}/qemu/{{ vm.vmid }}/config"
+    api_body:
+      cores: "{{ vm.cpus }}"
+      memory: "{{ vm.ram_mb }}"
+      tags: workstation-test
+      description: "Throwaway test VM for the workstation repo ({{ vm.profile }}); created by tests/proxmox/create.yml"
+      ciuser: "{{ proxmox_test_user }}"
+      # PVE validates sshkeys as percent-encoded with only [-%A-Za-z0-9_.!~*()'] raw,
+      # so "/" and "+" (common in key material) must be escaped too.
+      sshkeys: "{{ proxmox_ssh_pubkey | urlencode | replace('+', '%2B') | replace('/', '%2F') }}"
+      ipconfig0: "ip={{ vm.ip }}/{{ proxmox_test_ip_cidr }},gw={{ proxmox_test_gateway }}"
+      nameserver: "{{ proxmox_test_nameserver }}"
+      # PVE defaults to a full apt upgrade on first boot; tests don't need it
+      # and it adds minutes per VM.
+      ciupgrade: 0
+      onboot: 0
+
+- name: "Resize disk of {{ vm.name }}"
+  ansible.builtin.include_tasks: api.yml
+  vars:
+    api_method: PUT
+    api_path: "/nodes/{{ proxmox_node }}/qemu/{{ vm.vmid }}/resize"
+    api_body:
+      disk: scsi0
+      size: "{{ proxmox_test_disk_gb_gui if vm.gui | default(false) else proxmox_test_disk_gb }}G"
+
+- name: "Start {{ vm.name }}"
+  ansible.builtin.include_tasks: api.yml
+  vars:
+    api_method: POST
+    api_path: "/nodes/{{ proxmox_node }}/qemu/{{ vm.vmid }}/status/start"

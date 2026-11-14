@@ -1,0 +1,57 @@
+---
+# One-time: build cloud-init templates on the Proxmox host (runs over SSH as root,
+# because importing a disk image needs `qm` on the host).
+#   ansible-playbook tests/proxmox/templates.yml -i 192.168.178.46, -u root
+# Normally run via: tests/run_proxmox_tests.py --templates
+# Existing templates are left untouched; delete one (qm destroy <vmid>) to rebuild it.
+- name: Build Proxmox cloud-init templates
+  hosts: all
+  gather_facts: false
+  vars:
+    image_dir: /var/lib/vz/template/workstation-cloudimg
+  tasks:
+    - name: Load Proxmox test settings
+      ansible.builtin.include_vars:
+        file: "{{ playbook_dir }}/settings.yml"
+
+    - name: Ensure image cache directory exists
+      ansible.builtin.file:
+        path: "{{ image_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Check which templates already exist
+      ansible.builtin.stat:
+        path: /etc/pve/qemu-server/{{ item.value.vmid }}.conf
+      loop: "{{ proxmox_templates | dict2items }}"
+      loop_control:
+        label: "{{ item.key }} ({{ item.value.vmid }})"
+      register: template_conf
+
+    - name: Download cloud images
+      ansible.builtin.get_url:
+        url: "{{ item.item.value.url }}"
+        dest: "{{ image_dir }}/{{ item.item.key }}.qcow2"
+        mode: "0644"
+      loop: "{{ template_conf.results | rejectattr('stat.exists') | list }}"
+      loop_control:
+        label: "{{ item.item.key }}"
+
+    - name: Create templates
+      ansible.builtin.shell: |
+        set -e
+        qm create {{ item.item.value.vmid }} \
+          --name tmpl-workstation-{{ item.item.key }} \
+          --tags workstation-template \
+          --ostype l26 --memory 2048 --cores 2 \
+          --net0 virtio,bridge={{ proxmox_bridge }} \
+          --scsihw virtio-scsi-single \
+          --serial0 socket --vga serial0
+        qm set {{ item.item.value.vmid }} --scsi0 {{ proxmox_storage }}:0,import-from={{ image_dir }}/{{ item.item.key }}.qcow2,discard=on
+        qm set {{ item.item.value.vmid }} --ide2 {{ proxmox_storage }}:cloudinit --boot order=scsi0
+        qm template {{ item.item.value.vmid }}
+      args:
+        creates: /etc/pve/qemu-server/{{ item.item.value.vmid }}.conf
+      loop: "{{ template_conf.results | rejectattr('stat.exists') | list }}"
+      loop_control:
+        label: "{{ item.item.key }} ({{ item.item.value.vmid }})"

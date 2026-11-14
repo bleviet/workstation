@@ -1,0 +1,68 @@
+---
+# Shared setup: settings, API URL/auth, node auto-detection, machine table.
+- name: Load Proxmox test settings
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/settings.yml"
+
+# Token: exported PROXMOX_TOKEN_ID/SECRET, else ~/.config/workstation-proxmox/token.env
+# (plain KEY=VALUE lines, no 'export'; tests/run_proxmox_tests.py reads it too).
+- name: Read API token
+  ansible.builtin.set_fact:
+    proxmox_token_id: >-
+      {{ lookup('env', 'PROXMOX_TOKEN_ID')
+         or (lookup('ansible.builtin.ini', 'PROXMOX_TOKEN_ID', type='properties', file=proxmox_token_file)
+             | trim("'\"")
+             if proxmox_token_file is file else '') }}
+    proxmox_token_secret: >-
+      {{ lookup('env', 'PROXMOX_TOKEN_SECRET')
+         or (lookup('ansible.builtin.ini', 'PROXMOX_TOKEN_SECRET', type='properties', file=proxmox_token_file)
+             | trim("'\"")
+             if proxmox_token_file is file else '') }}
+  vars:
+    proxmox_token_file: "{{ '~/.config/workstation-proxmox/token.env' | expanduser }}"
+  no_log: true
+
+- name: Require an API token
+  ansible.builtin.assert:
+    that:
+      - proxmox_token_id | length > 0
+      - proxmox_token_secret | length > 0
+    fail_msg: >-
+      No Proxmox API token: export PROXMOX_TOKEN_ID (e.g. 'ansible@pve!workstation-tests')
+      and PROXMOX_TOKEN_SECRET, or put them in ~/.config/workstation-proxmox/token.env.
+      See docs/testing.md (Proxmox test VMs).
+    quiet: true
+
+- name: Set API facts
+  ansible.builtin.set_fact:
+    proxmox_api_url: "https://{{ proxmox_api_host }}:{{ proxmox_api_port }}/api2/json"
+    proxmox_auth_header: "PVEAPIToken={{ proxmox_token_id }}={{ proxmox_token_secret }}"
+  no_log: true
+
+- name: List Proxmox nodes
+  ansible.builtin.uri:
+    url: "{{ proxmox_api_url }}/nodes"
+    headers:
+      Authorization: "{{ proxmox_auth_header }}"
+    validate_certs: "{{ proxmox_validate_certs }}"
+  register: proxmox_nodes
+  when: proxmox_node | length == 0
+
+- name: Auto-detect the Proxmox node
+  ansible.builtin.set_fact:
+    proxmox_node: "{{ proxmox_nodes.json.data[0].node }}"
+  when: proxmox_node | length == 0
+
+- name: Build the test machine table from tests/vm/machines.yml
+  ansible.builtin.set_fact:
+    proxmox_machine_table: >-
+      {%- set rows = [] -%}
+      {%- for m in (lookup('file', playbook_dir + '/../vm/machines.yml') | from_yaml).machines -%}
+      {%-   set _ = rows.append(m | combine({
+              'index': loop.index0,
+              'vmid': proxmox_test_vmid_base | int + loop.index0,
+              'ip': proxmox_test_ip_prefix ~ '.' ~ (proxmox_test_ip_start | int + loop.index0),
+              'hostname': 'pve-' ~ m.name,
+            })) -%}
+      {%- endfor -%}
+      {{ rows }}
