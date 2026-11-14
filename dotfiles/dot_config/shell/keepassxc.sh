@@ -98,8 +98,13 @@ kp-unlock() {
   read -rs pw; echo >&2
   log="${XDG_CACHE_HOME:-$HOME/.cache}/kp-unlock.log"
   mkdir -p "$(dirname "$log")"
-  printf '%s\n' "$pw" | nohup "$bin" --pw-stdin --minimized "$(_kpxc_db_arg "$db")" >"$log" 2>&1 &
-  disown 2>/dev/null
+  # --minimized exists only in newer KeePassXC (not in Ubuntu 24.04's 2.7.6).
+  # On WSL the Windows build would show --help as a dialog: assume a current
+  # Windows install there.
+  local opt=--minimized
+  if ! _kpxc_is_wsl && ! "$bin" --help 2>/dev/null | grep -q -- '--minimized'; then opt=""; fi
+  # Subshell: no "[1] <pid>" job message, and the app outlives this shell.
+  ( printf '%s\n' "$pw" | nohup "$bin" --pw-stdin $opt "$(_kpxc_db_arg "$db")" >"$log" 2>&1 & )
   pw=; unset pw
 
   local i
