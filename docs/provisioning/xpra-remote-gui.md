@@ -56,15 +56,16 @@ WSL2 (server) and macOS (client), but not in containers.
    Xpra.app, add a `~/.ssh/config` entry such as
 
    ```sshconfig
-   Host desktop-ryzen5950x-wsl
+   Host my-dev-pc-wsl
      HostName <windows-lan-ip>
      Port 2222
      User <wsl-user>
    ```
 
-   and list the alias in `xpra_client_hosts` (`host_vars/localhost.yml`). Add
-   `hostname`/`port`/`user` there to let Ansible write that Host block. Then
-   `ssh desktop-ryzen5950x-wsl` and launch e.g. `quartus &`.
+   and list the alias in `xpra_client_hosts` for `localhost`. Real hosts belong
+   in your private inventory (`host_vars/localhost.yml` there), not in this
+   repo. Add `hostname`/`port`/`user` there to let Ansible write that Host
+   block. Then `ssh my-dev-pc-wsl` and launch e.g. `quartus &`.
 
 ## Why these settings
 
@@ -100,7 +101,7 @@ a reminder instead.
 
 ## Troubleshooting: slow or stalling transfers
 
-**Symptoms** (seen on desktop-ryzen5950x, 2026-11-13):
+**Symptoms** (seen on a WSL2 dev PC, 2026-11-13):
 - Xpra stalls with "server is not responding".
 - WSL2 → LAN drops to 0.05 MB/s, and internet downloads crawl at under 1 KB/s.
 - SMB reads from the NAS fail with "Unerwarteter Netzwerkfehler", so KeePass

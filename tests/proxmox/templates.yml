@@ -1,7 +1,7 @@
 ---
 # One-time: build cloud-init templates on the Proxmox host (runs over SSH as root,
 # because importing a disk image needs `qm` on the host).
-#   ansible-playbook tests/proxmox/templates.yml -i 192.168.178.46, -u root
+#   ansible-playbook tests/proxmox/templates.yml -i <pve-host>, -u root
 # Normally run via: tests/run_proxmox_tests.py --templates [--rebuild debian13 ...]
 # Existing templates are left untouched unless listed in proxmox_rebuild_templates
 # (OS keys from settings.yml), e.g. after changing an image URL.
@@ -13,8 +13,7 @@
     proxmox_rebuild_templates: []
   tasks:
     - name: Load Proxmox test settings
-      ansible.builtin.include_vars:
-        file: "{{ playbook_dir }}/settings.yml"
+      ansible.builtin.include_tasks: tasks/settings.yml
 
     - name: Require known OS keys for rebuild
       ansible.builtin.assert:

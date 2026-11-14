@@ -6,7 +6,7 @@
     LSOv2/RSC as a fallback.
 
 .DESCRIPTION
-    On desktop-ryzen5950x all LAN traffic went through a Windows network bridge
+    On one WSL2 dev PC all LAN traffic went through a Windows network bridge
     ("Netzwerkbrücke") whose only member was the Wi-Fi adapter. A bridge joins two
     networks; with one member it bridges nothing, but Windows moves TCP/IP and the
     SMB client from the Wi-Fi adapter onto it, and bridging over Wi-Fi needs MAC

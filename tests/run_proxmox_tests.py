@@ -17,7 +17,9 @@ Usage:
 
 Each run creates the VMs, runs ansible/site.yml twice (second run must report
 changed=0 failed=0 per host), then destroys them. Needs PROXMOX_TOKEN_ID and
-PROXMOX_TOKEN_SECRET in the environment (see docs/testing.md).
+PROXMOX_TOKEN_SECRET in the environment, and the host and network in a private
+settings file: $PROXMOX_SETTINGS, else ~/.config/workstation-proxmox/settings.yml
+(see docs/testing.md).
 """
 
 from __future__ import annotations
@@ -51,8 +53,27 @@ def load_yaml(path: Path) -> dict:
         return yaml.safe_load(fh)
 
 
-def machine_table() -> list[dict]:
+SETTINGS_OVERRIDE = Path(
+    os.environ.get("PROXMOX_SETTINGS") or "~/.config/workstation-proxmox/settings.yml"
+).expanduser()
+REQUIRED_SETTINGS = ("proxmox_api_host", "proxmox_test_ip_prefix",
+                     "proxmox_test_gateway", "proxmox_test_nameserver")
+
+
+def load_settings() -> dict:
+    """Public defaults, overlaid with the private settings file (same lookup as tasks/settings.yml)."""
     settings = load_yaml(PVE_DIR / "settings.yml")
+    if SETTINGS_OVERRIDE.is_file():
+        settings.update(load_yaml(SETTINGS_OVERRIDE) or {})
+    elif os.environ.get("PROXMOX_SETTINGS"):
+        sys.exit(f"PROXMOX_SETTINGS points to a missing file: {SETTINGS_OVERRIDE}")
+    missing = [k for k in REQUIRED_SETTINGS if not settings.get(k)]
+    if missing:
+        sys.exit(f"Set {', '.join(missing)} in {SETTINGS_OVERRIDE} (see docs/testing.md).")
+    return settings
+
+
+def machine_table(settings: dict) -> list[dict]:
     rows = []
     for index, m in enumerate(load_yaml(MACHINES_FILE)["machines"]):
         rows.append({
@@ -131,7 +152,8 @@ def main() -> int:
     ap.add_argument("--list", action="store_true", help="list machines, VMIDs and IPs")
     args = ap.parse_args()
 
-    table = machine_table()
+    settings = load_settings()
+    table = machine_table(settings)
     by_name = {m["name"]: m for m in table}
 
     if args.rebuild and not args.templates:
@@ -143,7 +165,7 @@ def main() -> int:
         return 0
 
     if args.templates:
-        host = load_yaml(PVE_DIR / "settings.yml")["proxmox_api_host"]
+        host = settings["proxmox_api_host"]
         log = LOG_DIR / "workstation-proxmox-templates.log"
         rc = run(["ansible-playbook", str(PVE_DIR / "templates.yml"), "-i", f"{host},", "-u", "root",
                   "-e", json.dumps({"proxmox_rebuild_templates": args.rebuild})], log)
@@ -170,7 +192,7 @@ def main() -> int:
 
     print(f"Proxmox test VMs: {', '.join(chosen)}")
     hostnames = {by_name[n]["hostname"]: n for n in chosen}
-    state_inventory = Path(load_yaml(PVE_DIR / "settings.yml")["proxmox_state_dir"]).expanduser() / "inventory.yml"
+    state_inventory = Path(settings["proxmox_state_dir"]).expanduser() / "inventory.yml"
     site = ["ansible-playbook", "ansible/site.yml",
             "-i", "ansible/inventory/hosts.yml", "-i", str(state_inventory), "-l", "proxmox_tests"]
     results: dict[str, str] = {}

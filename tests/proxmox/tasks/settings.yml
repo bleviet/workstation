@@ -1,0 +1,37 @@
+---
+# Public defaults (tests/proxmox/settings.yml), then the private override with
+# the real host and network: $PROXMOX_SETTINGS, else
+# ~/.config/workstation-proxmox/settings.yml. tests/run_proxmox_tests.py uses
+# the same lookup.
+- name: Load Proxmox test settings
+  ansible.builtin.include_vars:
+    file: "{{ playbook_dir }}/settings.yml"
+
+- name: Find private Proxmox settings
+  ansible.builtin.set_fact:
+    proxmox_settings_override: >-
+      {{ (lookup('env', 'PROXMOX_SETTINGS') or '~/.config/workstation-proxmox/settings.yml') | expanduser }}
+
+- name: Require the file PROXMOX_SETTINGS points to
+  ansible.builtin.assert:
+    that: proxmox_settings_override is file
+    fail_msg: "PROXMOX_SETTINGS points to a missing file: {{ proxmox_settings_override }}"
+    quiet: true
+  when: lookup('env', 'PROXMOX_SETTINGS') | length > 0
+
+- name: Load private Proxmox settings
+  ansible.builtin.include_vars:
+    file: "{{ proxmox_settings_override }}"
+  when: proxmox_settings_override is file
+
+- name: Require host and network settings
+  ansible.builtin.assert:
+    that:
+      - proxmox_api_host | length > 0
+      - proxmox_test_ip_prefix | length > 0
+      - proxmox_test_gateway | length > 0
+      - proxmox_test_nameserver | length > 0
+    fail_msg: >-
+      Set proxmox_api_host, proxmox_test_ip_prefix, proxmox_test_gateway and
+      proxmox_test_nameserver in {{ proxmox_settings_override }} (see docs/testing.md).
+    quiet: true

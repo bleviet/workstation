@@ -40,11 +40,12 @@ xpra_ssh_session_display: true
 # ~/.ssh/config. Add hostname (+ optional port/user) to have Ansible write the
 # Host block for you.
 #   xpra_client_hosts:
-#     - alias: desktop-ryzen5950x-wsl
-#       hostname: 192.168.178.40
+#     - alias: my-dev-pc-wsl
+#       hostname: 192.168.1.40
 #       port: 2222
-#       user: balevision
+#       user: dev
 #       display: 100
+# Real hosts go in your private inventory (host_vars/localhost.yml there).
 xpra_client_hosts: []
 
 # Low-latency LAN tuning used by the client config and the auto-attach wrapper.

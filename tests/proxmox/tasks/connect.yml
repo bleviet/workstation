@@ -1,8 +1,7 @@
 ---
 # Shared setup: settings, API URL/auth, node auto-detection, machine table.
 - name: Load Proxmox test settings
-  ansible.builtin.include_vars:
-    file: "{{ playbook_dir }}/settings.yml"
+  ansible.builtin.include_tasks: settings.yml
 
 # Token: exported PROXMOX_TOKEN_ID/SECRET, else ~/.config/workstation-proxmox/token.env
 # (plain KEY=VALUE lines, no 'export'; tests/run_proxmox_tests.py reads it too).

@@ -117,9 +117,21 @@ containers. Each run creates the VMs, runs `ansible/site.yml` twice (the second
 run must report `changed=0 failed=0` per host), then destroys them. Unlike
 container tests, this covers systemd, sshd, linger and the Xpra session.
 
-Settings (API host, storage, bridge, VMID and static-IP ranges, template
-images) live in `tests/proxmox/settings.yml`. Machine *N* in `machines.yml`
-gets VMID `9100+N` and IP `192.168.178.(230+N)`. See `--list`.
+Defaults (storage, bridge, VMID and static-IP ranges, template images) live in
+`tests/proxmox/settings.yml`. Your host and network are not in this repo: put
+them in a private settings file with the same keys, which is loaded on top of
+the defaults. The runner and the playbooks read `$PROXMOX_SETTINGS`, else
+`~/.config/workstation-proxmox/settings.yml`:
+
+```yaml
+proxmox_api_host: 192.168.1.46
+proxmox_test_ip_prefix: 192.168.1      # first three octets
+proxmox_test_gateway: 192.168.1.1
+proxmox_test_nameserver: 192.168.1.1
+```
+
+Keep that file in a private repo and symlink it there. Machine *N* in
+`machines.yml` gets VMID `9100+N` and IP `<prefix>.(230+N)`. See `--list`.
 
 ### One-time setup
 
@@ -172,7 +184,7 @@ gets VMID `9100+N` and IP `192.168.178.(230+N)`. See `--list`.
 ```
 
 Logs go to `/tmp/workstation-proxmox-{create,run1,run2,destroy}.log`. With
-`--keep`, connect via `ssh tester@192.168.178.230`, or reuse the generated
+`--keep`, connect via `ssh tester@<ip from --list>`, or reuse the generated
 inventory at `~/.cache/workstation-proxmox/inventory.yml`.
 
 The test harness only deletes VMs tagged `workstation-test` inside the test VMID

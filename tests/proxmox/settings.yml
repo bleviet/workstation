@@ -4,11 +4,16 @@
 # ansible/site.yml twice (idempotency check) and destroyed afterwards — no
 # local disk is used.
 #
+# These are public defaults. Your host and network go in a private override
+# file (same keys, loaded on top of this one):
+#   $PROXMOX_SETTINGS, else ~/.config/workstation-proxmox/settings.yml
+# The keys left empty below are required there.
+#
 # Credentials are never stored here. Export an API token before running:
 #   export PROXMOX_TOKEN_ID='ansible@pve!workstation-tests'
 #   export PROXMOX_TOKEN_SECRET='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx'
 
-proxmox_api_host: 192.168.178.46
+proxmox_api_host: ""             # required, e.g. 192.168.1.46
 proxmox_api_port: 8006
 proxmox_validate_certs: false    # default PVE install uses a self-signed cert
 # Leave empty to auto-detect (works for single-node installs).
@@ -36,11 +41,11 @@ proxmox_templates:
 # is the machine's position in tests/vm/machines.yml. Keep the IP range outside
 # the router's DHCP pool (FRITZ!Box default: .20-.200).
 proxmox_test_vmid_base: 9100
-proxmox_test_ip_prefix: 192.168.178
+proxmox_test_ip_prefix: ""       # required, first three octets, e.g. 192.168.1
 proxmox_test_ip_start: 230
 proxmox_test_ip_cidr: 24
-proxmox_test_gateway: 192.168.178.1
-proxmox_test_nameserver: 192.168.178.1
+proxmox_test_gateway: ""         # required, e.g. 192.168.1.1
+proxmox_test_nameserver: ""      # required, e.g. 192.168.1.1
 
 proxmox_test_disk_gb: 16         # headless machines
 proxmox_test_disk_gb_gui: 32     # desktop profiles
