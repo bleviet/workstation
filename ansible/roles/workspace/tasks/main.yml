@@ -1,0 +1,46 @@
+---
+- name: Create workspace folders
+  ansible.builtin.file:
+    path: "{{ workspace_root }}/{{ item }}"
+    state: directory
+    mode: "0755"
+  loop: "{{ [''] + workspace_dirs }}"
+  loop_control:
+    label: "{{ workspace_root }}/{{ item }}"
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
+# update: false -> an existing clone is left exactly as it is (no fetch, no
+# reset), so provisioning never touches work in progress.
+- name: Clone missing workspace repos
+  ansible.builtin.git:
+    repo: "{{ item.url | default(item) }}"
+    dest: "{{ workspace_root }}/{{ item.dest | default((item.url | default(item)) | workspace_path(workspace_host_dirs)) }}"
+    version: "{{ item.version | default(omit) }}"
+    update: false
+    accept_newhostkey: true
+  environment:
+    GIT_TERMINAL_PROMPT: "0"
+  loop: "{{ workspace_repos }}"
+  loop_control:
+    label: "{{ item.url | default(item) }}"
+  register: workspace_clone
+  # Report instead of failing: a fresh machine often lacks keys for private repos.
+  failed_when: false
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
+# A successful git result always has "after" (the checked-out commit).
+- name: List repos that could not be cloned
+  ansible.builtin.debug:
+    msg: "{{ item.item.url | default(item.item) }}: {{ item.msg | default('unknown error') }}"
+  loop: "{{ workspace_clone.results | default([]) | rejectattr('after', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.item.url | default(item.item) }}"
+
+- name: Fail when strict and a repo could not be cloned
+  ansible.builtin.fail:
+    msg: "Could not clone: {{ workspace_clone.results | rejectattr('after', 'defined') | map(attribute='item') | list }}"
+  when:
+    - workspace_clone_strict | bool
+    - workspace_clone.results | default([]) | rejectattr('after', 'defined') | list | length > 0

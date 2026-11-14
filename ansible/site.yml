@@ -2,7 +2,7 @@
 # Full workstation provisioning. Run order matters:
 #
 # Base roles (always applied):
-#   user → packages → dev-tools → shell → chezmoi → fonts → ssh
+#   user → packages → dev-tools → shell → chezmoi → fonts → ssh → workspace
 #
 # Optional features (skipped unless the matching flag is set):
 #   fpga   — features.fpga: true
@@ -46,6 +46,8 @@
     - chezmoi
     - fonts
     - ssh
+    # ~/workspace layout + clone missing repos (list in the inventory)
+    - workspace
     # ── Optional features ─────────────────────────────────────────────────
     - role: fpga
       when: >-

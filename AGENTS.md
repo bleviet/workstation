@@ -52,7 +52,7 @@ ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instance
   pip, with a `--break-system-packages` fallback for PEP 668 hosts, and patches
   `~/.bashrc` PATH. If `ansible` is not found, that PATH is the usual cause.
 - **Role order in `site.yml` is load-bearing** (`user → packages → dev-tools →
-  shell → chezmoi → fonts → ssh → optional fpga → desktop roles → xrdp → xpra`). Respect it
+  shell → chezmoi → fonts → ssh → workspace → optional fpga → desktop roles → xrdp → xpra`). Respect it
   when reordering or adding roles.
 - **Idempotency is enforced by the container tests**: `tests/container/Dockerfile.*`
   run the playbook twice and assert `changed=0.*failed=0`. Any role change must

@@ -1,0 +1,26 @@
+---
+# Code lives in ~/workspace/<where it is hosted>/... on every machine, so the
+# path of a repo never needs a decision (homelab layout.md):
+#   git@github.com:bleviet/workstation.git -> github.com/bleviet/workstation
+#   https://gitlab.com/owner/repo.git      -> gitlab.com/owner/repo
+workspace_root: "{{ dev_user_home }}/workspace"
+
+# Extra top-level folders; scratch/ is for throwaway work, never backed up.
+workspace_dirs:
+  - scratch
+
+# Repos to clone. Each item is a clone URL, or a dict:
+#   - url: git@github.com:bleviet/workstation.git
+#     dest: github.com/bleviet/workstation   # optional, relative to workspace_root
+#     version: main                          # optional branch/tag to check out on clone
+# Missing repos are cloned; existing clones are never pulled or reset.
+# Keep real lists in your private inventory.
+workspace_repos: []
+
+# Hosts whose repos go to <dir>/<repo> instead of <host>/<path>, e.g. a NAS:
+#   workspace_host_dirs: { mynas: nas }   # mynas:/volume1/git/x -> nas/x
+workspace_host_dirs: {}
+
+# true: fail the play when a repo cannot be cloned. false: list them at the end
+# (a fresh machine often has no key for private repos yet).
+workspace_clone_strict: false
