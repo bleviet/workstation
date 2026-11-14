@@ -4,10 +4,16 @@
 # Disabled by default; enable and fill in per host in your private inventory.
 nas_mount_enabled: false
 
-# //server/share, e.g. //192.168.1.20/home (an IP avoids needing mDNS).
+# cifs:  Linux mounts the share itself; login in a root-only credentials file.
+# drvfs: WSL mounts the Windows network path and uses the Windows login (no
+#        password in WSL); add the share in Windows first (Explorer or cmdkey).
+nas_mount_type: cifs
+
+# cifs: //server/share, e.g. //192.168.1.20/home (an IP avoids needing mDNS).
+# drvfs: the Windows path, e.g. \\192.168.1.20\home (quote it in YAML: '\\192.168.1.20\home').
 nas_mount_source: ""
 nas_mount_point: "{{ dev_user_home }}/synology"
-nas_mount_username: ""
+nas_mount_username: ""   # cifs only
 
 # Root-only file with the SMB login (username=, password=). Written once when
 # it does not exist; later runs leave it alone.

@@ -34,9 +34,11 @@
             export PATH="$HOME/.local/bin:$PATH"   # or open a new terminal
       delegate_to: localhost
       run_once: true
+      tags: always
 
     - name: Gather facts
       ansible.builtin.gather_facts:
+      tags: always
   roles:
     # ── Base ───────────────────────────────────────────────────────────────
     - user
@@ -47,7 +49,8 @@
     - fonts
     - ssh
     # NAS share at ~/synology via systemd automount (off unless enabled)
-    - nas-mount
+    - role: nas-mount
+      tags: [nas-mount]
     # ~/workspace layout + clone missing repos (list in the inventory)
     - workspace
     # ── Optional features ─────────────────────────────────────────────────
