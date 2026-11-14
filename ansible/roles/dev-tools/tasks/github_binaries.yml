@@ -12,6 +12,9 @@
         state: directory
         suffix: "_{{ tool.name }}"
       register: dev_tool_tmp
+      # tempfile has no check mode; without this, --check fails on the next
+      # task for every tool that is not installed yet. Only a scratch dir.
+      check_mode: false
 
     - name: "Download {{ tool.name }} {{ tool.version }}"
       ansible.builtin.get_url:
@@ -54,3 +57,4 @@
       ansible.builtin.file:
         path: "{{ dev_tool_tmp.path }}"
         state: absent
+      check_mode: false   # remove the scratch dir created above in --check too
