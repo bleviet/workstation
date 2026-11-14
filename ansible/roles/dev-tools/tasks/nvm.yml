@@ -8,9 +8,13 @@
 # Shell init is managed via ~/.config/shell/dev-tools.sh instead.
 - name: Install nvm
   ansible.builtin.shell: |
+    set -o pipefail
     curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v{{ nvm_version }}/install.sh | PROFILE=/dev/null bash
+  args:
+    executable: /bin/bash
   environment:
     HOME: "{{ dev_user_home }}"
+    NVM_DIR: "{{ dev_user_home }}/.nvm"
   when: not nvm_stat.stat.exists
   changed_when: true
 
@@ -19,12 +23,20 @@
     path: "{{ dev_user_home }}/.nvm/alias/default"
   register: nvm_default_alias
 
+# NVM_DIR must be explicit: without it nvm.sh guesses its location from $0,
+# which under a non-login /bin/sh is /bin ("mkdir: cannot create directory
+# '/bin/alias'"). nvm can exit 0 even when the download fails, so verify the
+# default alias at the end. No `set -e`: nvm.sh is not compatible with it.
 - name: Install Node.js LTS via nvm
   ansible.builtin.shell: |
-    . "{{ dev_user_home }}/.nvm/nvm.sh"
-    nvm install --lts
-    nvm alias default 'lts/*'
+    . "$NVM_DIR/nvm.sh" || exit 1
+    nvm install --lts || exit 1
+    nvm alias default 'lts/*' || exit 1
+    test -f "$NVM_DIR/alias/default" && nvm which default >/dev/null
+  args:
+    executable: /bin/bash
   environment:
     HOME: "{{ dev_user_home }}"
+    NVM_DIR: "{{ dev_user_home }}/.nvm"
   when: not nvm_default_alias.stat.exists
   changed_when: true

@@ -1,1 +1,5 @@
 sourceDir = "{{ chezmoi_source_path }}"
+# Fixed umask so managed files/dirs get 0644/0755 regardless of the login
+# session (pam_umask gives 002 on Debian/Ubuntu user-private groups), matching
+# the modes the Ansible roles set; otherwise every run flips 0775 <-> 0755.
+umask = 0o022
