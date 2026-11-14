@@ -14,14 +14,31 @@
   become: true
   when: xfce_packages | length > 0
 
-- name: Enable and start LightDM
+- name: Enable LightDM
   ansible.builtin.service:
     name: lightdm
     enabled: true
-    state: started
   become: true
   failed_when: false
   when: xfce_packages | length > 0
+
+# Starting needs a display device (detected in the desktop role). Without one
+# the display manager crash-loops and every run would retry and report changed.
+- name: Start LightDM
+  ansible.builtin.service:
+    name: lightdm
+    state: started
+  become: true
+  when:
+    - xfce_packages | length > 0
+    - desktop_has_display | default(true) | bool
+
+- name: Note that LightDM was not started
+  ansible.builtin.debug:
+    msg: "No display device (/sys/class/drm/card*): LightDM is enabled and will start on a machine with a display."
+  when:
+    - xfce_packages | length > 0
+    - not (desktop_has_display | default(true) | bool)
 
 - name: Ensure /etc/lightdm/lightdm.conf.d exists
   ansible.builtin.file:

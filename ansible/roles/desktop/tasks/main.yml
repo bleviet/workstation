@@ -1,4 +1,18 @@
 ---
+# Display managers need a display device (DRM card). Without one (e.g. a VM
+# with only a serial console) Xorg exits with "no screens found"; the DE roles
+# then enable but don't start their display manager.
+- name: Detect a display device
+  ansible.builtin.find:
+    paths: /sys/class/drm
+    patterns: "card[0-9]*"
+    file_type: any
+  register: desktop_drm_cards
+
+- name: Record whether a display device is present
+  ansible.builtin.set_fact:
+    desktop_has_display: "{{ desktop_drm_cards.matched | default(0) > 0 }}"
+
 - name: Install VM guest tools for desktop integration
   ansible.builtin.include_tasks: guest_tools.yml
 

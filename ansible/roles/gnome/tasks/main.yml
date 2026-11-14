@@ -13,11 +13,26 @@
     state: present
   become: true
 
-- name: Enable and start GDM
+- name: Enable GDM
   ansible.builtin.service:
     name: "{{ gnome_service }}"
     enabled: true
-    state: started
   become: true
   failed_when: false
+
+# Starting needs a display device (detected in the desktop role). Without one
+# the display manager crash-loops and every run would retry and report changed.
+- name: Start GDM
+  ansible.builtin.service:
+    name: "{{ gnome_service }}"
+    state: started
+  become: true
+  when:
+    - desktop_has_display | default(true) | bool
+
+- name: Note that GDM was not started
+  ansible.builtin.debug:
+    msg: "No display device (/sys/class/drm/card*): GDM is enabled and will start on a machine with a display."
+  when:
+    - not (desktop_has_display | default(true) | bool)
 
