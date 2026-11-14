@@ -72,9 +72,14 @@ _kpxc_db_arg() {
 }
 
 kp-unlock() {
-  local bin db pw
+  local bin db pw log
   bin=$(_kpxc_bin)
   [ -n "$bin" ] || { echo "kp-unlock: KeePassXC not installed" >&2; return 1; }
+  # Linux (not WSL): KeePassXC is a GUI app and needs a desktop session.
+  if [ "$(uname -s)" = Linux ] && ! _kpxc_is_wsl && [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+    echo "kp-unlock: no desktop session here (DISPLAY not set); run it in a terminal on the desktop" >&2
+    return 1
+  fi
   db="${KEEPASS_DB:-$HOME/synology/Documents/Personal/keepass/mp.kdbx}"
   [ -f "$db" ] || { echo "kp-unlock: database not found: $db (NAS mounted?)" >&2; return 1; }
 
@@ -91,15 +96,25 @@ kp-unlock() {
 
   printf 'KeePassXC master password: ' >&2
   read -rs pw; echo >&2
-  printf '%s\n' "$pw" | nohup "$bin" --pw-stdin --minimized "$(_kpxc_db_arg "$db")" >/dev/null 2>&1 &
+  log="${XDG_CACHE_HOME:-$HOME/.cache}/kp-unlock.log"
+  mkdir -p "$(dirname "$log")"
+  printf '%s\n' "$pw" | nohup "$bin" --pw-stdin --minimized "$(_kpxc_db_arg "$db")" >"$log" 2>&1 &
   disown 2>/dev/null
   pw=; unset pw
 
-  for _ in $(seq 1 40); do
+  local i
+  for i in $(seq 1 120); do
     if _kpxc_keys; then _kpxc_list_keys; return 0; fi
+    # KeePassXC quit early: wrong password, no display, ... show why. Only
+    # after 2 s: right after the start it may not be listed yet.
+    if [ "$i" -gt 8 ] && ! _kpxc_running; then
+      echo "kp-unlock: KeePassXC exited without unlocking (wrong password?). Its last messages:" >&2
+      tail -n 5 "$log" >&2
+      return 1
+    fi
     sleep 0.25
   done
-  echo "kp-unlock: no keys in the agent after 10 s (wrong password?)" >&2
+  echo "kp-unlock: no keys in the agent after 30 s; KeePassXC log: $log" >&2
   return 1
 }
 
