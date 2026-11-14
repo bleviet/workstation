@@ -18,7 +18,8 @@
 # Usage:
 #   ansible-playbook playbooks/site.yml -K
 - name: Provision workstation
-  hosts: all
+  # maintenance_only: hosts managed by maintenance.yml only (e.g. a hypervisor).
+  hosts: all:!maintenance_only
   gather_facts: false
   pre_tasks:
     - name: Require ansible-core >= 2.15

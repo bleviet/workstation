@@ -1,0 +1,46 @@
+---
+# Maintenance for Debian/Ubuntu hosts (incl. Proxmox): updates + health report.
+# Not part of site.yml; never reboots, only reports when a reboot is needed.
+#
+#   ansible-playbook ansible/maintenance.yml -i <inventories> -K
+#   ansible-playbook ansible/maintenance.yml -i <inventories> -e maintenance_upgrade=false   # report only, no sudo
+#   ... -l <host or group>                                                                   # a subset
+#
+# Targets the inventory group `maintenance` (opt-in: list the hosts there in
+# your inventory), or -e maintenance_hosts=<pattern>.
+#
+# Report: ~/.cache/workstation-maintenance/<date>.md on the controller.
+- name: Updates and health
+  hosts: "{{ maintenance_hosts | default('maintenance') }}"
+  gather_facts: true
+  roles:
+    - maintenance
+
+  # Written once on the controller from inside this play, so a -l limit that
+  # leaves out localhost still gets a report.
+  post_tasks:
+    - name: Write and show the report
+      delegate_to: localhost
+      run_once: true
+      become: false
+      vars:
+        maintenance_results: >-
+          {{ ansible_play_hosts_all | map('extract', hostvars) | selectattr('maintenance_result', 'defined')
+             | map(attribute='maintenance_result') | list }}
+        maintenance_now: "{{ lookup('pipe', 'date +%Y-%m-%d_%H%M%S') }}"
+      block:
+        - name: Create the report folder
+          ansible.builtin.file:
+            path: "{{ maintenance_report_dir | expanduser }}"
+            state: directory
+            mode: "0700"
+
+        - name: Write the report
+          ansible.builtin.template:
+            src: roles/maintenance/templates/report.md.j2
+            dest: "{{ maintenance_report_dir | expanduser }}/{{ maintenance_now }}.md"
+            mode: "0600"
+
+        - name: Show the report
+          ansible.builtin.debug:
+            msg: "{{ lookup('template', 'roles/maintenance/templates/report.md.j2').split('\n') }}"

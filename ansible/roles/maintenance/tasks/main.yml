@@ -1,0 +1,105 @@
+---
+- name: Skip hosts that are not Debian/Ubuntu
+  when: ansible_facts['os_family'] != 'Debian'
+  block:
+    - name: Record the skipped host
+      ansible.builtin.set_fact:
+        maintenance_result:
+          host: "{{ inventory_hostname }}"
+          skipped: "not Debian/Ubuntu ({{ ansible_facts['os_family'] }})"
+    - name: Stop here for this host
+      ansible.builtin.meta: end_host
+
+# ── Updates (skipped with -e maintenance_upgrade=false) ─────────────────────
+- name: Update package lists
+  ansible.builtin.apt:
+    update_cache: true
+  become: true
+  register: maintenance_apt_update
+  # A broken repo (e.g. Proxmox enterprise without subscription) is reported,
+  # not fatal: the health checks below still run.
+  failed_when: false
+  when: maintenance_upgrade | bool
+
+- name: Upgrade all packages (full-upgrade)
+  ansible.builtin.apt:
+    upgrade: dist
+  become: true
+  register: maintenance_apt_upgrade
+  when: maintenance_upgrade | bool
+
+- name: Remove packages that are no longer needed
+  ansible.builtin.apt:
+    autoremove: true
+  become: true
+  when:
+    - maintenance_upgrade | bool
+    - maintenance_autoremove | bool
+
+# ── Health (read-only, no sudo) ──────────────────────────────────────────────
+- name: Count pending updates
+  ansible.builtin.shell: apt list --upgradable 2>/dev/null | grep -c / || true
+  register: maintenance_pending
+  changed_when: false
+
+- name: Check whether a reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: maintenance_reboot
+
+- name: List failed systemd units
+  ansible.builtin.command: systemctl --failed --no-legend --plain
+  register: maintenance_failed_units
+  changed_when: false
+  failed_when: false
+  when: ansible_facts['service_mgr'] == 'systemd'
+
+# pvesm needs root; on Proxmox we log in as root anyway.
+- name: Read Proxmox version and storage usage
+  ansible.builtin.shell: |
+    command -v pveversion >/dev/null || exit 0
+    echo "VERSION $(pveversion)"
+    pvesm status 2>/dev/null | awk 'NR>1 && $3=="active" && $4>0 {printf "STORAGE %s %d\n", $1, $5*100/$4}'
+  register: maintenance_pve
+  changed_when: false
+  failed_when: false
+
+# Writable filesystems only (read-only images such as WSL's kernel headers are
+# always "full"), and each device once (bind mounts repeat the same disk).
+- name: Measure disk usage
+  ansible.builtin.set_fact:
+    maintenance_disks: >-
+      {{ maintenance_disks | default([])
+         + [{'mount': item.mount, 'device': item.device,
+             'pct': ((1 - item.size_available / item.size_total) * 100) | round | int}] }}
+  loop: >-
+    {{ ansible_facts['mounts'] | rejectattr('fstype', 'in', maintenance_skip_fstypes)
+       | selectattr('size_total', 'gt', 0) | sort(attribute='mount') | list }}
+  loop_control:
+    label: "{{ item.mount }}"
+  when:
+    - "'ro' not in item.options.split(',')"
+    - item.device not in (maintenance_disks | default([]) | map(attribute='device') | list)
+
+- name: Collect the result for the report
+  ansible.builtin.set_fact:
+    maintenance_result:
+      host: "{{ inventory_hostname }}"
+      os: "{{ ansible_facts['distribution'] }} {{ ansible_facts['distribution_version'] }}"
+      kernel: "{{ ansible_facts['kernel'] }}"
+      uptime_days: "{{ (ansible_facts['uptime_seconds'] / 86400) | round(1) }}"
+      mem_used_pct: "{{ ((1 - ansible_facts['memory_mb']['nocache']['free'] / ansible_facts['memtotal_mb']) * 100) | round | int }}"
+      disks: "{{ maintenance_disks | default([]) }}"
+      apt_update_error: >-
+        {{ '' if (maintenance_apt_update is skipped or maintenance_apt_update.cache_updated | default(false))
+           else (maintenance_apt_update.msg | default('apt update failed')) }}
+      upgraded: >-
+        {{ '-' if maintenance_apt_upgrade is skipped
+           else ((maintenance_apt_upgrade.stdout | default('') | regex_search('(\d+) upgraded', '\1')) or ['0']) | first }}
+      pending: "{{ maintenance_pending.stdout | trim }}"
+      reboot_required: "{{ maintenance_reboot.stat.exists }}"
+      failed_units: "{{ maintenance_failed_units.stdout_lines | default([]) | map('split') | map('first') | list }}"
+      pve_version: >-
+        {{ (maintenance_pve.stdout_lines | select('match', '^VERSION ') | first | default('VERSION -'))[8:] }}
+      pve_storage: >-
+        {{ maintenance_pve.stdout_lines | select('match', '^STORAGE ') | map('split') | list }}

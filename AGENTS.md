@@ -16,6 +16,9 @@ and `roles_path = ansible/roles`).
 ansible-playbook ansible/site.yml -K            # re-provision current host (prompts for sudo)
 ansible-playbook ansible/site.yml -l <host>     # a host from ansible/inventory/hosts.yml
 ansible-playbook ansible/site.yml --syntax-check   # fast first check; run before any role change
+ansible-playbook ansible/maintenance.yml -K        # apt full-upgrade + health report for group `maintenance`
+ansible-playbook ansible/maintenance.yml -e maintenance_upgrade=false   # report only, no sudo
+                                                # report: ~/.cache/workstation-maintenance/<date>.md; never reboots
 
 # Tests
 ./tests/run_container_tests.sh                 # Podman, parallel: debian+ubuntu. Logs: /tmp/workstation-test-<os>.log

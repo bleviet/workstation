@@ -1,0 +1,35 @@
+# Maintenance report {{ maintenance_now }}
+
+Mode: {{ 'updates + health' if maintenance_upgrade | bool else 'health only (no updates)' }}. Disk warning at {{ maintenance_disk_warn_pct }} %.
+
+## Needs attention
+
+{% set ns = namespace(n=0) %}
+{% for r in maintenance_results if r.skipped is not defined %}
+{% if r.reboot_required | bool %}{% set ns.n = ns.n + 1 %}- **{{ r.host }}**: reboot required
+{% endif %}
+{% if r.apt_update_error %}{% set ns.n = ns.n + 1 %}- **{{ r.host }}**: apt update failed: {{ r.apt_update_error | truncate(160) }}
+{% endif %}
+{% for u in r.failed_units %}{% set ns.n = ns.n + 1 %}- **{{ r.host }}**: failed unit `{{ u }}`
+{% endfor %}
+{% for d in r.disks if d.pct | int >= maintenance_disk_warn_pct | int %}{% set ns.n = ns.n + 1 %}- **{{ r.host }}**: `{{ d.mount }}` {{ d.pct }} % full
+{% endfor %}
+{% for s in r.pve_storage if s[2] | int >= maintenance_disk_warn_pct | int %}{% set ns.n = ns.n + 1 %}- **{{ r.host }}**: Proxmox storage `{{ s[1] }}` {{ s[2] }} % full
+{% endfor %}
+{% if (r.pending | int) > 0 and not maintenance_upgrade | bool %}{% set ns.n = ns.n + 1 %}- **{{ r.host }}**: {{ r.pending }} updates pending
+{% endif %}
+{% endfor %}
+{% if ns.n == 0 %}Nothing. All hosts healthy.
+{% endif %}
+
+## Hosts
+
+| Host | OS | Kernel | Up (days) | Mem | Upgraded | Pending | Reboot | Disks |
+|---|---|---|---|---|---|---|---|---|
+{% for r in maintenance_results %}
+{% if r.skipped is defined %}
+| {{ r.host }} | {{ r.skipped }} | | | | | | | |
+{% else %}
+| {{ r.host }} | {{ r.os }}{{ ' / ' ~ r.pve_version if r.pve_version not in ['', '-'] else '' }} | {{ r.kernel }} | {{ r.uptime_days }} | {{ r.mem_used_pct }} % | {{ r.upgraded }} | {{ r.pending }} | {{ 'yes' if r.reboot_required | bool else 'no' }} | {% for d in r.disks %}`{{ d.mount }}` {{ d.pct }} %{{ ', ' if not loop.last }}{% endfor %}{% for s in r.pve_storage %}, pve:`{{ s[1] }}` {{ s[2] }} %{% endfor %} |
+{% endif %}
+{% endfor %}

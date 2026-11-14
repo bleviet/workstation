@@ -1,0 +1,13 @@
+---
+# false: report only (pending updates from the last apt update; no sudo needed).
+maintenance_upgrade: true
+maintenance_autoremove: true
+
+# Warn when a filesystem (or Proxmox storage) is at least this full.
+maintenance_disk_warn_pct: 80
+
+# Filesystems that are not this host's own disks.
+maintenance_skip_fstypes: [tmpfs, devtmpfs, squashfs, overlay, 9p, drvfs, cifs, nfs, nfs4, fuse.sshfs, autofs, efivarfs]
+
+# Report folder on the Ansible controller.
+maintenance_report_dir: "~/.cache/workstation-maintenance"
