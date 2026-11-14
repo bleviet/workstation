@@ -24,6 +24,17 @@
     mode: "0755"
 
 # blockinfile (not a full template) so hand edits elsewhere in xpra.conf survive.
+# Xpra turns a key set twice into a list and the client then crashes on start
+# (bool options). Comment out hand-written copies of the managed keys that sit
+# above the managed block; once commented they no longer match (idempotent).
+- name: Comment out xpra.conf settings that the managed block sets
+  ansible.builtin.replace:
+    path: "{{ dev_user_home }}/Library/Application Support/Xpra/xpra.conf"
+    before: "# BEGIN ANSIBLE MANAGED BLOCK \\(xpra role\\)"
+    regexp: '^(\s*(?:ssh|min-speed|audio|printing|webcam|mdns|notifications)\s*=.*)$'
+    replace: '# \1   (set in the Ansible block below)'
+  failed_when: false   # file may not exist yet; blockinfile creates it
+
 - name: Tune Xpra client for low-latency LAN use
   ansible.builtin.blockinfile:
     path: "{{ dev_user_home }}/Library/Application Support/Xpra/xpra.conf"
