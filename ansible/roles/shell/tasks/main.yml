@@ -15,6 +15,60 @@
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
+# ── SSH agent at ~/.ssh/agent.sock (Linux with systemd, not in containers) ──
+# Same socket as on macOS (launchd), so shells, git and KeePassXC agree on one
+# agent and shells never start their own (start_ssh_agent.sh only connects).
+- name: Install the SSH agent user service
+  when:
+    - ansible_facts['os_family'] != 'Darwin'
+    - ansible_facts['service_mgr'] == 'systemd'
+    - ansible_facts['virtualization_type'] | default('') not in ['docker', 'containerd', 'podman', 'container']
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+  block:
+    - name: Ensure ~/.ssh and ~/.config/systemd/user exist
+      ansible.builtin.file:
+        path: "{{ item.path }}"
+        state: directory
+        mode: "{{ item.mode }}"
+      loop:
+        - { path: "{{ dev_user_home }}/.ssh", mode: "0700" }
+        - { path: "{{ dev_user_home }}/.config/systemd/user/default.target.wants", mode: "0755" }
+
+    - name: Place the SSH agent user unit
+      ansible.builtin.template:
+        src: ssh-agent-sock.service.j2
+        dest: "{{ dev_user_home }}/.config/systemd/user/ssh-agent-sock.service"
+        mode: "0644"
+      register: ssh_agent_unit
+
+    # Enabling = this symlink; works without a running user manager.
+    - name: Enable the SSH agent user unit
+      ansible.builtin.file:
+        src: "{{ dev_user_home }}/.config/systemd/user/ssh-agent-sock.service"
+        dest: "{{ dev_user_home }}/.config/systemd/user/default.target.wants/ssh-agent-sock.service"
+        state: link
+
+    - name: Find the user id
+      ansible.builtin.command: id -u
+      register: ssh_agent_uid
+      changed_when: false
+
+    - name: Check for a running user manager
+      ansible.builtin.stat:
+        path: "/run/user/{{ ssh_agent_uid.stdout }}/bus"
+      register: ssh_agent_bus
+
+    - name: Start the SSH agent now (when a user manager is running)
+      ansible.builtin.systemd:
+        name: ssh-agent-sock.service
+        scope: user
+        state: "{{ 'restarted' if ssh_agent_unit is changed else 'started' }}"
+        daemon_reload: "{{ ssh_agent_unit is changed }}"
+      environment:
+        XDG_RUNTIME_DIR: "/run/user/{{ ssh_agent_uid.stdout }}"
+      when: ssh_agent_bus.stat.exists
+
 - name: Check if oh-my-zsh is installed
   ansible.builtin.stat:
     path: "{{ dev_user_home }}/.oh-my-zsh"

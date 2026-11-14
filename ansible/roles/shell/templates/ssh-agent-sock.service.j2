@@ -1,0 +1,13 @@
+# Managed by Ansible (shell role).
+# One ssh-agent per user at a fixed socket, shared by shells, git and
+# KeePassXC (SSH Agent -> SSH_AUTH_SOCK override = ~/.ssh/agent.sock).
+[Unit]
+Description=SSH agent at ~/.ssh/agent.sock
+
+[Service]
+Type=simple
+ExecStartPre=/bin/rm -f %h/.ssh/agent.sock
+ExecStart=/usr/bin/ssh-agent -D -a %h/.ssh/agent.sock
+
+[Install]
+WantedBy=default.target
