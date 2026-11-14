@@ -83,6 +83,9 @@
       - apply
       - --no-tty
       - --force
+      # Prints a diff only for files it writes; plain apply is silent, so the
+      # changed_when below never fired, even on a first install.
+      - --verbose
       - --source
       - "{{ chezmoi_source_path }}"
   environment:
