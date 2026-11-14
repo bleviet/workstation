@@ -39,6 +39,9 @@
       # PVE defaults to a full apt upgrade on first boot; tests don't need it
       # and it adds minutes per VM.
       ciupgrade: 0
+      # Desktop profiles need a display adapter (Xorg: "no screens found" on
+      # the templates' serial-only console); headless keeps serial0.
+      vga: "{{ 'std' if vm.gui | default(false) | bool else 'serial0' }}"
       onboot: 0
 
 - name: "Resize disk of {{ vm.name }}"
