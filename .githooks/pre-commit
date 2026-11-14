@@ -1,5 +1,20 @@
 #!/bin/sh
-# Reject emojis in lines added by this commit (existing lines are not checked).
-# Enabled by: git config core.hooksPath .githooks
+# Pre-commit checks. Enabled by: git config core.hooksPath .githooks
+#   1. gitleaks: block secrets (API keys, tokens, private keys) in staged changes.
+#      False positive? Add a `gitleaks:allow` comment on that line, or put the
+#      finding's fingerprint in .gitleaksignore.
+#   2. Reject emojis in lines added by this commit (existing lines are not checked).
+set -e
+
+# Git GUIs often run hooks without ~/.local/bin on PATH.
+gitleaks=$(command -v gitleaks || true)
+[ -z "$gitleaks" ] && [ -x "$HOME/.local/bin/gitleaks" ] && gitleaks="$HOME/.local/bin/gitleaks"
+if [ -z "$gitleaks" ]; then
+  echo "pre-commit: gitleaks not found; install it (dev-tools role) before committing." >&2
+  echo "pre-commit: to skip all checks once: git commit --no-verify" >&2
+  exit 1
+fi
+"$gitleaks" git --pre-commit --staged --redact --no-banner --log-level warn -v
+
 git diff --cached --no-color --no-ext-diff -U0 --diff-filter=ACMR |
   perl "$(git rev-parse --show-toplevel)/.githooks/emoji-check.pl" diff

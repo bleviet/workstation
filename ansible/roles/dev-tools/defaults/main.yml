@@ -80,6 +80,12 @@ github_binaries:
     url: "https://github.com/dandavison/delta/releases/download/0.19.2/delta-0.19.2-x86_64-unknown-linux-musl.tar.gz"
     binary: delta
 
+  # Secret scanner, used by the .githooks/pre-commit hook.
+  - name: gitleaks
+    version: "8.30.1"
+    url: "https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz"
+    binary: gitleaks
+
 # VS Code extensions to install automatically
 vscode_extensions:
   - dracula-theme.theme-dracula

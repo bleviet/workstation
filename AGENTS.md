@@ -108,6 +108,10 @@ ansible-playbook ansible/site.yml -l wsl_instances  # provision all WSL instance
   `.githooks/` (commit-msg + pre-commit; `bootstrap.sh` sets
   `git config core.hooksPath .githooks`, or run it manually after cloning).
   Box drawing (`──`), arrows (`→`) and the starship chevrons are fine.
+- **No secrets in commits**: `.githooks/pre-commit` runs `gitleaks` on staged
+  changes and blocks the commit on a finding (gitleaks is installed by the
+  `dev-tools` role). Never bypass it with `--no-verify`; for a false positive
+  add a `gitleaks:allow` comment on that line.
 - `.editorconfig`: 2-space indent for `yml/yaml/toml/json/sh`; LF everywhere
   (enforced via `.gitattributes`); trim trailing whitespace. YAML roles follow
   this — don't introduce tabs or CRLF.

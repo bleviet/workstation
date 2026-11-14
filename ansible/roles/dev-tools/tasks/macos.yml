@@ -24,6 +24,7 @@
       - zoxide
       - git-delta
       - neovim
+      - gitleaks
     state: present
 
 - name: Symlink Homebrew binaries to dev_tools_bin_dir
@@ -43,6 +44,7 @@
     - { name: "lazygit", binary: "lazygit" }
     - { name: "starship", binary: "starship" }
     - { name: "yazi", binary: "yazi" }
+    - { name: "gitleaks", binary: "gitleaks" }
     - { name: "zoxide", binary: "zoxide" }
     - { name: "git-delta", binary: "delta" }
     - { name: "neovim", binary: "nvim" }
