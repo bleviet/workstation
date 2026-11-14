@@ -2,10 +2,20 @@
 # Xpra client on macOS: Xpra.app + low-latency client config + `ssh` wrapper
 # that auto-attaches to the server session when you `ssh <alias>`.
 
-- name: Install Xpra.app (Homebrew cask)
-  community.general.homebrew_cask:
-    name: xpra
-    state: present
+# Homebrew disabled the xpra cask on 2026-09-01 (fails the Gatekeeper check),
+# so Xpra.app is installed by hand from https://xpra.org/ and only checked here.
+- name: Check for Xpra.app
+  ansible.builtin.stat:
+    path: /Applications/Xpra.app
+  register: xpra_app
+
+- name: Require Xpra.app
+  ansible.builtin.assert:
+    that: xpra_app.stat.exists
+    fail_msg: >-
+      Xpra.app is missing. Homebrew's xpra cask is disabled; download the
+      macOS build from https://xpra.org/ into /Applications, then re-run.
+    quiet: true
 
 - name: Ensure Xpra client config directory exists
   ansible.builtin.file:
