@@ -10,16 +10,18 @@
 #               (the keys leave the agent)
 #   kp-status   sync state of the database (also shown in the prompt as kp:...)
 #
-# macOS / Linux: the local KeePassXC and agent. WSL: the Windows KeePassXC and
-# the Windows OpenSSH agent (the one git in WSL uses via ssh.exe).
+# macOS / Linux / WSL: the local KeePassXC and agent. WSL counts as its own
+# Linux machine (KeePassXC through WSLg, agent at ~/.ssh/agent.sock, its own
+# clone of the database repo). KP_WSL_USE_WINDOWS=1 switches WSL back to
+# driving the Windows KeePassXC and the Windows OpenSSH agent.
 # The password goes to KeePassXC through a pipe (--pw-stdin): never in argv,
 # the environment or the shell history.
 #   KEEPASS_DB  default ~/workspace/nas/keepass/mp.kdbx, a git repo synced by
-#               kp-sync (WSL: C:\Users\<you>\workspace\nas\keepass\mp.kdbx, so the
-#               Windows KeePassXC saves to a local disk, never to a network share)
+#               kp-sync (with KP_WSL_USE_WINDOWS=1: C:\Users\<you>\workspace\nas\
+#               keepass\mp.kdbx, so the Windows KeePassXC saves to a local disk)
 
 _kpxc_default_db() {
-  if _kpxc_is_wsl; then
+  if _kpxc_win; then
     local d
     for d in /mnt/c/Users/*/workspace/nas/keepass/mp.kdbx; do
       [ -f "$d" ] && { echo "$d"; return; }
@@ -29,9 +31,11 @@ _kpxc_default_db() {
 }
 
 _kpxc_is_wsl() { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; }
+# WSL driving the Windows KeePassXC (opt-in); otherwise WSL is plain Linux.
+_kpxc_win() { [ "${KP_WSL_USE_WINDOWS:-0}" = 1 ] && _kpxc_is_wsl; }
 
 _kpxc_bin() {
-  if _kpxc_is_wsl; then
+  if _kpxc_win; then
     [ -x "/mnt/c/Program Files/KeePassXC/KeePassXC.exe" ] && echo "/mnt/c/Program Files/KeePassXC/KeePassXC.exe"
   elif [ -x /Applications/KeePassXC.app/Contents/MacOS/KeePassXC ]; then
     echo /Applications/KeePassXC.app/Contents/MacOS/KeePassXC
@@ -41,7 +45,7 @@ _kpxc_bin() {
 }
 
 _kpxc_running() {
-  if _kpxc_is_wsl; then
+  if _kpxc_win; then
     tasklist.exe /FI "IMAGENAME eq KeePassXC.exe" /NH 2>/dev/null | grep -qi keepassxc.exe
   elif [ "$(uname -s)" = Darwin ]; then
     pgrep -xq KeePassXC
@@ -52,7 +56,7 @@ _kpxc_running() {
 
 # SIGTERM / WM_CLOSE = normal quit.
 _kpxc_quit() {
-  if _kpxc_is_wsl; then
+  if _kpxc_win; then
     taskkill.exe /IM KeePassXC.exe >/dev/null 2>&1
   elif [ "$(uname -s)" = Darwin ]; then
     pkill -x KeePassXC
@@ -62,7 +66,7 @@ _kpxc_quit() {
 }
 
 _kpxc_keys() {
-  if _kpxc_is_wsl; then
+  if _kpxc_win; then
     /mnt/c/Windows/System32/OpenSSH/ssh-add.exe -l >/dev/null 2>&1
   else
     ssh-add -l >/dev/null 2>&1
@@ -70,14 +74,14 @@ _kpxc_keys() {
 }
 
 _kpxc_list_keys() {
-  if _kpxc_is_wsl; then /mnt/c/Windows/System32/OpenSSH/ssh-add.exe -l | tr -d '\r'; else ssh-add -l; fi
+  if _kpxc_win; then /mnt/c/Windows/System32/OpenSSH/ssh-add.exe -l | tr -d '\r'; else ssh-add -l; fi
 }
 
 # The database path as KeePassXC sees it. On WSL a file below a drvfs mount of
 # a Windows network share (e.g. ~/synology -> \\nas\home) becomes \\nas\home\...
 _kpxc_db_arg() {
   local db=$1 mnt src rel
-  if ! _kpxc_is_wsl; then echo "$db"; return; fi
+  if ! _kpxc_win; then echo "$db"; return; fi
   mnt=$(findmnt -n -o TARGET -T "$db" 2>/dev/null)
   src=$(findmnt -n -o SOURCE -T "$db" 2>/dev/null)
   case "$src" in
@@ -93,12 +97,18 @@ _kpxc_sync() {
   return 0
 }
 
+# WSLg's Wayland compositor crashes on KeePassXC ("The Wayland connection
+# broke"); X11 through XWayland works. Prints the env assignment for env(1).
+_kpxc_qpa() {
+  if _kpxc_is_wsl && ! _kpxc_win; then echo "QT_QPA_PLATFORM=${QT_QPA_PLATFORM:-xcb}"; else echo "KPXC_NOOP=1"; fi
+}
+
 kp-unlock() {
   local bin db pw log
   bin=$(_kpxc_bin)
   [ -n "$bin" ] || { echo "kp-unlock: KeePassXC not installed" >&2; return 1; }
   # Linux (not WSL): KeePassXC is a GUI app and needs a desktop session.
-  if [ "$(uname -s)" = Linux ] && ! _kpxc_is_wsl && [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
+  if [ "$(uname -s)" = Linux ] && ! _kpxc_win && [ -z "${DISPLAY:-}${WAYLAND_DISPLAY:-}" ]; then
     echo "kp-unlock: no desktop session here (DISPLAY not set); run it in a terminal on the desktop" >&2
     return 1
   fi
@@ -124,9 +134,9 @@ kp-unlock() {
   # On WSL the Windows build would show --help as a dialog: assume a current
   # Windows install there.
   local opt=--minimized
-  if ! _kpxc_is_wsl && ! "$bin" --help 2>/dev/null | grep -q -- '--minimized'; then opt=""; fi
+  if ! _kpxc_win && ! env "$(_kpxc_qpa)" "$bin" --help 2>/dev/null | grep -q -- '--minimized'; then opt=""; fi
   # Subshell: no "[1] <pid>" job message, and the app outlives this shell.
-  ( printf '%s\n' "$pw" | nohup "$bin" --pw-stdin $opt "$(_kpxc_db_arg "$db")" >"$log" 2>&1 & )
+  ( printf '%s\n' "$pw" | nohup env "$(_kpxc_qpa)" "$bin" --pw-stdin $opt "$(_kpxc_db_arg "$db")" >"$log" 2>&1 & )
   pw=; unset pw
 
   local i

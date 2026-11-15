@@ -29,3 +29,44 @@
     - wsl2_enable_systemd | default(false) | bool
     - ansible_facts['kernel'] | lower is search('microsoft')
   notify: Restart WSL2 instance reminder
+
+# KeePassXC from its developers' PPA: Ubuntu 22.04 ships 2.6.6, which can drop
+# KDBX 4.1 data (tags) when it saves a database written by 2.7+ elsewhere.
+# Signing key fetched by its full fingerprint (Launchpad: signing_key_fingerprint
+# of ~phoerious/+archive/ubuntu/keepassxc), so the keyserver cannot swap it.
+- name: Add the KeePassXC PPA
+  when:
+    - wsl_keepassxc_ppa | default(false) | bool
+    - ansible_facts['distribution'] == 'Ubuntu'
+  become: true
+  block:
+    - name: Install python3-debian (required by deb822_repository)
+      ansible.builtin.apt:
+        name: python3-debian
+        state: present
+
+    - name: Add the KeePassXC PPA (ppa:phoerious/keepassxc)
+      ansible.builtin.deb822_repository:
+        name: keepassxc
+        types: deb
+        uris: https://ppa.launchpadcontent.net/phoerious/keepassxc/ubuntu
+        suites: "{{ ansible_facts['distribution_release'] }}"
+        components: main
+        signed_by: https://keyserver.ubuntu.com/pks/lookup?op=get&search=0xD89C66D0E31FEA2874EBD20561922AB60068FCD6
+        state: present
+      register: keepassxc_ppa
+
+    - name: Install the current KeePassXC from the PPA
+      ansible.builtin.apt:
+        name: keepassxc
+        state: latest
+        update_cache: "{{ keepassxc_ppa is changed }}"
+
+# Extra apt packages for this WSL instance only, e.g. keepassxc: WSL counts as
+# its own machine with its own KeePassXC (a WSLg window) and SSH agent.
+- name: Install extra packages for WSL2
+  ansible.builtin.apt:
+    name: "{{ wsl_extra_packages }}"
+    state: present
+  become: true
+  when: wsl_extra_packages | default([]) | length > 0

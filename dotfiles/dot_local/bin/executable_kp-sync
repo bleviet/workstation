@@ -19,8 +19,9 @@
 # Database > Merge from database..., then run kp-sync again.
 #
 # Environment:
-#   KEEPASS_DB        database (default: ~/workspace/nas/keepass/mp.kdbx;
-#                     WSL: C:\Users\<you>\workspace\nas\keepass\mp.kdbx)
+#   KEEPASS_DB        database (default: ~/workspace/nas/keepass/mp.kdbx on
+#                     macOS, Linux, WSL and Git Bash on Windows; with
+#                     KP_WSL_USE_WINDOWS=1 in WSL: the Windows clone under /mnt/c)
 #   KEEPASS_KEYFILE   key file, if the database uses one (kp-diff)
 #   KEEPASS_BACKUP_DAYS  delete KeePassXC backups in <repo>/backup older than
 #                     this (default 30)
@@ -37,9 +38,13 @@ say()  { [ "${QUIET:-0}" = 1 ] || printf '%s\n' "$*"; }
 warn() { printf '%s: %s\n' "$me" "$*" >&2; }
 
 is_wsl() { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; }
+# WSL driving the Windows KeePassXC (opt-in, see keepassxc.sh); else plain Linux.
+win_mode() { [ "${KP_WSL_USE_WINDOWS:-0}" = 1 ] && is_wsl; }
+# Git Bash / MSYS on Windows itself.
+is_gitbash() { case "$(uname -s)" in MINGW*|MSYS*) return 0 ;; esac; return 1; }
 
 default_db() {
-  if is_wsl; then
+  if win_mode; then
     local d
     for d in /mnt/c/Users/*/workspace/nas/keepass/mp.kdbx; do
       [ -f "$d" ] && { echo "$d"; return; }
@@ -53,13 +58,17 @@ REPO="$(dirname "$DB")"
 FILE="$(basename "$DB")"
 STEM="${FILE%.*}"; EXT="${FILE##*.}"
 HOST="${KP_HOST:-$(hostname -s 2>/dev/null || hostname)}"
+HOST="${HOST%%.*}"
 
 g() { git -C "$REPO" "$@"; }
 in_repo() { [ -f "$DB" ] && g rev-parse --git-dir >/dev/null 2>&1; }
 
 # Never ask for a passphrase or host key from a script; keep a configured
 # ssh (WSL: core.sshCommand = Windows ssh.exe, which talks to the Windows agent).
-ssh_cmd="$(g config core.sshCommand 2>/dev/null || echo ssh)"
+ssh_cmd="$(g config core.sshCommand 2>/dev/null || true)"
+# Git Bash: its bundled ssh cannot reach the Windows agent; use Windows OpenSSH.
+if [ -z "$ssh_cmd" ] && is_gitbash; then ssh_cmd="C:/Windows/System32/OpenSSH/ssh.exe"; fi
+ssh_cmd="${ssh_cmd:-ssh}"
 export GIT_SSH_COMMAND="$ssh_cmd -o BatchMode=yes -o ConnectTimeout=10"
 
 ahead_behind() {   # against the last fetched upstream; no network
@@ -107,7 +116,12 @@ do_sync() {
     say "committed the local save"
   fi
   if ! g fetch -q origin 2>/dev/null; then
-    say "remote not reachable (KeePassXC locked = no SSH key, or offline): kept the commit locally, run kp-sync later"
+    local pending; pending="$(g rev-list --count '@{u}..HEAD' 2>/dev/null || echo 0)"
+    if [ "${pending:-0}" -gt 0 ]; then
+      say "remote not reachable (no SSH key in the agent, or offline): $pending save(s) committed locally, run kp-sync later"
+    else
+      say "remote not reachable (no SSH key in the agent, or offline): nothing to push; run kp-sync later to get newer saves"
+    fi
     return 3
   fi
   local a b
@@ -176,11 +190,16 @@ do_status() {
 }
 
 kp_cli() {
-  if is_wsl; then echo "/mnt/c/Program Files/KeePassXC/keepassxc-cli.exe"
+  if win_mode; then echo "/mnt/c/Program Files/KeePassXC/keepassxc-cli.exe"
+  elif is_gitbash; then echo "/c/Program Files/KeePassXC/keepassxc-cli.exe"
   elif [ -x /Applications/KeePassXC.app/Contents/MacOS/keepassxc-cli ]; then echo /Applications/KeePassXC.app/Contents/MacOS/keepassxc-cli
   else command -v keepassxc-cli; fi
 }
-native_path() { if is_wsl; then wslpath -w "$1"; else echo "$1"; fi; }
+native_path() {
+  if win_mode; then wslpath -w "$1"
+  elif is_gitbash; then cygpath -w "$1"
+  else echo "$1"; fi
+}
 
 do_diff() {
   in_repo || { warn "$DB is not in a git repo"; return 1; }

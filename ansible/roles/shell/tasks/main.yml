@@ -82,6 +82,20 @@
   become: "{{ dev_user != ansible_facts['user_id'] }}"
   become_user: "{{ dev_user }}"
 
+# git_ssh_command: "" (set, but empty) removes a value set by an earlier run,
+# e.g. when WSL stops using the Windows ssh.exe and gets its own agent.
+- name: Remove git core.sshCommand for this host
+  community.general.git_config:
+    scope: file
+    file: "{{ dev_user_home }}/.config/git/config"
+    name: core.sshCommand
+    state: absent
+  when:
+    - git_ssh_command is defined
+    - git_ssh_command | length == 0
+  become: "{{ dev_user != ansible_facts['user_id'] }}"
+  become_user: "{{ dev_user }}"
+
 - name: Check if oh-my-zsh is installed
   ansible.builtin.stat:
     path: "{{ dev_user_home }}/.oh-my-zsh"
