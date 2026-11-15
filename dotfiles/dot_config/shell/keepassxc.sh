@@ -4,14 +4,29 @@
 ###############################################################################
 #
 #   kp-unlock   ask for the master password, start KeePassXC minimized with the
-#               database open; its SSH agent integration loads the keys
-#   kp-lock     lock all databases (the keys leave the agent)
+#               database open; its SSH agent integration loads the keys; then
+#               kp-sync (pull newer saves, push local ones)
+#   kp-lock     kp-sync first (push needs the key), then lock all databases
+#               (the keys leave the agent)
+#   kp-status   sync state of the database (also shown in the prompt as kp:...)
 #
 # macOS / Linux: the local KeePassXC and agent. WSL: the Windows KeePassXC and
 # the Windows OpenSSH agent (the one git in WSL uses via ssh.exe).
 # The password goes to KeePassXC through a pipe (--pw-stdin): never in argv,
 # the environment or the shell history.
-#   KEEPASS_DB  default ~/synology/Documents/Personal/keepass/mp.kdbx
+#   KEEPASS_DB  default ~/workspace/nas/keepass/mp.kdbx, a git repo synced by
+#               kp-sync (WSL: C:\Users\<you>\workspace\nas\keepass\mp.kdbx, so the
+#               Windows KeePassXC saves to a local disk, never to a network share)
+
+_kpxc_default_db() {
+  if _kpxc_is_wsl; then
+    local d
+    for d in /mnt/c/Users/*/workspace/nas/keepass/mp.kdbx; do
+      [ -f "$d" ] && { echo "$d"; return; }
+    done
+  fi
+  echo "$HOME/workspace/nas/keepass/mp.kdbx"
+}
 
 _kpxc_is_wsl() { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; }
 
@@ -71,6 +86,13 @@ _kpxc_db_arg() {
   esac
 }
 
+# Pull/push the database repo (kp-sync is silent when the file is not in git).
+_kpxc_sync() {
+  command -v kp-sync >/dev/null 2>&1 || return 0
+  KEEPASS_DB="$1" kp-sync --auto
+  return 0
+}
+
 kp-unlock() {
   local bin db pw log
   bin=$(_kpxc_bin)
@@ -80,12 +102,12 @@ kp-unlock() {
     echo "kp-unlock: no desktop session here (DISPLAY not set); run it in a terminal on the desktop" >&2
     return 1
   fi
-  db="${KEEPASS_DB:-$HOME/synology/Documents/Personal/keepass/mp.kdbx}"
-  [ -f "$db" ] || { echo "kp-unlock: database not found: $db (NAS mounted?)" >&2; return 1; }
+  db="${KEEPASS_DB:-$(_kpxc_default_db)}"
+  [ -f "$db" ] || { echo "kp-unlock: database not found: $db (clone your KeePass git repo to ~/workspace/nas/keepass, or set KEEPASS_DB)" >&2; return 1; }
 
   # Keys in the agent = unlocked, wherever KeePassXC runs. Checked first: the
   # process check cannot see other login sessions (e.g. over SSH on Windows).
-  if _kpxc_keys; then echo "kp-unlock: already unlocked"; _kpxc_list_keys; return 0; fi
+  if _kpxc_keys; then echo "kp-unlock: already unlocked"; _kpxc_list_keys; _kpxc_sync "$db"; return 0; fi
 
   if _kpxc_running; then
     # A second start cannot unlock a running instance; it is locked, so
@@ -109,7 +131,7 @@ kp-unlock() {
 
   local i
   for i in $(seq 1 120); do
-    if _kpxc_keys; then _kpxc_list_keys; return 0; fi
+    if _kpxc_keys; then _kpxc_list_keys; _kpxc_sync "$db"; return 0; fi
     # KeePassXC quit early: wrong password, no display, ... show why. Only
     # after 2 s: right after the start it may not be listed yet.
     if [ "$i" -gt 8 ] && ! _kpxc_running; then
@@ -128,6 +150,8 @@ kp-lock() {
   bin=$(_kpxc_bin)
   [ -n "$bin" ] || return 1
   _kpxc_running || { echo "kp-lock: KeePassXC is not running"; return 0; }
+  # Push before locking: the SSH key for git leaves the agent with the lock.
+  _kpxc_sync "${KEEPASS_DB:-$(_kpxc_default_db)}"
   "$bin" --lock >/dev/null 2>&1
   echo "KeePassXC locked"
 }

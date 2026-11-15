@@ -1,0 +1,215 @@
+#!/usr/bin/env bash
+###############################################################################
+# kp-sync / kp-status / kp-diff
+# Purpose: keep the KeePassXC database in a git repo, chezmoi-style: the file
+# lives locally in the repo and is synced with explicit commands.
+###############################################################################
+#
+#   kp-sync              commit a local save, fetch, fast-forward or push
+#   kp-sync --auto       same, but silent when the database is not in a git repo
+#                        (called by kp-unlock / kp-lock)
+#   kp-status            local state: unsaved commit, ahead/behind, conflicts
+#   kp-status --prompt   short form for the shell prompt ("kp:*↑1"), no network
+#   kp-diff              entries only here / only on the remote (asks the
+#                        master password; prints titles, never secrets)
+#
+# Both sides changed (two machines edited without syncing): nothing is merged
+# automatically, the file is binary. The remote version is saved next to the
+# database as <name>.conflict-<host>-<time>.kdbx; merge it in KeePassXC with
+# Database > Merge from database..., then run kp-sync again.
+#
+# Environment:
+#   KEEPASS_DB        database (default: ~/workspace/nas/keepass/mp.kdbx;
+#                     WSL: C:\Users\<you>\workspace\nas\keepass\mp.kdbx)
+#   KEEPASS_KEYFILE   key file, if the database uses one (kp-diff)
+#   KEEPASS_BACKUP_DAYS  delete KeePassXC backups in <repo>/backup older than
+#                     this (default 30)
+#   KEEPASS_NAS_COPY  optional file path: after a sync, copy the database
+#                     there (one-way backup copy, never opened) when its
+#                     folder exists, e.g. the mounted NAS share
+#
+# Exit codes: 0 in sync, 1 error, 3 remote not reachable (changes committed
+# locally), 4 conflict saved for a manual merge.
+set -uo pipefail
+
+me="$(basename "$0")"
+say()  { [ "${QUIET:-0}" = 1 ] || printf '%s\n' "$*"; }
+warn() { printf '%s: %s\n' "$me" "$*" >&2; }
+
+is_wsl() { [ -n "${WSL_DISTRO_NAME:-}" ] || grep -qi microsoft /proc/sys/kernel/osrelease 2>/dev/null; }
+
+default_db() {
+  if is_wsl; then
+    local d
+    for d in /mnt/c/Users/*/workspace/nas/keepass/mp.kdbx; do
+      [ -f "$d" ] && { echo "$d"; return; }
+    done
+  fi
+  echo "$HOME/workspace/nas/keepass/mp.kdbx"
+}
+
+DB="${KEEPASS_DB:-$(default_db)}"
+REPO="$(dirname "$DB")"
+FILE="$(basename "$DB")"
+STEM="${FILE%.*}"; EXT="${FILE##*.}"
+HOST="${KP_HOST:-$(hostname -s 2>/dev/null || hostname)}"
+
+g() { git -C "$REPO" "$@"; }
+in_repo() { [ -f "$DB" ] && g rev-parse --git-dir >/dev/null 2>&1; }
+
+# Never ask for a passphrase or host key from a script; keep a configured
+# ssh (WSL: core.sshCommand = Windows ssh.exe, which talks to the Windows agent).
+ssh_cmd="$(g config core.sshCommand 2>/dev/null || echo ssh)"
+export GIT_SSH_COMMAND="$ssh_cmd -o BatchMode=yes -o ConnectTimeout=10"
+
+ahead_behind() {   # against the last fetched upstream; no network
+  if g rev-parse -q --verify '@{u}' >/dev/null 2>&1; then
+    g rev-list --left-right --count 'HEAD...@{u}' 2>/dev/null
+  else
+    echo "0 0"
+  fi
+}
+is_dirty() {
+  ! g diff --quiet HEAD -- "$FILE" 2>/dev/null ||
+    [ -n "$(g ls-files --others --exclude-standard -- "$FILE")" ]
+}
+conflict_files() { (cd "$REPO" && for f in "$STEM".conflict-*."$EXT"; do [ -f "$f" ] && echo "$f"; done); }
+
+nas_copy() {
+  local dst="${KEEPASS_NAS_COPY:-}"
+  [ -n "$dst" ] && [ -d "$(dirname "$dst")" ] || return 0
+  cmp -s "$DB" "$dst" 2>/dev/null && return 0
+  if cp "$DB" "$dst.partial" 2>/dev/null && mv -f "$dst.partial" "$dst" 2>/dev/null; then
+    say "copied to $dst"
+  else
+    rm -f "$dst.partial" 2>/dev/null; warn "copy to $dst failed (share offline?); the git copy is fine"
+  fi
+}
+
+# KeePassXC's backup-before-save copies in <repo>/backup/ (git-ignored) are
+# never pruned by KeePassXC itself; git already holds every committed save.
+prune_backups() {
+  local days="${KEEPASS_BACKUP_DAYS:-30}"
+  [ -d "$REPO/backup" ] || return 0
+  find "$REPO/backup" -maxdepth 1 -type f -name '*.old.kdbx' -mtime +"$days" -delete 2>/dev/null || true
+}
+
+do_sync() {
+  if ! in_repo; then
+    [ "${AUTO:-0}" = 1 ] && return 0
+    warn "$DB is not in a git repo (set KEEPASS_DB, or see the README of the keepass repo)"; return 1
+  fi
+  prune_backups
+  if is_dirty; then
+    if ! { g add -- "$FILE" && g commit -q -m "save from $HOST $(date '+%Y-%m-%d %H:%M:%S')"; }; then
+      warn "commit failed"; return 1
+    fi
+    say "committed the local save"
+  fi
+  if ! g fetch -q origin 2>/dev/null; then
+    say "remote not reachable (KeePassXC locked = no SSH key, or offline): kept the commit locally, run kp-sync later"
+    return 3
+  fi
+  local a b
+  read -r a b < <(ahead_behind)
+  if [ "$a" -gt 0 ] && [ "$b" -gt 0 ]; then
+    local ts rhost cf
+    ts="$(date +%Y%m%d-%H%M%S)"
+    rhost="$(g log -1 --format=%s '@{u}' | sed -n 's/^save from \([^ ]*\).*/\1/p')"
+    cf="$STEM.conflict-${rhost:-remote}-$ts.$EXT"
+    ( umask 077; g show "@{u}:$FILE" > "$REPO/$cf" ) || { warn "could not save the remote version"; return 1; }
+    g merge -q -s ours --no-edit -m "merge: kept the $HOST version, other side saved as $cf" '@{u}' || { warn "merge failed"; return 1; }
+    g push -q origin HEAD 2>/dev/null || warn "push failed; run kp-sync again"
+    warn "CONFLICT: this machine and ${rhost:-another one} both changed the database."
+    warn "  KeePassXC: Database > Merge from database... > $REPO/$cf"
+    warn "  then save, run kp-sync, and delete $cf"
+    nas_copy
+    return 4
+  fi
+  if [ "$b" -gt 0 ]; then
+    g merge -q --ff-only '@{u}' || { warn "fast-forward failed"; return 1; }
+    say "updated from the remote ($b newer save(s)); KeePassXC reloads the file"
+  fi
+  if [ "$a" -gt 0 ]; then
+    g push -q origin HEAD 2>/dev/null || { warn "push failed; run kp-sync again"; return 3; }
+    say "pushed $a save(s)"
+  fi
+  [ "$a" = 0 ] && [ "$b" = 0 ] && ! is_dirty && say "in sync"
+  nas_copy
+  return 0
+}
+
+do_status() {
+  local prompt="${1:-}"
+  if ! in_repo; then
+    [ -n "$prompt" ] && return 0
+    warn "$DB is not in a git repo"; return 1
+  fi
+  local a b dirty="" conf
+  read -r a b < <(ahead_behind)
+  is_dirty && dirty=1
+  conf="$(conflict_files)"
+  if [ -n "$prompt" ]; then
+    local out=""
+    [ -n "$dirty" ] && out="${out}*"
+    [ "$a" -gt 0 ] && out="${out}↑$a"
+    [ "$b" -gt 0 ] && out="${out}↓$b"
+    [ -n "$conf" ] && out="${out}!"
+    [ -n "$out" ] && echo "kp:$out"
+    return 0
+  fi
+  local fetched="never"
+  local fh; fh="$(g rev-parse --absolute-git-dir)/FETCH_HEAD"
+  [ -f "$fh" ] && fetched="$(date -r "$fh" '+%Y-%m-%d %H:%M' 2>/dev/null)"
+  echo "database:    $DB"
+  echo "last commit: $(g log -1 --format='%s (%cr)')"
+  echo "last fetch:  $fetched (ahead/behind are as of then; kp-sync fetches)"
+  if [ -n "$dirty" ]; then echo "local:       saved but not committed yet (*)"; fi
+  [ "$a" -gt 0 ] && echo "ahead:       $a save(s) not pushed (↑)"
+  [ "$b" -gt 0 ] && echo "behind:      $b newer save(s) on the remote (↓)"
+  if [ -n "$conf" ]; then
+    echo "conflicts:   merge in KeePassXC (Database > Merge from database...), then delete (!):"
+    printf '%s\n' "$conf" | sed 's/^/             /'
+  fi
+  [ -z "$dirty$conf" ] && [ "$a" = 0 ] && [ "$b" = 0 ] && echo "state:       in sync"
+  return 0
+}
+
+kp_cli() {
+  if is_wsl; then echo "/mnt/c/Program Files/KeePassXC/keepassxc-cli.exe"
+  elif [ -x /Applications/KeePassXC.app/Contents/MacOS/keepassxc-cli ]; then echo /Applications/KeePassXC.app/Contents/MacOS/keepassxc-cli
+  else command -v keepassxc-cli; fi
+}
+native_path() { if is_wsl; then wslpath -w "$1"; else echo "$1"; fi; }
+
+do_diff() {
+  in_repo || { warn "$DB is not in a git repo"; return 1; }
+  local cli tmp pw
+  cli="$(kp_cli)"; [ -n "$cli" ] && [ -x "$cli" ] || { warn "keepassxc-cli not found"; return 1; }
+  g fetch -q origin 2>/dev/null || say "(remote not reachable: comparing with the last fetched version)"
+  g rev-parse -q --verify '@{u}' >/dev/null || { warn "no remote version yet"; return 1; }
+  tmp="$(mktemp -d)"; chmod 700 "$tmp"
+  # shellcheck disable=SC2064
+  trap "rm -rf '$tmp'" EXIT
+  g show "@{u}:$FILE" > "$tmp/remote.$EXT"
+  if cmp -s "$DB" "$tmp/remote.$EXT"; then echo "identical to the remote"; return 0; fi
+  printf 'KeePassXC master password: ' >&2; read -rs pw; echo >&2
+  list() {
+    local args=(ls -R -f -q)
+    [ -n "${KEEPASS_KEYFILE:-}" ] && args+=(-k "$(native_path "$KEEPASS_KEYFILE")")
+    printf '%s\n' "$pw" | "$cli" "${args[@]}" "$(native_path "$1")" | tr -d '\r' | sort
+  }
+  local here there
+  here="$(list "$DB")" || { warn "could not open the local database"; pw=; return 1; }
+  there="$(list "$tmp/remote.$EXT")" || { warn "could not open the remote version"; pw=; return 1; }
+  pw=; unset pw
+  echo "entries only here (+) / only on the remote (-):"
+  diff <(printf '%s\n' "$here") <(printf '%s\n' "$there") | sed -n 's/^< /  + /p; s/^> /  - /p'
+  echo "(entries changed in place keep their title and are not listed; the files differ)"
+}
+
+case "$me" in
+  kp-status) do_status "${1:+prompt}" ;;
+  kp-diff)   do_diff ;;
+  *)         [ "${1:-}" = "--auto" ] && AUTO=1; do_sync ;;
+esac

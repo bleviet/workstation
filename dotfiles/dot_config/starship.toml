@@ -36,3 +36,14 @@ style = "orange"
 
 [package]
 style = "pink"
+
+# KeePass database sync state (kp-status, ~/.local/bin): hidden when in sync.
+#   *  saved, not committed   ↑n  not pushed   ↓n  newer on the remote (as of
+#   the last kp-sync)   !  conflict copy waiting for a merge in KeePassXC
+[custom.keepass]
+description = "KeePass database sync state"
+command = "kp-status --prompt"
+when = true
+shell = ["sh"]
+style = "red"
+format = "([$output]($style) )"
