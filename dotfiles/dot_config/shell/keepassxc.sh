@@ -77,6 +77,23 @@ _kpxc_list_keys() {
   if _kpxc_win; then /mnt/c/Windows/System32/OpenSSH/ssh-add.exe -l | tr -d '\r'; else ssh-add -l; fi
 }
 
+# KeePassXC adds the keys one at a time after unlocking: wait until the number
+# of keys in the agent has not changed for 1 s (at most 5 s), so the list
+# shows all of them, not just the first.
+_kpxc_wait_keys() {
+  local n last=-1 same=0
+  for _ in $(seq 1 20); do
+    n=$(_kpxc_list_keys 2>/dev/null | grep -c 'SHA256:')
+    if [ "$n" = "$last" ]; then
+      same=$((same + 1))
+      [ "$same" -ge 4 ] && return 0
+    else
+      same=0; last=$n
+    fi
+    sleep 0.25
+  done
+}
+
 # The database path as KeePassXC sees it. On WSL a file below a drvfs mount of
 # a Windows network share (e.g. ~/synology -> \\nas\home) becomes \\nas\home\...
 _kpxc_db_arg() {
@@ -141,7 +158,7 @@ kp-unlock() {
 
   local i
   for i in $(seq 1 120); do
-    if _kpxc_keys; then _kpxc_list_keys; _kpxc_sync "$db"; return 0; fi
+    if _kpxc_keys; then _kpxc_wait_keys; _kpxc_list_keys; _kpxc_sync "$db"; return 0; fi
     # KeePassXC quit early: wrong password, no display, ... show why. Only
     # after 2 s: right after the start it may not be listed yet.
     if [ "$i" -gt 8 ] && ! _kpxc_running; then
